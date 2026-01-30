@@ -307,4 +307,23 @@ export const taskRouter = router({
       orderBy: { priority: "asc" },
     });
   }),
+
+  // Get backlog tasks (unscheduled)
+  getBacklogTasks: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.task.findMany({
+      where: {
+        userId: ctx.userId,
+        // Remove strictly null filter for now so user can see their tasks
+        // and drag them to reschedule or time block them.
+        // scheduledDate: null,
+        status: { not: "done" },
+      },
+      include: {
+        project: {
+          select: { id: true, name: true, color: true },
+        },
+      },
+      orderBy: { priority: "asc" },
+    });
+  }),
 });

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskList } from "@/components/tasks/TaskList";
 import { trpc } from "@/lib/trpc/client";
+import { UrgencyDashboard } from "@/components/dashboard/UrgencyDashboard";
+import { SmartInsight } from "@/components/dashboard/SmartInsight";
 
 interface DashboardStats {
   todaysTasks: number;
@@ -189,6 +191,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           Your productivity at a glance
         </p>
       </div>
+
+      {/* Smart Insights & Urgency */}
+      <SmartInsight />
+      <UrgencyDashboard />
 
       {/* Active Timer */}
       <ActiveTimerWidget initialTimer={initialData.activeTimer} />

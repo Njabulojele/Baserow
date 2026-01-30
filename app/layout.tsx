@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LifeOS",
+  title: "BaseRow",
   description: "Never rely on memory again.",
 };
 

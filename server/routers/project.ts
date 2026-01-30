@@ -219,4 +219,158 @@ export const projectRouter = router({
         ...timeStats,
       };
     }),
+
+  // Get all projects classified by urgency
+  getUrgencySummary: protectedProcedure.query(async ({ ctx }) => {
+    const projects = await ctx.prisma.project.findMany({
+      where: {
+        userId: ctx.userId,
+        status: { in: ["active", "planning"] },
+        archivedAt: null,
+      },
+      include: {
+        tasks: { select: { status: true } },
+        client: { select: { name: true } },
+      },
+    });
+
+    const scoredProjects = projects.map((project) => {
+      // 1. Deadline Score
+      let deadlineScore = 0;
+      let daysUntil = 999;
+      if (project.deadline) {
+        const now = new Date();
+        const deadline = new Date(project.deadline);
+        daysUntil = Math.ceil(
+          (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        if (daysUntil < 0) deadlineScore = 40;
+        else if (daysUntil <= 3) deadlineScore = 35;
+        else if (daysUntil <= 7) deadlineScore = 25;
+        else if (daysUntil <= 14) deadlineScore = 15;
+        else deadlineScore = 5;
+      }
+
+      // 2. Priority Score
+      let priorityScore = 0;
+      if (project.priority === "critical") priorityScore = 20;
+      else if (project.priority === "high") priorityScore = 15;
+      else if (project.priority === "medium") priorityScore = 5;
+
+      // 3. Completion Score
+      const total = project.tasks.length;
+      const done = project.tasks.filter((t) => t.status === "done").length;
+      const rate = total > 0 ? done / total : 0;
+      let completionScore = 0;
+      if (rate < 0.5) completionScore = 15;
+      if (rate < 0.2) completionScore = 30;
+
+      const totalScore = deadlineScore + priorityScore + completionScore;
+      let urgency = "On Track";
+      if (totalScore >= 70) urgency = "Critical";
+      else if (totalScore >= 50) urgency = "Urgent";
+      else if (totalScore >= 30) urgency = "Attention";
+
+      return {
+        ...project,
+        urgency,
+        score: totalScore,
+        daysUntil,
+        progress: Math.round(rate * 100),
+      };
+    });
+
+    return {
+      critical: scoredProjects.filter((p) => p.urgency === "Critical"),
+      urgent: scoredProjects.filter((p) => p.urgency === "Urgent"),
+      attention: scoredProjects.filter((p) => p.urgency === "Attention"),
+    };
+  }),
+
+  // Calculate generic urgency score for a project
+  getUrgencyStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const project = await ctx.prisma.project.findUnique({
+        where: { id: input.id },
+        include: {
+          client: true,
+          tasks: { select: { status: true } },
+        },
+      });
+
+      if (!project || project.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      if (project.status === "completed" || project.status === "cancelled") {
+        return { status: "Completed", score: 0, color: "bg-gray-500" };
+      }
+
+      // 1. Deadline Score (0-40 points)
+      let deadlineScore = 0;
+      if (project.deadline) {
+        const now = new Date();
+        const deadline = new Date(project.deadline);
+        const daysUntil = Math.ceil(
+          (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        if (daysUntil < 0)
+          deadlineScore = 40; // Overdue
+        else if (daysUntil <= 3)
+          deadlineScore = 35; // < 3 days
+        else if (daysUntil <= 7)
+          deadlineScore = 25; // < 1 week
+        else if (daysUntil <= 14)
+          deadlineScore = 15; // < 2 weeks
+        else deadlineScore = 5;
+      }
+
+      // 2. Client Priority Score (0-20 points)
+      let priorityScore = 0;
+      if (project.priority === "critical") priorityScore = 20;
+      else if (project.priority === "high") priorityScore = 15;
+      else if (project.priority === "medium") priorityScore = 5;
+
+      // 3. Completion Score (Inverse: less complete = higher urgency if deadline near) (0-30 points)
+      const totalTasks = project.tasks.length;
+      const completedTasks = project.tasks.filter(
+        (t) => t.status === "done",
+      ).length;
+      const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
+
+      let completionScore = 0;
+      // If we are < 50% done, that adds urgency
+      if (completionRate < 0.5) completionScore = 15;
+      if (completionRate < 0.2) completionScore = 30;
+
+      const totalScore = deadlineScore + priorityScore + completionScore;
+
+      let status = "On Track";
+      let color = "bg-emerald-500";
+
+      if (totalScore >= 70) {
+        status = "Critical";
+        color = "bg-red-500";
+      } else if (totalScore >= 50) {
+        status = "Urgent";
+        color = "bg-orange-500";
+      } else if (totalScore >= 30) {
+        status = "Attention";
+        color = "bg-yellow-500";
+      }
+
+      return {
+        score: totalScore,
+        status,
+        color,
+        details: {
+          deadlineScore,
+          priorityScore,
+          completionScore,
+        },
+      };
+    }),
 });

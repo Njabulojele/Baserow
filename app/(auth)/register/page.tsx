@@ -17,7 +17,7 @@ export default function RegisterPage() {
             <div className="w-8 h-8 rounded bg-white/20 backdrop-blur-sm flex items-center justify-center">
               L
             </div>
-            LifeOS
+            Baserow
           </div>
         </div>
 
@@ -32,7 +32,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="relative z-10 flex items-center gap-4 text-sm text-secondary-foreground/60">
-          <p>© 2026 LifeOS Inc.</p>
+          <p>© 2026 Baserow Inc.</p>
           <span>•</span>
           <Link href="/privacy" className="hover:text-white transition-colors">
             Privacy
@@ -51,7 +51,7 @@ export default function RegisterPage() {
             <div className="w-8 h-8 rounded bg-secondary text-white flex items-center justify-center">
               L
             </div>
-            LifeOS
+            Baserow
           </div>
         </div>
 

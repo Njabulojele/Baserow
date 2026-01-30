@@ -363,6 +363,11 @@ export const planningRouter = router({
       z.object({
         weekStart: z.date(),
         topOutcomes: z.array(z.string()).optional(),
+        keyWins: z.array(z.string()).optional(),
+        challenges: z.array(z.string()).optional(),
+        lessonsLearned: z.array(z.string()).optional(),
+        rating: z.number().optional(),
+        reviewNotes: z.string().optional(),
         plannedClientHours: z.number().optional(),
         plannedPersonalHours: z.number().optional(),
       }),

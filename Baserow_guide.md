@@ -1,16 +1,19 @@
-# LifeOS - Ultimate Life & Productivity Management System - Comprehensive Development Prompt
+# Baserow - Ultimate Life & Productivity Management System - Comprehensive Development Prompt
 
 ## Project Overview
-Design and develop a comprehensive, AI-powered life and productivity management system that enables complete life orchestration through intelligent tracking, planning, and optimization. LifeOS replaces memory with systems, transforms goals into actionable plans, and provides real-time insights to maximize productivity, well-being, and achievement.
+
+Design and develop a comprehensive, AI-powered life and productivity management system that enables complete life orchestration through intelligent tracking, planning, and optimization. Baserow replaces memory with systems, transforms goals into actionable plans, and provides real-time insights to maximize productivity, well-being, and achievement.
 
 ---
 
 ## Vision & Positioning
 
 ### Product Philosophy
+
 **"Never Rely on Memory Again. Build Systems That Execute."**
 
-LifeOS is not just another todo app or calendar. It's a complete life operating system that:
+Baserow is not just another todo app or calendar. It's a complete life operating system that:
+
 - Transforms long-term visions into executable daily actions
 - Tracks every aspect of productivity and well-being
 - Provides intelligent insights and recommendations
@@ -20,12 +23,14 @@ LifeOS is not just another todo app or calendar. It's a complete life operating 
 - Integrates client work with personal development seamlessly
 
 ### Target User
+
 - **Freelancers & Solo Entrepreneurs**: Managing multiple client projects alongside personal goals
 - **Agency Owners**: Balancing client delivery with business growth
 - **Knowledge Workers**: Anyone juggling complex projects and personal development
 - **High Achievers**: People committed to continuous growth and measurable progress
 
 ### Unique Value Propositions
+
 1. **Complete Life Orchestration**: One system for everything - client work, personal projects, health, learning, relationships
 2. **Multi-Timeframe Planning**: Seamlessly break down yearly goals into months, weeks, days, and hours
 3. **Intelligent Progress Prediction**: AI-powered deadline tracking that tells you if you're on track
@@ -42,15 +47,18 @@ LifeOS is not just another todo app or calendar. It's a complete life operating 
 ### 1. HIERARCHICAL GOAL & PROJECT PLANNING
 
 #### Year Planning System
+
 **Purpose**: Define annual vision and major objectives
 
 **Features**:
+
 - Create yearly themes and focus areas (e.g., "2026: Year of Growth")
 - Define 3-5 major annual goals with clear success criteria
 - Visual annual roadmap showing quarters and major milestones
 - Review mechanism to assess year-end progress vs. plan
 
 **Data Model**:
+
 ```typescript
 YearPlan {
   id: string
@@ -68,9 +76,11 @@ YearPlan {
 ---
 
 #### Quarter Planning
+
 **Purpose**: Break annual goals into quarterly objectives
 
 **Features**:
+
 - 90-day planning cycles
 - Quarterly OKRs (Objectives & Key Results)
 - Quarter-end review and retrospective
@@ -78,6 +88,7 @@ YearPlan {
 - Visual quarter progress dashboard
 
 **Data Model**:
+
 ```typescript
 QuarterPlan {
   id: string
@@ -96,9 +107,11 @@ QuarterPlan {
 ---
 
 #### Month Planning
+
 **Purpose**: Monthly goal breakdown and sprint planning
 
 **Features**:
+
 - Monthly objectives linked to quarterly goals
 - Major project milestones for the month
 - Monthly focus areas (max 3-5 priorities)
@@ -106,6 +119,7 @@ QuarterPlan {
 - Visual monthly calendar with project blocks
 
 **Data Model**:
+
 ```typescript
 MonthPlan {
   id: string
@@ -125,9 +139,11 @@ MonthPlan {
 ---
 
 #### Week Planning
+
 **Purpose**: Tactical weekly execution planning
 
 **Features**:
+
 - Weekly planning session template (Sunday evening / Monday morning)
 - Top 3 outcomes for the week
 - Week-at-a-glance calendar view
@@ -136,6 +152,7 @@ MonthPlan {
 - Weekly review template (Friday evening / Sunday)
 
 **Data Model**:
+
 ```typescript
 WeekPlan {
   id: string
@@ -159,9 +176,11 @@ WeekPlan {
 ---
 
 #### Day Planning
+
 **Purpose**: Daily execution and task management
 
 **Features**:
+
 - Daily planning ritual (morning)
 - Time-blocked schedule
 - Top 3 priorities for the day
@@ -170,6 +189,7 @@ WeekPlan {
 - Energy check-ins (morning, afternoon, evening)
 
 **Data Model**:
+
 ```typescript
 DayPlan {
   id: string
@@ -191,9 +211,11 @@ DayPlan {
 ---
 
 #### Hour Planning (Time Blocking)
+
 **Purpose**: Granular time allocation and deep work sessions
 
 **Features**:
+
 - Visual time blocking interface (drag-and-drop)
 - Deep work vs. shallow work classification
 - Focus sessions with Pomodoro-style timers
@@ -202,6 +224,7 @@ DayPlan {
 - Time block templates (e.g., "Creative Morning", "Client Afternoon")
 
 **Data Model**:
+
 ```typescript
 TimeBlock {
   id: string
@@ -228,15 +251,18 @@ TimeBlock {
 ### 2. PROJECT & TASK MANAGEMENT
 
 #### Project Hierarchy
+
 **Purpose**: Organize work into logical project structures
 
 **Project Types**:
+
 1. **Client Projects**: Paid client work with deadlines and deliverables
 2. **Personal Projects**: Business development, learning, side projects
 3. **Life Areas**: Health, relationships, finances, personal growth
 4. **Recurring Systems**: Weekly routines, monthly reviews, habits
 
 **Data Model**:
+
 ```typescript
 Project {
   id: string
@@ -244,33 +270,33 @@ Project {
   description: string
   type: "client" | "personal" | "life_area" | "recurring"
   status: "planning" | "active" | "on_hold" | "completed" | "cancelled"
-  
+
   // Client-specific
   clientId: string | null
   billable: boolean
   hourlyRate: number | null
   budgetHours: number | null
-  
+
   // Timeline
   startDate: DateTime | null
   deadline: DateTime | null
   estimatedHours: number
-  
+
   // Tracking
   actualHoursSpent: number // Calculated from time entries
   completionPercentage: number // Manually set or auto-calculated
-  
+
   // Relationships
   goalId: string | null // Link to annual/quarterly goal
   parentProjectId: string | null // For sub-projects
   milestones: Milestone[]
   tasks: Task[]
-  
+
   // Metadata
   priority: "critical" | "high" | "medium" | "low"
   tags: string[]
   color: string // For visual identification
-  
+
   createdAt: DateTime
   updatedAt: DateTime
   completedAt: DateTime | null
@@ -281,9 +307,11 @@ Project {
 ---
 
 #### Tasks with Smart Tracking
+
 **Purpose**: Actionable work items with automatic time tracking
 
 **Features**:
+
 - Quick task creation (+ button, keyboard shortcut, voice capture)
 - Task states: Not Started → In Progress → Done
 - Automatic time tracking when status changes
@@ -293,41 +321,42 @@ Project {
 - Task templates for recurring work
 
 **Data Model**:
+
 ```typescript
 Task {
   id: string
   title: string
   description: string
   projectId: string | null
-  
+
   // Status & Progress
   status: "not_started" | "in_progress" | "blocked" | "done" | "cancelled"
   startedAt: DateTime | null // Auto-set when status → in_progress
   completedAt: DateTime | null // Auto-set when status → done
-  
+
   // Time Tracking
   estimatedMinutes: number | null
   actualMinutes: number // Calculated from time entries
   timerRunning: boolean
   currentTimerStart: DateTime | null
-  
+
   // Scheduling
   scheduledDate: DateTime | null // When you plan to do it
   dueDate: DateTime | null // Hard deadline
-  
+
   // Organization
   priority: "critical" | "high" | "medium" | "low"
   type: "deep_work" | "shallow_work" | "admin" | "meeting" | "learning"
   tags: string[]
-  
+
   // Relationships
   parentTaskId: string | null // For subtasks
   dependsOn: string[] // Task IDs that must be completed first
   blocks: string[] // Task IDs that are waiting on this
-  
+
   // Energy
   energyRequired: number // 1-10, how much energy this takes
-  
+
   // Metadata
   createdAt: DateTime
   updatedAt: DateTime
@@ -340,9 +369,11 @@ Task {
 ---
 
 #### Time Entry System
+
 **Purpose**: Automatic and manual time tracking with rich context
 
 **Features**:
+
 - Automatic entries when task status changes
 - Manual timer (start/stop)
 - Manual entry creation (for forgotten sessions)
@@ -351,35 +382,36 @@ Task {
 - Export to CSV/Excel for invoicing
 
 **Data Model**:
+
 ```typescript
 TimeEntry {
   id: string
   taskId: string | null
   projectId: string | null
   clientId: string | null
-  
+
   startTime: DateTime
   endTime: DateTime | null // Null if timer still running
   duration: number // minutes, calculated or manual
-  
+
   type: "automatic" | "manual" | "timer"
-  
+
   // Context
   description: string
   tags: string[]
-  
+
   // Quality metrics
   focusQuality: number | null // 1-10, how focused were you
   energyBefore: number | null
   energyAfter: number | null
   distractions: number // Count of interruptions
-  
+
   // Billing
   billable: boolean
   hourlyRate: number | null
   amount: number // Calculated
   invoiced: boolean
-  
+
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -390,9 +422,11 @@ TimeEntry {
 ### 3. CLIENT MANAGEMENT SYSTEM
 
 #### Client Profiles
+
 **Purpose**: Centralized client information and communication
 
 **Features**:
+
 - Client contact information
 - Communication history (emails, meetings, calls)
 - Active projects per client
@@ -401,6 +435,7 @@ TimeEntry {
 - Relationship health score
 
 **Data Model**:
+
 ```typescript
 Client {
   id: string
@@ -408,7 +443,7 @@ Client {
   companyName: string | null
   email: string
   phone: string | null
-  
+
   // Contact details
   primaryContact: {
     name: string
@@ -417,29 +452,29 @@ Client {
     role: string
   }
   additionalContacts: Contact[]
-  
+
   // Business details
   industry: string | null
   website: string | null
   address: Address | null
-  
+
   // Relationship
   relationshipHealth: number // 1-10
   lastContactedAt: DateTime | null
   preferredCommunication: "email" | "phone" | "slack" | "teams"
   timezone: string
-  
+
   // Projects & Billing
   activeProjects: Project[]
   totalProjectsCompleted: number
   defaultHourlyRate: number | null
   paymentTerms: string // e.g., "Net 30"
   outstandingBalance: number
-  
+
   // Notes & Tags
   notes: string
   tags: string[]
-  
+
   // Metadata
   createdAt: DateTime
   lastInteractionAt: DateTime
@@ -450,12 +485,14 @@ Client {
 ---
 
 #### Client Communication Hub
+
 **Purpose**: Manage all client communications from one place
 
 **Features**:
 
 **Email Integration**:
-- Send emails directly from LifeOS
+
+- Send emails directly from Baserow
 - Email templates for common communications
 - Thread tracking and history
 - Attachment support
@@ -463,6 +500,7 @@ Client {
 - Read receipts
 
 **Meeting Management**:
+
 - Schedule meetings with calendar integration
 - Send calendar invites to client emails
 - Meeting preparation checklist
@@ -471,6 +509,7 @@ Client {
 - Meeting recording integration (future)
 
 **Communication Log**:
+
 - Automatic logging of all client interactions
 - Manual entry for calls, in-person meetings
 - Communication sentiment tracking
@@ -478,38 +517,39 @@ Client {
 - Follow-up reminders
 
 **Data Model**:
+
 ```typescript
 Communication {
   id: string
   clientId: string
   projectId: string | null
-  
+
   type: "email" | "call" | "meeting" | "message" | "other"
   direction: "inbound" | "outbound"
-  
+
   subject: string
   content: string
   summary: string | null // AI-generated summary
-  
+
   // Email specific
   from: string | null
   to: string[]
   cc: string[]
   bcc: string[]
   attachments: Attachment[]
-  
+
   // Meeting specific
   meetingDate: DateTime | null
   meetingDuration: number | null
   attendees: string[]
   meetingNotes: string | null
   actionItems: Task[]
-  
+
   // Tracking
   sentiment: "positive" | "neutral" | "negative" | null
   requiresFollowUp: boolean
   followUpDate: DateTime | null
-  
+
   createdAt: DateTime
   responseTime: number | null // For inbound, how long until we responded
 }
@@ -518,9 +558,11 @@ Communication {
 ---
 
 #### Meeting Scheduler
+
 **Purpose**: Seamless meeting scheduling with clients
 
 **Features**:
+
 - Visual calendar availability
 - Generate meeting links (Google Meet, Zoom, etc.)
 - Send calendar invites to multiple attendees
@@ -530,44 +572,45 @@ Communication {
 - Meeting templates (discovery call, check-in, sprint review, etc.)
 
 **Data Model**:
+
 ```typescript
 Meeting {
   id: string
   clientId: string | null
   projectId: string | null
-  
+
   title: string
   description: string
   type: "discovery" | "check_in" | "sprint_review" | "presentation" | "workshop" | "other"
-  
+
   // Scheduling
   scheduledAt: DateTime
   duration: number // minutes
   timezone: string
-  
+
   // Attendees
   organizer: string
   requiredAttendees: string[] // Emails
   optionalAttendees: string[]
-  
+
   // Location
   location: string | null // Physical location
   meetingLink: string | null // Video call link
-  
+
   // Preparation
   agenda: string
   preparationTasks: Task[]
   attachments: Attachment[]
-  
+
   // Notes & Follow-up
   meetingNotes: string | null
   actionItems: Task[]
   decisions: string[]
   nextSteps: string[]
-  
+
   // Status
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | "rescheduled"
-  
+
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -578,17 +621,20 @@ Meeting {
 ### 4. DEADLINE & URGENCY MANAGEMENT
 
 #### Intelligent Deadline Tracking
+
 **Purpose**: Predict project completion and surface urgent items
 
 **Features**:
 
 **Visual Urgency Indicators**:
+
 - Color-coded urgency (green → yellow → orange → red → critical red)
 - Days until deadline countdown
 - Percentage complete vs. time remaining
 - "On Track" / "At Risk" / "Behind Schedule" status
 
 **Smart Completion Prediction**:
+
 - Calculate average velocity (tasks/hours per week)
 - Estimate remaining work
 - Predict completion date based on current pace
@@ -596,6 +642,7 @@ Meeting {
 - Alert when predicted completion > deadline
 
 **Urgency Scoring Algorithm**:
+
 ```
 urgencyScore = (
   (daysUntilDeadline / totalDaysFromStart) * 0.4 +
@@ -612,6 +659,7 @@ Status:
 ```
 
 **Dashboard Widget**:
+
 ```typescript
 DeadlineWidget {
   upcomingDeadlines: {
@@ -627,27 +675,32 @@ DeadlineWidget {
 ---
 
 #### Urgency Dashboard
+
 **Purpose**: Clear visibility into what needs attention NOW
 
 **Layout**:
 
 **Top Section - CRITICAL**:
+
 - Projects with deadlines < 3 days
 - Tasks blocking other tasks
 - Client requests awaiting response > 24 hours
 - Large, bold, impossible to ignore
 
 **Middle Section - URGENT**:
+
 - Projects with deadlines < 7 days
 - At-risk projects (predicted to miss deadline)
 - High-priority tasks scheduled for today/tomorrow
 
 **Bottom Section - ATTENTION NEEDED**:
+
 - Projects with no activity in 7+ days
 - Tasks scheduled for today but not started
 - Weekly/monthly reviews overdue
 
 **Visual Design**:
+
 - Critical: Pulsing red border, large cards
 - Urgent: Orange/yellow border
 - Attention: Blue border
@@ -664,9 +717,11 @@ DeadlineWidget {
 ### 5. CALENDAR SYSTEM
 
 #### Multi-View Calendar
+
 **Purpose**: Comprehensive time visualization
 
 **Views**:
+
 1. **Day View**: Hourly time blocks with tasks
 2. **Week View**: 7-day overview with time blocks
 3. **Month View**: Monthly calendar with project milestones
@@ -674,6 +729,7 @@ DeadlineWidget {
 5. **Year View**: Annual planning and quarterly themes
 
 **Features**:
+
 - Drag-and-drop time blocking
 - Color-coded by project/client/type
 - Time block templates (save and reuse common patterns)
@@ -683,46 +739,48 @@ DeadlineWidget {
 - Multi-calendar view (personal, client, meetings)
 
 **Calendar Integration**:
+
 - Two-way sync with Google Calendar
 - Import external calendars
-- Export LifeOS events to external calendars
+- Export Baserow events to external calendars
 - Conflict detection
 - Meeting preparation reminders
 
 **Data Model**:
+
 ```typescript
 CalendarEvent {
   id: string
   title: string
   description: string
-  
+
   // Time
   startTime: DateTime
   endTime: DateTime
   allDay: boolean
   timezone: string
-  
+
   // Recurrence
   isRecurring: boolean
   recurrenceRule: string | null // RRULE format
-  
+
   // Relationships
   projectId: string | null
   taskId: string | null
   clientId: string | null
   meetingId: string | null
-  
+
   // Type
   type: "task" | "meeting" | "time_block" | "reminder" | "personal"
-  
+
   // Notifications
   reminders: Reminder[]
-  
+
   // Metadata
   color: string
   location: string | null
   attendees: string[]
-  
+
   // External sync
   externalCalendarId: string | null
   externalEventId: string | null
@@ -735,11 +793,13 @@ CalendarEvent {
 ### 6. ANALYTICS & INSIGHTS
 
 #### Comprehensive Dashboard
+
 **Purpose**: Visual, motivational insights into productivity and well-being
 
 **Key Metrics**:
 
 **Productivity Metrics**:
+
 - Hours worked (total, by project, by client, by type)
 - Tasks completed (daily, weekly, monthly)
 - Projects completed
@@ -749,6 +809,7 @@ CalendarEvent {
 - Revenue generated (from time tracking)
 
 **Progress Metrics**:
+
 - Goal completion rate (annual, quarterly, monthly)
 - Project completion velocity
 - On-time delivery rate
@@ -756,6 +817,7 @@ CalendarEvent {
 - Week-over-week progress
 
 **Energy & Well-being Metrics**:
+
 - Energy levels (morning, afternoon, evening averages)
 - Energy trends over time
 - Burnout risk score
@@ -765,6 +827,7 @@ CalendarEvent {
 - Reading/learning time
 
 **Client Metrics**:
+
 - Active clients
 - Projects per client
 - Revenue per client
@@ -775,11 +838,13 @@ CalendarEvent {
 ---
 
 #### Beautiful, Smooth Graphs
+
 **Purpose**: Visual motivation and insight
 
 **Chart Types & Use Cases**:
 
 **1. Hours Worked - Smooth Line Chart**
+
 - X-axis: Time (days, weeks, months)
 - Y-axis: Hours
 - Multiple lines: Total, Client Work, Personal Projects, Deep Work
@@ -789,6 +854,7 @@ CalendarEvent {
 - Trend line showing trajectory
 
 **2. Energy Levels - Area Chart**
+
 - X-axis: Time (day/week)
 - Y-axis: Energy (1-10)
 - Three stacked areas: Morning, Afternoon, Evening
@@ -797,6 +863,7 @@ CalendarEvent {
 - Burnout warning zone (consistently low energy)
 
 **3. Project Progress - Multi-Bar Chart**
+
 - X-axis: Projects
 - Y-axis: Completion %
 - Grouped bars: Planned completion vs. Actual completion
@@ -804,12 +871,14 @@ CalendarEvent {
 - Deadline indicators
 
 **4. Task Completion - Heatmap Calendar**
+
 - GitHub-style contribution graph
 - Each day colored by tasks completed
 - Streak counter
 - Click to see day details
 
 **5. Focus Quality - Radial/Polar Chart**
+
 - Compare focus quality across different:
   - Times of day
   - Days of week
@@ -818,18 +887,21 @@ CalendarEvent {
 - Find optimal focus patterns
 
 **6. Revenue & Time - Combined Chart**
+
 - Dual Y-axis: Hours (bars) and Revenue (line)
 - Show correlation between time invested and earnings
 - Monthly/quarterly view
 - Forecast projection
 
 **7. Goal Progress - Nested Donut Charts**
+
 - Outer ring: Annual goals
 - Middle ring: Quarterly objectives
 - Inner ring: Monthly targets
 - Interactive: click to drill down
 
 **8. Work-Life Balance - Stacked Bar Chart**
+
 - Daily/weekly view
 - Categories: Client work, Personal projects, Learning, Health, Rest
 - Target line for ideal balance
@@ -838,9 +910,11 @@ CalendarEvent {
 ---
 
 #### Chart Library & Styling
+
 **Recommended**: Recharts or Chart.js with custom theming
 
 **Design Principles**:
+
 - Smooth curves (bezier) over sharp angles
 - Gradient fills for visual appeal
 - Consistent color palette across all charts
@@ -851,6 +925,7 @@ CalendarEvent {
 - Animated transitions (entrance and updates)
 
 **Color Palette for Charts**:
+
 ```typescript
 chartColors = {
   primary: "#6366f1", // Indigo
@@ -858,32 +933,34 @@ chartColors = {
   warning: "#f59e0b", // Amber
   danger: "#ef4444", // Red
   info: "#3b82f6", // Blue
-  
+
   // Multi-line charts
   line1: "#6366f1",
   line2: "#8b5cf6",
   line3: "#ec4899",
   line4: "#f59e0b",
   line5: "#10b981",
-  
+
   // Gradients
   gradient1: "linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%)",
   gradient2: "linear-gradient(180deg, #10b981 0%, #3b82f6 100%)",
-  
+
   // Backgrounds
   gridLines: "rgba(255, 255, 255, 0.1)",
-  chartBackground: "rgba(255, 255, 255, 0.02)"
-}
+  chartBackground: "rgba(255, 255, 255, 0.02)",
+};
 ```
 
 ---
 
 #### Insight Engine (AI-Powered)
+
 **Purpose**: Surface actionable insights automatically
 
 **Automated Insights**:
 
 **Weekly Insights Email/Notification**:
+
 - "You completed 87% of your planned tasks this week! 🎉"
 - "Your energy levels were highest on Tuesday mornings - schedule deep work then."
 - "Project X is at risk: only 30% complete with 2 weeks until deadline."
@@ -891,6 +968,7 @@ chartColors = {
 - "Your focus quality increases 40% when you work in 90-minute blocks."
 
 **Monthly Insights Report**:
+
 - Top achievements
 - Areas for improvement
 - Productivity patterns discovered
@@ -900,6 +978,7 @@ chartColors = {
 - Comparison to previous month
 
 **Predictive Insights**:
+
 - "Based on your current pace, you'll complete Annual Goal #2 by March (2 months early!)"
 - "Client A typically requests revisions on Thursdays - allocate buffer time."
 - "Your energy crashes after 3 consecutive deep work sessions - schedule a break."
@@ -910,17 +989,20 @@ chartColors = {
 ### 7. WELL-BEING & ENERGY MANAGEMENT
 
 #### Energy Tracking System
+
 **Purpose**: Prevent burnout and optimize performance
 
 **Features**:
 
 **Energy Check-ins**:
+
 - Morning: How energized do you feel? (1-10)
 - Afternoon: Energy level check-in
 - Evening: End-of-day energy assessment
 - Track energy alongside hours worked
 
 **Energy Patterns**:
+
 - Visualize energy across:
   - Time of day
   - Days of week
@@ -928,6 +1010,7 @@ chartColors = {
   - Correlation with sleep, exercise, diet (if tracked)
 
 **Burnout Prevention**:
+
 - Calculate burnout risk score based on:
   - Consecutive days worked
   - Hours per week (sustained high hours)
@@ -938,6 +1021,7 @@ chartColors = {
 - Suggest interventions
 
 **Energy Budget**:
+
 - Estimate energy required for upcoming tasks
 - Compare to available energy
 - Warn when overcommitted
@@ -946,11 +1030,13 @@ chartColors = {
 ---
 
 #### Well-being Routines
+
 **Purpose**: Integrate healthy habits into productivity system
 
 **Features**:
 
 **Morning Routine**:
+
 - Wake-up time tracking
 - Morning pages / journaling
 - Gratitude practice (3 things)
@@ -959,6 +1045,7 @@ chartColors = {
 - Intention setting
 
 **Evening Routine**:
+
 - Daily review
   - What went well?
   - What could be improved?
@@ -973,6 +1060,7 @@ chartColors = {
 - Screen time cutoff reminder
 
 **Weekly Review**:
+
 - Review accomplishments
 - Analyze patterns (energy, productivity, focus)
 - Assess goal progress
@@ -981,6 +1069,7 @@ chartColors = {
 - Identify improvements
 
 **Healthy Habits Tracking**:
+
 - Exercise: Type, duration, frequency
 - Reading: Books, articles, time spent
 - Learning: Courses, tutorials, hours
@@ -990,17 +1079,18 @@ chartColors = {
 - Nutrition: Basic tracking (optional)
 
 **Data Model**:
+
 ```typescript
 WellBeingEntry {
   id: string
   date: DateTime
-  
+
   // Energy
   morningEnergy: number | null
   afternoonEnergy: number | null
   eveningEnergy: number | null
   averageEnergy: number // Calculated
-  
+
   // Habits
   exerciseMinutes: number
   exerciseType: string | null
@@ -1009,18 +1099,18 @@ WellBeingEntry {
   meditationMinutes: number
   sleepHours: number | null
   sleepQuality: number | null // 1-10
-  
+
   // Journaling
   morningJournal: string | null
   eveningReflection: string | null
   gratitude: string[]
   dailyWin: string | null
-  
+
   // Mood & Stress
   mood: number // 1-10
   stressLevel: number // 1-10
   focusQuality: number // 1-10
-  
+
   // Notes
   notes: string | null
 }
@@ -1029,11 +1119,13 @@ WellBeingEntry {
 ---
 
 #### Rest & Recovery Recommendations
+
 **Purpose**: Intelligent rest suggestions based on data
 
 **Recommendation Engine**:
 
 **Triggers for "Take a Break" suggestions**:
+
 - Worked 6+ consecutive days
 - Averaged 50+ hours/week for 3+ weeks
 - Energy declining for 5+ consecutive days
@@ -1041,6 +1133,7 @@ WellBeingEntry {
 - High burnout risk score
 
 **Types of Break Suggestions**:
+
 - "Take a day off this week"
 - "Schedule a half-day on Friday"
 - "Consider a long weekend"
@@ -1049,6 +1142,7 @@ WellBeingEntry {
 - "End work 2 hours early today"
 
 **Proactive Calendar Blocking**:
+
 - Automatically suggest free days
 - Block personal time during high-stress periods
 - Protect evenings and weekends
@@ -1059,9 +1153,11 @@ WellBeingEntry {
 ### 8. PERSONAL PROJECTS & LIFE AREAS
 
 #### Personal Project Management
+
 **Purpose**: Balance client work with personal development
 
 **Personal Project Types**:
+
 1. **Business Development**: Marketing, networking, content creation
 2. **Learning**: Courses, reading, skill development
 3. **Side Projects**: Passion projects, experiments
@@ -1071,6 +1167,7 @@ WellBeingEntry {
 7. **Finances**: Budgeting, investing, financial planning
 
 **Separate Metrics**:
+
 - Personal project hours tracked separately
 - Personal goal completion rates
 - Learning hours (e.g., "100 hours of learning in 2026")
@@ -1081,9 +1178,11 @@ WellBeingEntry {
 ---
 
 #### Life Areas Framework
+
 **Purpose**: Holistic life management beyond work
 
 **8 Life Areas** (wheel of life):
+
 1. **Career & Work**: Client projects, income, professional growth
 2. **Learning & Growth**: Skills, knowledge, education
 3. **Health & Energy**: Fitness, nutrition, sleep, energy
@@ -1094,6 +1193,7 @@ WellBeingEntry {
 8. **Contribution**: Giving back, mentoring, volunteering
 
 **Life Area Dashboard**:
+
 - Wheel of Life visualization (radar chart)
 - Rate satisfaction in each area (1-10)
 - Set goals for each area
@@ -1101,6 +1201,7 @@ WellBeingEntry {
 - Balance score (are you neglecting any area?)
 
 **Data Model**:
+
 ```typescript
 LifeArea {
   id: string
@@ -1121,16 +1222,18 @@ LifeArea {
 ### 9. REVIEWS & REFLECTION SYSTEM
 
 #### Daily Review
+
 **Time**: Evening (5-10 minutes)
 
 **Template**:
+
 ```
 Daily Review - [Date]
 
 ✅ Top 3 Accomplishments:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 🎯 Top 3 Priorities Completed:
 □ Priority 1
@@ -1152,9 +1255,9 @@ Evening: [1-10]
 
 
 🙏 3 Things I'm Grateful For:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 🌟 Biggest Win:
 
@@ -1164,17 +1267,19 @@ Evening: [1-10]
 
 ---
 Tomorrow's Top 3:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 ```
 
 ---
 
 #### Weekly Review
+
 **Time**: Sunday evening or Friday afternoon (30-45 minutes)
 
 **Template**:
+
 ```
 Weekly Review - Week [#] of [Year]
 
@@ -1188,24 +1293,24 @@ Weekly Review - Week [#] of [Year]
 
 🎯 GOALS & OUTCOMES
 Top 3 Intended Outcomes:
-1. [✓/✗] 
-2. [✓/✗] 
-3. [✓/✗] 
+1. [✓/✗]
+2. [✓/✗]
+3. [✓/✗]
 
 Completion Rate: [X]%
 
 🏆 WINS & ACHIEVEMENTS
 Major wins this week:
-- 
-- 
-- 
+-
+-
+-
 
 Projects advanced:
-- 
-- 
+-
+-
 
 Skills developed:
-- 
+-
 
 📈 PROGRESS
 Annual Goals Progress:
@@ -1218,20 +1323,20 @@ Quarterly Objectives:
 
 🧠 INSIGHTS & LEARNINGS
 What worked well:
-- 
-- 
+-
+-
 
 What didn't work:
-- 
-- 
+-
+-
 
 Lessons learned:
-- 
-- 
+-
+-
 
 Patterns noticed:
-- 
-- 
+-
+-
 
 ⚡ ENERGY & WELL-BEING
 Average energy: [X]/10
@@ -1241,17 +1346,17 @@ Reading: [X] hours
 Sleep: Avg [X] hours/night
 
 Self-care notes:
-- 
+-
 
 🎯 NEXT WEEK PLANNING
 Top 3 Outcomes for next week:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 Major milestones:
-- 
-- 
+-
+-
 
 Time allocation:
 - Client work: [X] hours
@@ -1260,33 +1365,35 @@ Time allocation:
 - Rest: [X] hours
 
 Anticipated challenges:
-- 
+-
 
 How I'll address them:
-- 
+-
 
 💭 REFLECTIONS
 Overall satisfaction: [X]/10
 
 What I'm grateful for:
-- 
-- 
+-
+-
 
 What I'm looking forward to:
-- 
-- 
+-
+-
 
 Adjustments needed:
-- 
-- 
+-
+-
 ```
 
 ---
 
 #### Monthly Review
+
 **Time**: Last day of month or first day of new month (1-2 hours)
 
 **Template**:
+
 ```
 Monthly Review - [Month] [Year]
 
@@ -1301,28 +1408,28 @@ Monthly Review - [Month] [Year]
 
 🎯 MONTHLY OBJECTIVES
 [List each objective with completion status]
-1. [✓/✗] 
-2. [✓/✗] 
-3. [✓/✗] 
+1. [✓/✗]
+2. [✓/✗]
+3. [✓/✗]
 
 Overall Completion: [X]%
 
 🏆 MAJOR WINS
 Projects Shipped:
-- 
-- 
+-
+-
 
 Milestones Achieved:
-- 
-- 
+-
+-
 
 Skills Developed:
-- 
-- 
+-
+-
 
 Personal Bests:
-- 
-- 
+-
+-
 
 📊 CLIENT WORK ANALYSIS
 Active Clients: [X]
@@ -1332,10 +1439,10 @@ Average Project Value: R[X]
 Client Satisfaction: [X]/10
 
 Top Client:
-- 
+-
 
 Most Profitable Project:
-- 
+-
 
 📈 GOAL PROGRESS
 [For each annual goal, show current %]
@@ -1345,8 +1452,8 @@ Annual Goal 2: [X]% (Target: [X]%)
 On Track / Behind / Ahead
 
 Adjustments Needed:
-- 
-- 
+-
+-
 
 ⚡ ENERGY & HEALTH
 Average Energy: [X]/10
@@ -1360,27 +1467,27 @@ Health Habits:
 - Meditation: [X] sessions
 
 Energy Insights:
-- 
-- 
+-
+-
 
 🧠 KEY LEARNINGS
 What worked exceptionally well:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 What didn't work:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 Systems to implement:
-- 
-- 
+-
+-
 
 Systems to remove:
-- 
-- 
+-
+-
 
 💰 FINANCIAL REVIEW
 Income: R[X]
@@ -1389,25 +1496,25 @@ Profit: R[X]
 Savings Rate: [X]%
 
 Financial Goals Progress:
-- 
-- 
+-
+-
 
 🎯 NEXT MONTH PLANNING
 Theme for Next Month:
 
 
 Top 3 Objectives:
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 Major Projects:
-- 
-- 
+-
+-
 
 Focus Areas:
-- 
-- 
+-
+-
 
 Time Budget:
 - Client work: [X] hours
@@ -1416,8 +1523,8 @@ Time Budget:
 - Rest: [X] hours
 
 Experiments to Try:
-- 
-- 
+-
+-
 
 💭 PERSONAL REFLECTION
 Overall Satisfaction: [X]/10
@@ -1425,45 +1532,47 @@ Mood Trend: [↑/→/↓]
 Stress Level: [X]/10
 
 What I'm proud of:
-- 
-- 
+-
+-
 
 What I'm grateful for:
-- 
-- 
+-
+-
 
 What I want more of:
-- 
-- 
+-
+-
 
 What I want less of:
-- 
-- 
+-
+-
 
 🔮 LOOKING AHEAD
 Upcoming Deadlines (Next 3 Months):
-- 
-- 
+-
+-
 
 Opportunities on the Horizon:
-- 
-- 
+-
+-
 
 Potential Challenges:
-- 
-- 
+-
+-
 
 Preparation Needed:
-- 
-- 
+-
+-
 ```
 
 ---
 
 #### Quarterly Review
+
 **Time**: End of quarter (2-3 hours)
 
 **Template**:
+
 ```
 Quarterly Review - Q[#] [Year]
 
@@ -1491,9 +1600,11 @@ Major Milestones:
 ---
 
 #### Annual Review
+
 **Time**: End of year (4+ hours)
 
 **Template**:
+
 ```
 Annual Review - [Year]
 
@@ -1515,17 +1626,20 @@ Annual Review - [Year]
 ### 10. CAPTURE SYSTEMS (Future AI Integration)
 
 #### Quick Capture Methods
+
 **Purpose**: Never lose an idea, thought, or task
 
 **Capture Types**:
 
 **1. Text Capture**:
+
 - Quick add button (always visible)
 - Keyboard shortcut (Cmd/Ctrl + K)
 - Smart parsing: "Call John tomorrow at 2pm" → Creates task with due date
 - Inbox for processing later
 
 **2. Voice Notes**:
+
 - One-tap recording
 - Automatic transcription (Whisper API or similar)
 - Speaker identification
@@ -1534,6 +1648,7 @@ Annual Review - [Year]
 - Daily journaling via voice
 
 **3. Handwritten Notes** (Future):
+
 - iPad/tablet support with Apple Pencil
 - OCR for handwriting recognition
 - Sketch support
@@ -1541,33 +1656,36 @@ Annual Review - [Year]
 - Convert handwriting to typed text
 
 **4. Email Capture**:
-- Unique email address (e.g., capture@lifeos.app)
+
+- Unique email address (e.g., capture@Baserow.app)
 - Email forwarding creates tasks
 - Parse email for due dates, projects, priorities
 
 **5. Browser Extension** (Future):
+
 - Capture web pages as tasks/notes
 - Save research for projects
 - Bookmark with tagging
 - Screenshot capture
 
 **Data Model**:
+
 ```typescript
 Capture {
   id: string
   type: "text" | "voice" | "handwritten" | "email" | "web" | "image"
   content: string // Raw content
   transcription: string | null // For voice/handwriting
-  
+
   // Metadata
   createdAt: DateTime
   processedAt: DateTime | null
-  
+
   // Processing
   status: "inbox" | "processed" | "archived"
   convertedToTaskId: string | null
   convertedToNoteId: string | null
-  
+
   // AI-extracted data
   suggestedProject: string | null
   suggestedDueDate: DateTime | null
@@ -1579,9 +1697,11 @@ Capture {
 ---
 
 #### Voice Brainstorming Sessions
+
 **Purpose**: Capture free-form thinking and ideation
 
 **Features**:
+
 - Start recording with one tap
 - Unlimited duration
 - Automatic transcription
@@ -1593,6 +1713,7 @@ Capture {
 - AI summarization of key points
 
 **Use Cases**:
+
 - Solo brainstorming
 - Client calls (with permission)
 - Idea generation sessions
@@ -1601,31 +1722,32 @@ Capture {
 - Daily reflections
 
 **Data Model**:
+
 ```typescript
 VoiceSession {
   id: string
   title: string
   duration: number // seconds
   recordedAt: DateTime
-  
+
   // Audio
   audioFileUrl: string
   waveformData: number[] // For visualization
-  
+
   // Transcription
   transcription: string
   speakers: Speaker[] // If multiple people
   timestamps: Timestamp[]
-  
+
   // AI Processing
   summary: string | null
   keyPoints: string[]
   actionItems: Task[]
-  
+
   // Relationships
   projectId: string | null
   tags: string[]
-  
+
   // Status
   processed: boolean
   archivedAt: DateTime | null
@@ -1637,11 +1759,13 @@ VoiceSession {
 ### 11. AI-POWERED FEATURES (Future Phase)
 
 #### AI Research Assistant (via MCP)
+
 **Purpose**: Deep research and strategic planning with AI
 
 **Features**:
 
 **Research Sessions**:
+
 - Ask AI to research topics
 - Multi-step research plans
 - Source aggregation
@@ -1649,12 +1773,14 @@ VoiceSession {
 - Save research to knowledge base
 
 **Strategic Brainstorming**:
+
 - "Help me plan the next quarter"
 - "What's the best approach to [problem]?"
 - "Analyze my productivity data and suggest improvements"
 - Conversational planning sessions
 
 **Project Planning Assistant**:
+
 - Break down complex projects into tasks
 - Estimate time requirements
 - Identify dependencies
@@ -1662,6 +1788,7 @@ VoiceSession {
 - Risk identification
 
 **Content Generation**:
+
 - Blog post outlines
 - Email templates
 - Meeting agendas
@@ -1669,12 +1796,14 @@ VoiceSession {
 - Documentation
 
 **Data Analysis**:
+
 - "Why was I less productive last week?"
 - "What patterns do you see in my energy data?"
 - "Which clients are most profitable?"
 - "Am I on track to hit my annual goals?"
 
 **Implementation**:
+
 - Use Claude MCP servers for research
 - Store AI conversations linked to projects
 - Export AI insights to tasks/notes
@@ -1683,9 +1812,11 @@ VoiceSession {
 ---
 
 #### AI Note-Taking
+
 **Purpose**: Intelligent note organization and retrieval
 
 **Features**:
+
 - Automatic tagging and categorization
 - Smart linking between related notes
 - Summary generation
@@ -1697,11 +1828,13 @@ VoiceSession {
 ### 12. MOBILE-FIRST DESIGN
 
 #### Design Philosophy
+
 **Priority**: Mobile experience is primary, desktop is enhancement
 
 **Mobile Features**:
 
 **Home Screen**:
+
 - Today's top 3 priorities (large, tappable)
 - Quick add button (floating action button)
 - Energy check-in prompt
@@ -1709,6 +1842,7 @@ VoiceSession {
 - Critical deadline warnings
 
 **Quick Actions**:
+
 - Swipe gestures:
   - Swipe right on task: Mark as done
   - Swipe left: Reschedule
@@ -1719,6 +1853,7 @@ VoiceSession {
   - Tap "Done" → Stops timer, marks complete
 
 **Mobile-Optimized Views**:
+
 - Bottom navigation (thumb-friendly)
 - Large touch targets (48x48px minimum)
 - Minimal typing required
@@ -1727,12 +1862,14 @@ VoiceSession {
 - Offline mode with sync
 
 **Mobile Widgets** (iOS/Android):
+
 - Today's top priorities
 - Current time tracking
 - Energy check-in
 - Quick capture
 
 **Progressive Web App (PWA)**:
+
 - Install on home screen
 - Offline functionality
 - Push notifications
@@ -1741,6 +1878,7 @@ VoiceSession {
 ---
 
 #### Responsive Breakpoints
+
 ```
 Mobile: < 640px (primary design)
 Tablet: 640px - 1024px
@@ -1749,6 +1887,7 @@ Large Desktop: > 1440px
 ```
 
 **Mobile-First Components**:
+
 - Collapsible sections
 - Bottom sheets for actions
 - Swipe gestures
@@ -1761,11 +1900,13 @@ Large Desktop: > 1440px
 ### 13. NOTIFICATION & REMINDER SYSTEM
 
 #### Smart Notifications
+
 **Purpose**: Timely reminders without overwhelm
 
 **Notification Types**:
 
 **Time-Based**:
+
 - Task due soon (1 hour, 1 day, 1 week before)
 - Meeting starting in 15 minutes
 - Time block starting in 5 minutes
@@ -1773,6 +1914,7 @@ Large Desktop: > 1440px
 - Weekly review reminder (Sunday/Friday)
 
 **Event-Based**:
+
 - Task status changed by collaborator
 - Client sent a message
 - Project deadline approaching
@@ -1780,6 +1922,7 @@ Large Desktop: > 1440px
 - Weekly goal achievement milestone
 
 **Habit Reminders**:
+
 - Morning routine prompt
 - Evening review prompt
 - Energy check-in
@@ -1787,42 +1930,45 @@ Large Desktop: > 1440px
 - Monthly review
 
 **Smart Scheduling**:
+
 - Learn user's preferred notification times
 - Suppress during focus sessions
 - Batch non-urgent notifications
 - Respect quiet hours
 
 **Notification Preferences**:
+
 - Per-notification-type toggle
 - Quiet hours configuration
 - Urgent-only mode
 - Digest mode (batch into daily summary)
 
 **Data Model**:
+
 ```typescript
 Notification {
   id: string
   type: "task_due" | "meeting_reminder" | "review_prompt" | "achievement" | "warning"
   title: string
   body: string
-  
+
   // Scheduling
   scheduledFor: DateTime
   sentAt: DateTime | null
-  
+
   // Targeting
   userId: string
-  
+
   // Relationships
   taskId: string | null
   projectId: string | null
   meetingId: string | null
-  
+
   // Status
   read: boolean
   dismissed: boolean
   actionTaken: boolean
-  
+
   // Delivery
   channels: ("push" | "email" | "in_app")[]
   priority: "low" | "medium" | "high" | "critical"
@@ -1834,9 +1980,11 @@ Notification {
 ### 14. COLLABORATION & SHARING (Future)
 
 #### Share Progress with Stakeholders
+
 **Purpose**: Keep clients/team updated without overhead
 
 **Features**:
+
 - Public project status pages
 - Shareable weekly progress reports
 - Client-facing dashboards
@@ -1844,6 +1992,7 @@ Notification {
 - Email progress reports
 
 **Client Portal** (Future):
+
 - Clients can view their project status
 - Communication history
 - File sharing
@@ -1857,43 +2006,51 @@ Notification {
 #### Essential Integrations
 
 **Calendar**:
+
 - Google Calendar (two-way sync)
 - Outlook Calendar
 - Apple Calendar
 
 **Email**:
+
 - Gmail API (send emails, read emails)
 - Outlook
 - SMTP for custom domains
 
 **File Storage**:
+
 - Google Drive
 - Dropbox
 - OneDrive
 - Local storage
 
 **Time Tracking**:
+
 - Export to Toggl
 - Export to Harvest
 - CSV export for invoicing
 
 **Accounting**:
+
 - QuickBooks (future)
 - Xero (future)
 - FreshBooks (future)
 
 **Communication**:
+
 - Slack webhooks (send updates)
 - Discord webhooks
 - WhatsApp Business API (future)
 
 **AI & Automation**:
+
 - OpenAI API (GPT-4 for insights)
 - Anthropic Claude (MCP for research)
 - Whisper API (voice transcription)
 - ElevenLabs (voice generation - future)
 
 **Analytics**:
+
 - Google Analytics (product analytics)
 - Mixpanel (user behavior)
 - PostHog (product analytics + session replay)
@@ -1905,6 +2062,7 @@ Notification {
 ### Technology Stack
 
 **Frontend Framework**: Next.js 14+ (App Router)
+
 - Server-side rendering (SSR)
 - React Server Components
 - Server Actions for mutations
@@ -1912,95 +2070,112 @@ Notification {
 - Route interception for modals
 
 **UI Framework**: React 18+
+
 - Concurrent features
 - Suspense for data fetching
 - Transitions API
 - Error boundaries
 
 **Styling**: Tailwind CSS
+
 - Custom design system
 - Dark mode support
 - Responsive utilities
 - Animation utilities
 
 **Component Library**: shadcn/ui
+
 - Accessible components
 - Customizable primitives
 - Radix UI under the hood
 
 **State Management**:
+
 - React Server State (from Next.js)
 - Zustand (client state)
 - React Query / TanStack Query (server state caching)
 
 **Form Handling**:
+
 - React Hook Form
 - Zod validation schemas
 - Type-safe forms
 
 **Charts**: Recharts
+
 - Responsive charts
 - Smooth animations
 - Custom theming
 - Accessible
 
 **Backend**: tRPC
+
 - End-to-end type safety
 - No API boilerplate
 - Real-time subscriptions
 - Batching and caching
 
 **Database**: Neon (Serverless PostgreSQL)
+
 - Serverless, scalable
 - Branching for development
 - Connection pooling
 - Edge-ready
 
 **ORM**: Prisma
+
 - Type-safe database access
 - Schema migrations
 - Prisma Studio for data management
 - Query optimization
 
 **Authentication**: NextAuth.js or Clerk
+
 - Email/password
 - OAuth (Google, GitHub)
 - Session management
 - Role-based access control (future for teams)
 
 **File Storage**: Cloudinary or Vercel Blob
+
 - Image optimization
 - Video storage
 - Audio file storage
 - Transcription storage
 
 **Real-time**: Pusher or Ably
+
 - Real-time updates
 - Presence (who's online - future for teams)
 - Typing indicators (future for team chat)
 
 **Email**: Resend or SendGrid
+
 - Transactional emails
 - Email templates
 - Delivery tracking
 
 **Analytics**:
+
 - Vercel Analytics (web vitals)
 - PostHog (product analytics)
 - Custom event tracking
 
 **AI & ML**:
+
 - OpenAI API (GPT-4, Whisper)
 - Anthropic Claude (via MCP)
 - Vercel AI SDK (streaming, function calling)
 
 **Deployment**: Vercel
+
 - Automatic CI/CD
 - Edge network
 - Preview deployments
 - Environment variables management
 
 **Monitoring**:
+
 - Sentry (error tracking)
 - LogRocket (session replay - optional)
 - Vercel logs
@@ -2019,7 +2194,7 @@ model User {
   name          String
   avatar        String?
   timezone      String    @default("Africa/Johannesburg")
-  
+
   // Relationships
   yearPlans     YearPlan[]
   projects      Project[]
@@ -2027,7 +2202,7 @@ model User {
   clients       Client[]
   timeEntries   TimeEntry[]
   captures      Capture[]
-  
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -2040,12 +2215,12 @@ model YearPlan {
   theme         String
   vision        String    @db.Text
   focusAreas    String[]
-  
+
   quarterPlans  QuarterPlan[]
-  
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2055,12 +2230,12 @@ model QuarterPlan {
   quarter       Int       // 1-4
   theme         String
   objectives    String[]
-  
+
   monthPlans    MonthPlan[]
-  
+
   startDate     DateTime
   endDate       DateTime
-  
+
   yearPlan      YearPlan  @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
 }
 
@@ -2070,12 +2245,12 @@ model MonthPlan {
   month           Int       // 1-12
   year            Int
   objectives      String[]
-  
+
   weekPlans       WeekPlan[]
-  
+
   completionRate  Float     @default(0)
   energyRating    Float?
-  
+
   quarterPlan     QuarterPlan @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
 }
 
@@ -2086,13 +2261,13 @@ model WeekPlan {
   year              Int
   startDate         DateTime
   endDate           DateTime
-  
+
   topOutcomes       String[]
   plannedClientHours Float?
   plannedPersonalHours Float?
-  
+
   dayPlans          DayPlan[]
-  
+
   monthPlan         MonthPlan @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
 }
 
@@ -2100,48 +2275,48 @@ model DayPlan {
   id              String    @id @default(cuid())
   weekPlanId      String
   date            DateTime  @db.Date
-  
+
   topPriorities   String[]  // Task IDs
-  
+
   morningEnergy   Float?
   afternoonEnergy Float?
   eveningEnergy   Float?
-  
+
   dailyWin        String?
   gratitude       String[]
   tomorrowPrep    String[]
-  
+
   timeBlocks      TimeBlock[]
-  
+
   completionRate  Float     @default(0)
-  
+
   weekPlan        WeekPlan  @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
 }
 
 model TimeBlock {
   id              String    @id @default(cuid())
   dayPlanId       String
-  
+
   startTime       DateTime
   endTime         DateTime
   duration        Int       // minutes
-  
+
   type            String    // deep_work, shallow_work, meeting, break, learning, admin
-  
+
   taskId          String?
   projectId       String?
   clientId        String?
-  
+
   actualStartTime DateTime?
   actualEndTime   DateTime?
   actualDuration  Int?
-  
+
   energyBefore    Float?
   energyAfter     Float?
   focusQuality    Float?
-  
+
   notes           String?   @db.Text
-  
+
   dayPlan         DayPlan   @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
   task            Task?     @relation(fields: [taskId], references: [id])
   project         Project?  @relation(fields: [projectId], references: [id])
@@ -2156,40 +2331,40 @@ model Project {
   description         String?   @db.Text
   type                String    // client, personal, life_area, recurring
   status              String    // planning, active, on_hold, completed, cancelled
-  
+
   // Client-specific
   clientId            String?
   billable            Boolean   @default(false)
   hourlyRate          Float?
   budgetHours         Float?
-  
+
   // Timeline
   startDate           DateTime?
   deadline            DateTime?
   estimatedHours      Float?
-  
+
   // Tracking
   actualHoursSpent    Float     @default(0)
   completionPercentage Float    @default(0)
-  
+
   // Relationships
   goalId              String?
   parentProjectId     String?
-  
+
   tasks               Task[]
   timeEntries         TimeEntry[]
   timeBlocks          TimeBlock[]
-  
+
   // Metadata
   priority            String    // critical, high, medium, low
   tags                String[]
   color               String?
-  
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   completedAt         DateTime?
   archivedAt          DateTime?
-  
+
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   client              Client?   @relation(fields: [clientId], references: [id])
 }
@@ -2198,49 +2373,49 @@ model Task {
   id                String    @id @default(cuid())
   userId            String
   projectId         String?
-  
+
   title             String
   description       String?   @db.Text
-  
+
   status            String    @default("not_started") // not_started, in_progress, blocked, done, cancelled
-  
+
   startedAt         DateTime?
   completedAt       DateTime?
-  
+
   // Time tracking
   estimatedMinutes  Int?
   actualMinutes     Int       @default(0)
   timerRunning      Boolean   @default(false)
   currentTimerStart DateTime?
-  
+
   // Scheduling
   scheduledDate     DateTime?
   dueDate           DateTime?
-  
+
   // Organization
   priority          String    // critical, high, medium, low
   type              String    // deep_work, shallow_work, admin, meeting, learning
   tags              String[]
-  
+
   // Relationships
   parentTaskId      String?
   dependsOn         String[]
   blocks            String[]
-  
+
   // Energy
   energyRequired    Float?    // 1-10
-  
+
   // Metadata
   isAdHoc           Boolean   @default(false)
   isRecurring       Boolean   @default(false)
   recurringPattern  String?
-  
+
   timeEntries       TimeEntry[]
   timeBlocks        TimeBlock[]
-  
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  
+
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   project           Project?  @relation(fields: [projectId], references: [id])
 }
@@ -2251,31 +2426,31 @@ model TimeEntry {
   taskId          String?
   projectId       String?
   clientId        String?
-  
+
   startTime       DateTime
   endTime         DateTime?
   duration        Int       // minutes
-  
+
   type            String    // automatic, manual, timer
-  
+
   description     String?   @db.Text
   tags            String[]
-  
+
   // Quality metrics
   focusQuality    Float?
   energyBefore    Float?
   energyAfter     Float?
   distractions    Int       @default(0)
-  
+
   // Billing
   billable        Boolean   @default(false)
   hourlyRate      Float?
   amount          Float     @default(0)
   invoiced        Boolean   @default(false)
-  
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   task            Task?     @relation(fields: [taskId], references: [id])
   project         Project?  @relation(fields: [projectId], references: [id])
@@ -2286,46 +2461,46 @@ model TimeEntry {
 model Client {
   id                  String    @id @default(cuid())
   userId              String
-  
+
   name                String
   companyName         String?
   email               String
   phone               String?
-  
+
   // Contact details
   primaryContact      Json?     // {name, email, phone, role}
   additionalContacts  Json[]    // Array of contacts
-  
+
   // Business
   industry            String?
   website             String?
   timezone            String?
-  
+
   // Relationship
   relationshipHealth  Float?    // 1-10
   lastContactedAt     DateTime?
   preferredCommunication String? // email, phone, slack
-  
+
   // Billing
   defaultHourlyRate   Float?
   paymentTerms        String?
   outstandingBalance  Float     @default(0)
-  
+
   // Metadata
   notes               String?   @db.Text
   tags                String[]
   status              String    @default("active") // active, inactive, archived
-  
+
   projects            Project[]
   timeEntries         TimeEntry[]
   timeBlocks          TimeBlock[]
   communications      Communication[]
   meetings            Meeting[]
-  
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   lastInteractionAt   DateTime?
-  
+
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2333,34 +2508,34 @@ model Communication {
   id              String    @id @default(cuid())
   clientId        String
   projectId       String?
-  
+
   type            String    // email, call, meeting, message
   direction       String    // inbound, outbound
-  
+
   subject         String
   content         String    @db.Text
   summary         String?   @db.Text
-  
+
   // Email specific
   from            String?
   to              String[]
   cc              String[]
   attachments     Json[]
-  
+
   // Meeting specific
   meetingDate     DateTime?
   meetingDuration Int?
   attendees       String[]
   meetingNotes    String?   @db.Text
-  
+
   // Tracking
   sentiment       String?   // positive, neutral, negative
   requiresFollowUp Boolean  @default(false)
   followUpDate    DateTime?
-  
+
   createdAt       DateTime  @default(now())
   responseTime    Int?      // minutes
-  
+
   client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
@@ -2368,35 +2543,35 @@ model Meeting {
   id                String    @id @default(cuid())
   clientId          String?
   projectId         String?
-  
+
   title             String
   description       String?   @db.Text
   type              String    // discovery, check_in, sprint_review, etc.
-  
+
   scheduledAt       DateTime
   duration          Int       // minutes
   timezone          String
-  
+
   // Attendees
   organizer         String
   requiredAttendees String[]
   optionalAttendees String[]
-  
+
   // Location
   location          String?
   meetingLink       String?
-  
+
   // Preparation & Notes
   agenda            String?   @db.Text
   meetingNotes      String?   @db.Text
   actionItems       Json[]
   decisions         String[]
-  
+
   status            String    // scheduled, confirmed, completed, cancelled
-  
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  
+
   client            Client?   @relation(fields: [clientId], references: [id])
 }
 
@@ -2405,13 +2580,13 @@ model WellBeingEntry {
   id                String    @id @default(cuid())
   userId            String
   date              DateTime  @db.Date
-  
+
   // Energy
   morningEnergy     Float?
   afternoonEnergy   Float?
   eveningEnergy     Float?
   averageEnergy     Float?
-  
+
   // Habits
   exerciseMinutes   Int       @default(0)
   exerciseType      String?
@@ -2420,22 +2595,22 @@ model WellBeingEntry {
   meditationMinutes Int       @default(0)
   sleepHours        Float?
   sleepQuality      Float?
-  
+
   // Journaling
   morningJournal    String?   @db.Text
   eveningReflection String?   @db.Text
   gratitude         String[]
   dailyWin          String?
-  
+
   // Mood
   mood              Float?    // 1-10
   stressLevel       Float?    // 1-10
   focusQuality      Float?    // 1-10
-  
+
   notes             String?   @db.Text
-  
+
   createdAt         DateTime  @default(now())
-  
+
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2443,56 +2618,56 @@ model WellBeingEntry {
 model Capture {
   id                String    @id @default(cuid())
   userId            String
-  
+
   type              String    // text, voice, handwritten, email, web, image
   content           String    @db.Text
   transcription     String?   @db.Text
-  
+
   status            String    @default("inbox") // inbox, processed, archived
-  
+
   convertedToTaskId String?
   convertedToNoteId String?
-  
+
   // AI suggestions
   suggestedProject  String?
   suggestedDueDate  DateTime?
   suggestedPriority String?
   tags              String[]
-  
+
   createdAt         DateTime  @default(now())
   processedAt       DateTime?
-  
+
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VoiceSession {
   id              String    @id @default(cuid())
   userId          String
-  
+
   title           String
   duration        Int       // seconds
   recordedAt      DateTime
-  
+
   audioFileUrl    String
   waveformData    Json?
-  
+
   transcription   String?   @db.Text
   speakers        Json[]
   timestamps      Json[]
-  
+
   // AI processing
   summary         String?   @db.Text
   keyPoints       String[]
   actionItems     Json[]
-  
+
   projectId       String?
   tags            String[]
-  
+
   processed       Boolean   @default(false)
   archivedAt      DateTime?
-  
+
   createdAt       DateTime  @default(now())
-  
+
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2500,42 +2675,42 @@ model VoiceSession {
 model CalendarEvent {
   id                  String    @id @default(cuid())
   userId              String
-  
+
   title               String
   description         String?   @db.Text
-  
+
   startTime           DateTime
   endTime             DateTime
   allDay              Boolean   @default(false)
   timezone            String
-  
+
   // Recurrence
   isRecurring         Boolean   @default(false)
   recurrenceRule      String?
-  
+
   // Relationships
   projectId           String?
   taskId              String?
   clientId            String?
   meetingId           String?
-  
+
   type                String    // task, meeting, time_block, reminder, personal
-  
+
   // Notifications
   reminders           Json[]
-  
+
   color               String?
   location            String?
   attendees           String[]
-  
+
   // External sync
   externalCalendarId  String?
   externalEventId     String?
   syncStatus          String?   // synced, pending, error
-  
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  
+
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2543,14 +2718,14 @@ model CalendarEvent {
 model AnalyticsEvent {
   id          String    @id @default(cuid())
   userId      String
-  
+
   eventType   String    // page_view, task_completed, project_created, etc.
   eventData   Json?
-  
+
   sessionId   String?
-  
+
   createdAt   DateTime  @default(now())
-  
+
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 ```
@@ -2653,6 +2828,7 @@ model AnalyticsEvent {
 ### API Design (tRPC Routers)
 
 **Planning Router**:
+
 ```typescript
 // Year planning
 createYearPlan(input: YearPlanInput)
@@ -2683,6 +2859,7 @@ getToday()
 ```
 
 **Project Router**:
+
 ```typescript
 // Projects
 createProject(input: ProjectInput)
@@ -2702,6 +2879,7 @@ predictProjectCompletion(id: string)
 ```
 
 **Task Router**:
+
 ```typescript
 // Tasks
 createTask(input: TaskInput)
@@ -2726,6 +2904,7 @@ getActiveTimer()
 ```
 
 **Time Tracking Router**:
+
 ```typescript
 // Time entries
 createTimeEntry(input: TimeEntryInput)
@@ -2744,6 +2923,7 @@ getRevenueByClient(startDate: Date, endDate: Date)
 ```
 
 **Client Router**:
+
 ```typescript
 // Clients
 createClient(input: ClientInput)
@@ -2770,6 +2950,7 @@ getUpcomingMeetings(clientId?: string)
 ```
 
 **Analytics Router**:
+
 ```typescript
 // Dashboard metrics
 getDashboardMetrics(startDate: Date, endDate: Date)
@@ -2793,6 +2974,7 @@ getBurnoutRisk()
 ```
 
 **Well-being Router**:
+
 ```typescript
 // Well-being entries
 createWellBeingEntry(input: WellBeingInput)
@@ -2816,6 +2998,7 @@ getEnergyOptimizationSuggestions()
 ```
 
 **Review Router**:
+
 ```typescript
 // Reviews
 createDailyReview(input: DailyReviewInput)
@@ -2835,6 +3018,7 @@ getMonthlyReviewTemplate(month: number, year: number)
 ```
 
 **Capture Router**:
+
 ```typescript
 // Quick capture
 quickCapture(content: string, type: CaptureType)
@@ -2856,6 +3040,7 @@ deleteCapture(id: string)
 ```
 
 **Calendar Router**:
+
 ```typescript
 // Events
 createEvent(input: CalendarEventInput)
@@ -2879,6 +3064,7 @@ importExternalCalendar(url: string)
 ### Color Palette
 
 **Primary Colors**:
+
 ```
 Primary: #6366f1 (Indigo) - Main actions, primary buttons, links
 Secondary: #8b5cf6 (Purple) - Secondary actions, accents
@@ -2889,6 +3075,7 @@ Info: #3b82f6 (Blue) - Information, neutral states
 ```
 
 **Semantic Colors**:
+
 ```
 Client Work: #6366f1 (Indigo)
 Personal Projects: #8b5cf6 (Purple)
@@ -2900,6 +3087,7 @@ Meetings: #f59e0b (Amber)
 ```
 
 **Urgency Colors**:
+
 ```
 Critical (< 3 days): #ef4444 (Red) - Pulsing animation
 Urgent (< 7 days): #f59e0b (Amber)
@@ -2909,6 +3097,7 @@ Ahead: #10b981 (Green) - Lighter shade
 ```
 
 **Backgrounds**:
+
 ```
 Light Mode:
   Primary BG: #ffffff
@@ -2926,6 +3115,7 @@ Dark Mode:
 ```
 
 **Text**:
+
 ```
 Light Mode:
   Primary: #0f172a
@@ -2945,6 +3135,7 @@ Dark Mode:
 ### Typography
 
 **Font Family**:
+
 ```
 Display/Headers: "Cal Sans" or "Satoshi" (geometric sans)
 Body: "Inter" or "Plus Jakarta Sans"
@@ -2952,6 +3143,7 @@ Code: "JetBrains Mono"
 ```
 
 **Type Scale**:
+
 ```
 H1: 48px / 56px (3rem / 3.5rem) - font-bold
 H2: 36px / 44px (2.25rem / 2.75rem) - font-bold
@@ -2966,6 +3158,7 @@ Caption: 12px / 16px (0.75rem / 1rem)
 ---
 
 ### Spacing System
+
 ```
 xs: 4px
 sm: 8px
@@ -2983,6 +3176,7 @@ xl: 32px
 ### Component Styles
 
 **Cards**:
+
 ```
 Background: Card BG color
 Border: 1px solid border color
@@ -2995,6 +3189,7 @@ Hover: Shadow increase, slight lift (-2px translateY)
 **Buttons**:
 
 Primary:
+
 ```
 Background: Primary color
 Text: White
@@ -3006,6 +3201,7 @@ Active: Scale 0.98
 ```
 
 Secondary:
+
 ```
 Background: Transparent
 Border: 2px solid primary color
@@ -3014,12 +3210,14 @@ Hover: Background primary, text white
 ```
 
 Danger:
+
 ```
 Background: Danger color
 Text: White
 ```
 
 **Inputs**:
+
 ```
 Background: Input BG
 Border: 1px solid border color
@@ -3033,6 +3231,7 @@ Focus: Border primary color, ring
 ### Animation Principles
 
 **Duration**:
+
 ```
 Instant: 100ms
 Fast: 200ms
@@ -3041,6 +3240,7 @@ Slow: 500ms
 ```
 
 **Easing**:
+
 ```
 In: cubic-bezier(0.4, 0, 1, 1)
 Out: cubic-bezier(0, 0, 0.2, 1)
@@ -3048,6 +3248,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ```
 
 **Effects**:
+
 - Page transitions: Fade + slide up
 - Card hover: Lift + shadow increase
 - Button hover: Scale 1.02
@@ -3060,8 +3261,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ## User Experience Flows
 
 ### Onboarding Flow
+
 1. **Account Creation**: Email/password or OAuth
-2. **Welcome**: Brief intro to LifeOS
+2. **Welcome**: Brief intro to Baserow
 3. **Setup Wizard**:
    - Set timezone
    - Define annual theme and goals (optional)
@@ -3074,6 +3276,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Daily Workflow
+
 1. **Morning**:
    - Open app → Today's view
    - See top 3 priorities
@@ -3098,6 +3301,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Weekly Workflow
+
 1. **Sunday Evening / Monday Morning**:
    - Weekly planning session
    - Review last week's accomplishments
@@ -3117,6 +3321,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ## Success Metrics & KPIs
 
 ### Product Metrics
+
 - **Daily Active Users (DAU)**: Target 80%+ of registered users
 - **Weekly Active Users (WAU)**: Target 95%+
 - **Task Completion Rate**: Average 70%+ of planned tasks
@@ -3125,12 +3330,14 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 - **Client Project On-Time Delivery**: 85%+ on time
 
 ### User Success Metrics
+
 - **Goal Achievement**: Users hitting 70%+ of quarterly goals
 - **Burnout Prevention**: Users maintaining energy > 6/10
 - **Work-Life Balance**: Users achieving planned rest days
 - **Productivity Increase**: 20%+ increase in completed tasks vs. baseline
 
 ### Technical Metrics
+
 - **Page Load Time**: < 1s
 - **Time to Interactive**: < 2s
 - **Lighthouse Score**: 95+
@@ -3142,7 +3349,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ## Development Roadmap
 
 ### Phase 1: MVP (Months 1-2)
+
 **Core Features**:
+
 - User authentication
 - Project & task management
 - Basic time tracking (manual + timer)
@@ -3157,7 +3366,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Phase 2: Enhanced Tracking (Month 3)
+
 **Features**:
+
 - Calendar integration (Google Calendar)
 - Energy tracking
 - Well-being routines
@@ -3171,7 +3382,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Phase 3: Client Management (Month 4)
+
 **Features**:
+
 - Client profiles
 - Email integration (send emails)
 - Meeting scheduler
@@ -3185,7 +3398,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Phase 4: Analytics & Insights (Month 5)
+
 **Features**:
+
 - Advanced charts (all 8 chart types)
 - Energy pattern analysis
 - Burnout risk detection
@@ -3199,7 +3414,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Phase 5: AI Features (Month 6)
+
 **Features**:
+
 - Voice note transcription
 - Quick capture with AI parsing
 - Research assistant (Claude MCP)
@@ -3212,7 +3429,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ---
 
 ### Phase 6: Advanced Features (Month 7+)
+
 **Features**:
+
 - Handwritten note support
 - Advanced voice sessions
 - Team collaboration (multi-user)
@@ -3228,24 +3447,28 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ## Launch Strategy
 
 ### Pre-Launch (Month 1-2)
+
 - Build MVP
 - Private beta with 10-20 users
 - Gather feedback
 - Iterate on core features
 
 ### Soft Launch (Month 3)
+
 - Launch to personal network
 - Create landing page
 - Start blog/content marketing
 - Build in public on Twitter/LinkedIn
 
 ### Public Launch (Month 4-5)
+
 - Product Hunt launch
 - Content marketing push
 - Influencer outreach
 - Community building
 
 ### Growth (Month 6+)
+
 - Paid marketing (if validated)
 - Partnerships
 - Enterprise features
@@ -3258,6 +3481,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ### Pricing Tiers
 
 **Free Tier**:
+
 - 3 active projects
 - 50 tasks/month
 - Basic analytics
@@ -3266,6 +3490,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 - Mobile web access
 
 **Pro Tier** (R199/month or R1,990/year):
+
 - Unlimited projects
 - Unlimited tasks
 - Advanced analytics
@@ -3279,6 +3504,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 - Mobile app access
 
 **Teams Tier** (R499/month or R4,990/year) - Future:
+
 - Everything in Pro
 - Up to 5 team members
 - Shared projects
@@ -3288,6 +3514,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 - API access
 
 **Target**:
+
 - 100 paying users by end of Year 1: R19,900/month = R238,800/year
 - 500 paying users by end of Year 2: R99,500/month = R1,194,000/year
 
@@ -3296,6 +3523,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 ## Final Notes
 
 ### Critical Success Factors
+
 1. **Frictionless mobile experience**: Most usage will be mobile
 2. **Beautiful, motivating design**: Users need to WANT to open the app
 3. **Fast performance**: No lag, instant updates
@@ -3305,6 +3533,7 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 7. **AI that adds value**: Not gimmicks, real productivity gains
 
 ### Differentiation from Competitors
+
 - **Notion**: Less flexible but more opinionated for productivity
 - **Todoist**: More comprehensive (planning, analytics, client management)
 - **ClickUp**: Simpler, more personal, better design
@@ -3312,7 +3541,9 @@ In-Out: cubic-bezier(0.4, 0, 0.2, 1)
 - **Sunsama**: Similar ethos but broader scope (year → day), AI-powered
 
 ### Vision
-LifeOS becomes the operating system for high-achievers and solo entrepreneurs who want to:
+
+Baserow becomes the operating system for high-achievers and solo entrepreneurs who want to:
+
 - Never rely on memory
 - Build systems that execute
 - Track everything that matters
@@ -3338,6 +3569,7 @@ LifeOS becomes the operating system for high-achievers and solo entrepreneurs wh
 12. **Integrate AI Features** (voice, insights)
 
 ### Development Principles
+
 - **Mobile-first**: Design for mobile, enhance for desktop
 - **Offline-capable**: Core features work offline, sync when online
 - **Performance**: < 1s page loads, optimistic UI updates
@@ -3348,4 +3580,4 @@ LifeOS becomes the operating system for high-achievers and solo entrepreneurs wh
 
 ---
 
-This is the complete, comprehensive specification for LifeOS - the ultimate life and productivity management system. Build this, and never rely on memory again. 🚀
+This is the complete, comprehensive specification for Baserow - the ultimate life and productivity management system. Build this, and never rely on memory again. 🚀

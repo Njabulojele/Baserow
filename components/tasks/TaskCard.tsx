@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Pause, Clock, Flag } from "lucide-react";
+import { Play, Pause, Clock, Flag, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -197,8 +197,23 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
               {task.project.name}
             </Badge>
           )}
+          {task.scheduledDate && (
+            <span
+              className="flex items-center gap-1 text-blue-600 dark:text-blue-400"
+              title="Scheduled Date"
+            >
+              <Calendar className="h-3 w-3" />
+              {new Date(task.scheduledDate).toLocaleDateString()}
+            </span>
+          )}
           {task.dueDate && (
-            <span className="flex items-center gap-1">
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                task.dueDate < new Date() && "text-red-500",
+              )}
+              title="Due Date"
+            >
               <Clock className="h-3 w-3" />
               {new Date(task.dueDate).toLocaleDateString()}
             </span>

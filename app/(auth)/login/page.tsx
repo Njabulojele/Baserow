@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignInForm } from "@/components/auth/SignInForm";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
@@ -14,10 +15,8 @@ export default function LoginPage() {
 
         <div className="relative z-10 transition-transform duration-700 hover:scale-105 origin-top-left">
           <div className="flex items-center gap-2 text-2xl font-bold tracking-tighter">
-            <div className="w-8 h-8 rounded bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              L
-            </div>
-            LifeOS
+            <Image src="/logo.png" alt="Baserow" width={32} height={32} />
+            Baserow
           </div>
         </div>
 
@@ -27,12 +26,12 @@ export default function LoginPage() {
           </h1>
           <p className="text-xl text-primary-foreground/90 leading-relaxed theme-transition animate-in slide-in-from-bottom-8 duration-700 delay-100">
             Transform long-term visions into executable daily actions. Join
-            thousands of high-achievers orchestrating their lives with LifeOS.
+            thousands of high-achievers orchestrating their lives with Baserow.
           </p>
         </div>
 
         <div className="relative z-10 flex items-center gap-4 text-sm text-primary-foreground/60">
-          <p>© 2026 LifeOS Inc.</p>
+          <p>© 2026 Baserow Inc.</p>
           <span>•</span>
           <Link href="/privacy" className="hover:text-white transition-colors">
             Privacy
@@ -51,7 +50,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded bg-primary text-white flex items-center justify-center">
               L
             </div>
-            LifeOS
+            Baserow
           </div>
         </div>
 

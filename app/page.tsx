@@ -12,7 +12,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center">
               L
             </div>
-            LifeOS
+            Baserow
           </div>
           <div className="flex items-center gap-4">
             <SignedOut>
@@ -67,7 +67,7 @@ export default function LandingPage() {
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
             Transform long-term visions into executable daily actions. Join
-            thousands of high-achievers orchestrating their lives with LifeOS.
+            thousands of high-achievers orchestrating their lives with Baserow.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
@@ -118,7 +118,7 @@ export default function LandingPage() {
               <span className="text-primary">master your workflow</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Stop switching between five different apps. LifeOS brings your
+              Stop switching between five different apps. Baserow brings your
               goals, tasks, and habits into one unified system.
             </p>
           </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
             <FeatureCard
               icon={<ArrowRight className="w-6 h-6 text-purple-500" />}
               title="Seamless Sync"
-              description="Access your LifeOS from any device. Your data stays in perfect sync everywhere."
+              description="Access your Baserow from any device. Your data stays in perfect sync everywhere."
             />
             <FeatureCard
               icon={<ArrowRight className="w-6 h-6 text-pink-500" />}
@@ -191,10 +191,10 @@ export default function LandingPage() {
             <div className="w-6 h-6 rounded bg-primary/20 text-primary flex items-center justify-center text-xs">
               L
             </div>
-            LifeOS
+            Baserow
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} LifeOS Inc. All rights reserved.
+            © {new Date().getFullYear()} Baserow Inc. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link href="#" className="hover:text-foreground transition-colors">
