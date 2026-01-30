@@ -1,0 +1,127 @@
+"use client";
+
+import * as React from "react";
+import {
+  Calendar,
+  CheckSquare,
+  FolderOpen,
+  Heart,
+  LayoutDashboard,
+  LineChart,
+  Settings,
+  Users,
+} from "lucide-react";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const routes = [
+  {
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    label: "Day Navigation",
+    icon: Calendar,
+    href: "/planning/day",
+  },
+  {
+    label: "Week Planning",
+    icon: LayoutDashboard,
+    href: "/planning/week",
+  },
+  {
+    label: "Tasks",
+    icon: CheckSquare,
+    href: "/tasks",
+  },
+  {
+    label: "Projects",
+    icon: FolderOpen,
+    href: "/projects",
+  },
+  {
+    label: "Calendar",
+    icon: Calendar,
+    href: "/calendar",
+  },
+  {
+    label: "Clients",
+    icon: Users,
+    href: "/clients",
+  },
+  {
+    label: "Analytics",
+    icon: LineChart,
+    href: "/analytics",
+  },
+  {
+    label: "Well-being",
+    icon: Heart,
+    href: "/well-being",
+  },
+  {
+    label: "Settings",
+    icon: Settings,
+    href: "/settings",
+  },
+];
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <div className="flex items-center p-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shrink-0">
+            L
+          </div>
+          <div className="ml-2 flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
+            <span className="font-bold">LifeOS</span>
+            <span className="">v1.0</span>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          {routes.map((item) => (
+            <SidebarMenuItem key={item.label}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                tooltip={item.label}
+              >
+                <Link href={item.href}>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="p-2 flex items-center gap-2">
+          <UserButton showName={false} />
+          <div className="flex flex-col text-sm group-data-[collapsible=icon]:hidden">
+            <span className="font-medium">Account</span>
+          </div>
+        </div>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
