@@ -14,8 +14,10 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 transition-transform duration-700 hover:scale-105 origin-top-left">
-          <div className="flex items-center gap-2 text-2xl font-bold tracking-tighter">
-            <Image src="/logo.png" alt="Baserow" width={32} height={32} />
+          <div className="flex items-center gap-2.5 text-2xl font-bold tracking-tighter leading-none">
+            <div className="relative top-[1px]">
+              <Image src="/logo.png" alt="Baserow" width={32} height={32} />
+            </div>
             Baserow
           </div>
         </div>
@@ -45,17 +47,21 @@ export default function LoginPage() {
 
       {/* Right Column - Form */}
       <div className="flex flex-col items-center justify-center p-8 lg:p-12 relative">
-        <div className="absolute top-8 right-8 lg:hidden">
-          <div className="flex items-center gap-2 text-xl font-bold tracking-tighter text-primary">
-            <div className="w-8 h-8 rounded bg-primary text-white flex items-center justify-center">
-              L
-            </div>
-            Baserow
-          </div>
-        </div>
-
         <div className="w-full max-w-md space-y-8 animate-in fade-in duration-500">
+          {/* Mobile Logo & Welcome */}
           <div className="text-center lg:text-left">
+            <div className="flex lg:hidden items-center justify-center gap-2 mb-8 text-2xl font-bold tracking-tighter text-primary leading-none">
+              <div className="relative top-[1px]">
+                <Image
+                  src="/logo.png"
+                  alt="Baserow"
+                  width={32}
+                  height={32}
+                  className="rounded"
+                />
+              </div>
+              Baserow
+            </div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Welcome back
             </h2>
