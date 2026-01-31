@@ -52,10 +52,69 @@ export const analyticsRouter = router({
       },
     });
 
-    const hoursThisWeek =
-      Math.round(((weekTimeEntries._sum.duration || 0) / 60) * 10) / 10;
+    // Calculate total duration from time entries
+    const timeEntryMinutes = weekTimeEntries._sum.duration || 0;
 
-    // Active timer
+    // Get actualMinutes from tasks worked on this week
+    // We assume tasks updated/completed this week with actualMinutes > 0 represent work done this week.
+    // To avoid massive double counting with TimeEntries (which are creating actualMinutes too),
+    // we take the MAXIMUM of (TimeEntry Sum) vs (Task actualMinutes Sum).
+    // This is heuristic: if you use detailed timers, TimeEntries > actualMinutes (usually, or equal).
+    // If you use "Start/Stop" without timers, actualMinutes > TimeEntry (because TimeEntries might be missing or actualMinutes manually set).
+    // Ideally, we sum TimeEntries + (ActualMinutes of tasks that have NO time entries).
+    // For simplicity and robustness given the current transition:
+    // We'll trust TimeEntries primarily. But if TaskMinutes is significantly higher, we might be missing entries.
+    // Let's Add Task Minutes for tasks completed this week that might not have entries?
+
+    // Better Approach:
+    // Just sum Duration of TimeEntries for "Recorded Sessions".
+    // AND sum `actualMinutes` of tasks completed this week, but only if we think they aren't covered?
+    // Actually, sticking to the user's request: "integrate actualMinutes".
+    // Let's use TimeEntries as base. If TaskMinutes is higher, use TaskMinutes?
+    // No, let's try to be precise.
+
+    // Updated Logic: Use TimeEntries for precision (chart).
+    // For the total "Hours This Week", let's use the aggregated TimeEntries
+    // PLUS any `actualMinutes` from tasks that *started* and *completed* this week (if we can filter).
+
+    // Simplest robust improvement:
+    // Hours = timeEntryMinutes + (taskMinutes - (min(taskMinutes, timeEntries_linked_to_these_tasks)))
+    // Too complex.
+
+    // Let's just use TimeEntries + actualMinutes from tasks that do NOT have time entries.
+    // That requires specific filtering.
+
+    // Fallback for MVP:
+    // Simply use the GREATER of the two values?
+    // No, risk of double counting is high if they match.
+    // Let's assume TimeEntries are the correct way forward.
+    // IF the user says "It doesn't update", maybe they have 0 TimeEntries?
+
+    // If timeEntryMinutes is 0, use taskMinutes.
+    // If timeEntryMinutes > 0, use timeEntryMinutes.
+
+    const weekTasks = await ctx.prisma.task.aggregate({
+      where: {
+        userId: ctx.userId,
+        updatedAt: { gte: weekStart },
+        actualMinutes: { gt: 0 },
+      },
+      _sum: {
+        actualMinutes: true,
+      },
+    });
+
+    const taskMinutes = weekTasks._sum.actualMinutes || 0;
+
+    // Intelligent Merge:
+    // If we have TimeEntries, they are the gold standard.
+    // But if we have High Task Minutes and Low Time Entries, we likely missed recording sessions.
+    // Let's simply take the higher value to ensure we don't UNDERREPORT usage to the user
+    // (better to be slightly optimistic than show 0).
+    const totalMinutes = Math.max(timeEntryMinutes, taskMinutes);
+
+    const hoursThisWeek = Math.round((totalMinutes / 60) * 10) / 10;
+
     const activeTimer = await ctx.prisma.task.findFirst({
       where: {
         userId: ctx.userId,
@@ -85,19 +144,24 @@ export const analyticsRouter = router({
   getProductivityTrends: protectedProcedure
     .input(
       z.object({
-        range: z.enum(["7d", "30d", "90d"]).default("7d"),
+        range: z.enum(["today", "7d", "30d", "90d"]).default("7d"),
       }),
     )
     .query(async ({ ctx, input }) => {
       const today = new Date();
-      today.setHours(23, 59, 59, 999);
+      const now = new Date();
 
+      // If today range, we query everything from the start of today
       const startDate = new Date(today);
-      if (input.range === "7d") startDate.setDate(startDate.getDate() - 7);
-      else if (input.range === "30d")
-        startDate.setDate(startDate.getDate() - 30);
-      else startDate.setDate(startDate.getDate() - 90);
-      startDate.setHours(0, 0, 0, 0);
+      if (input.range === "today") {
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        // For other ranges, we want N points ENDING today
+        // e.g. 7d = Today + last 6 days
+        const days = input.range === "7d" ? 6 : input.range === "30d" ? 29 : 89;
+        startDate.setDate(startDate.getDate() - days);
+        startDate.setHours(0, 0, 0, 0);
+      }
 
       const timeEntries = await ctx.prisma.timeEntry.findMany({
         where: {
@@ -111,19 +175,80 @@ export const analyticsRouter = router({
         orderBy: { startTime: "asc" },
       });
 
-      // Initialize map with all dates in range
+      const completedTasks = await ctx.prisma.task.findMany({
+        where: {
+          userId: ctx.userId,
+          completedAt: { gte: startDate },
+          actualMinutes: { gt: 0 },
+        },
+        select: {
+          completedAt: true,
+          actualMinutes: true,
+        },
+      });
+
+      if (input.range === "today") {
+        // Hourly Map for Today
+        const hourlyMap: Record<string, number> = {};
+        for (let i = 0; i < 24; i++) {
+          hourlyMap[i.toString().padStart(2, "0") + ":00"] = 0;
+        }
+
+        // Fill with TimeEntries
+        timeEntries.forEach((entry) => {
+          const hour = entry.startTime.getHours();
+          const key = hour.toString().padStart(2, "0") + ":00";
+          if (hourlyMap[key] !== undefined) {
+            hourlyMap[key] += entry.duration / 60;
+          }
+        });
+
+        // Fill/Supplement with Task Minutes
+        completedTasks.forEach((task) => {
+          if (!task.completedAt) return;
+          const hour = task.completedAt.getHours();
+          const key = hour.toString().padStart(2, "0") + ":00";
+          if (hourlyMap[key] !== undefined) {
+            // Heuristic: If we have 0 for this hour, use task minutes
+            if (hourlyMap[key] === 0) {
+              hourlyMap[key] += task.actualMinutes / 60;
+            }
+          }
+        });
+
+        return Object.entries(hourlyMap).map(([time, hours]) => ({
+          date: time,
+          hours: Math.round(hours * 10) / 10,
+        }));
+      }
+
+      // Daily Map for 7d, 30d, 90d
       const dailyMap: Record<string, number> = {};
       const currentDate = new Date(startDate);
-      while (currentDate <= today) {
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      while (currentDate <= endOfDay) {
         dailyMap[currentDate.toISOString().split("T")[0]] = 0;
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Fill with data
+      // Fill with TimeEntry data
       timeEntries.forEach((entry) => {
         const dateKey = entry.startTime.toISOString().split("T")[0];
         if (dailyMap[dateKey] !== undefined) {
           dailyMap[dateKey] += entry.duration / 60;
+        }
+      });
+
+      // Supplement with Task data
+      completedTasks.forEach((task) => {
+        if (!task.completedAt) return;
+        const dateKey = task.completedAt.toISOString().split("T")[0];
+        if (dailyMap[dateKey] !== undefined) {
+          if (dailyMap[dateKey] === 0) {
+            dailyMap[dateKey] += task.actualMinutes / 60;
+          }
         }
       });
 

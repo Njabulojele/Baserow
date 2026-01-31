@@ -47,6 +47,8 @@ import {
 import { ClientForm } from "@/components/clients/ClientForm";
 import { CommunicationTimeline } from "@/components/clients/CommunicationTimeline";
 import { CommunicationForm } from "@/components/clients/CommunicationForm";
+import { MeetingList } from "@/components/clients/MeetingList";
+import { MeetingEditor } from "@/components/clients/MeetingEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -62,6 +64,15 @@ export default function ClientDetailPage({
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLogCommOpen, setIsLogCommOpen] = useState(false);
+  const [isMeetingOpen, setIsMeetingOpen] = useState(false);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(
+    null,
+  );
+
+  const handleOpenMeeting = (id?: string) => {
+    setSelectedMeetingId(id || null);
+    setIsMeetingOpen(true);
+  };
 
   const {
     data: client,
@@ -237,6 +248,19 @@ export default function ClientDetailPage({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
+          <DialogContent className="sm:max-w-[700px]">
+            <MeetingEditor
+              clientId={client.id}
+              meetingId={selectedMeetingId}
+              onClose={() => setIsMeetingOpen(false)}
+              onSave={() => {
+                refetch(); // Refetch client to update counts if needed? well meetings are separate
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Separator />
@@ -249,6 +273,10 @@ export default function ClientDetailPage({
             <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
               {client._count?.communications || 0}
             </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="meetings">
+            Meetings
+            {/* We could fetch meeting count if we wanted, or just leave it blank for now */}
           </TabsTrigger>
           <TabsTrigger value="projects">
             Projects
@@ -395,6 +423,7 @@ export default function ClientDetailPage({
               </CardContent>
             </Card>
           )}
+
           <CommunicationTimeline
             communications={communications?.items || []}
             isLoading={commsLoading}
@@ -403,6 +432,14 @@ export default function ClientDetailPage({
                 deleteCommunication.mutate({ id });
               }
             }}
+          />
+        </TabsContent>
+
+        <TabsContent value="meetings" className="space-y-4">
+          <MeetingList
+            clientId={client.id}
+            onSelectMeeting={(id) => handleOpenMeeting(id)}
+            onCreateMeeting={() => handleOpenMeeting()}
           />
         </TabsContent>
 

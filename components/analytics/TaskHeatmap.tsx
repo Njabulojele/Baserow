@@ -64,14 +64,16 @@ export function TaskHeatmap() {
   };
 
   return (
-    <Card className="col-span-full border-border/60">
+    <Card className="col-span-full border-border/60 min-w-0 overflow-hidden">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle>Consistency Graph</CardTitle>
-            <CardDescription>Every contribution counts.</CardDescription>
+            <CardTitle className="text-xl">Consistency Graph</CardTitle>
+            <CardDescription className="text-white-smoke/60">
+              Every contribution counts.
+            </CardDescription>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
             <span>Less</span>
             <div className="flex gap-1">
               <div className="w-3 h-3 rounded-sm bg-muted/40" />

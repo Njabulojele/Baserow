@@ -142,6 +142,29 @@ export const taskRouter = router({
       return ctx.prisma.task.delete({ where: { id: input.id } });
     }),
 
+  // Start working on a task (simple status-based tracking, no timer complexity)
+  startTask: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+      });
+      if (!task || task.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      // Only set startedAt if not already started
+      const startedAt = task.startedAt || new Date();
+
+      return ctx.prisma.task.update({
+        where: { id: input.id },
+        data: {
+          status: "in_progress",
+          startedAt,
+        },
+      });
+    }),
+
   // Start timer on a task
   startTimer: protectedProcedure
     .input(z.object({ id: z.string() }))
@@ -240,6 +263,23 @@ export const taskRouter = router({
             endTime: new Date(),
             duration: additionalMinutes,
             type: "timer",
+          },
+        });
+      } else if (task.startedAt && task.actualMinutes === 0) {
+        // If no timer was used but task was started, calculate from startedAt
+        additionalMinutes = Math.floor(
+          (Date.now() - task.startedAt.getTime()) / 60000,
+        );
+
+        await ctx.prisma.timeEntry.create({
+          data: {
+            userId: ctx.userId,
+            taskId: task.id,
+            projectId: task.projectId,
+            startTime: task.startedAt,
+            endTime: new Date(),
+            duration: additionalMinutes,
+            type: "work_session",
           },
         });
       }

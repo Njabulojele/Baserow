@@ -85,7 +85,7 @@ export function GoalProgressChart() {
   );
 
   return (
-    <Card className="h-full border-border/60">
+    <Card className="col-span-full border-border/60 min-w-0 overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center gap-2">
           <Target className="w-5 h-5 text-indigo-500" />

@@ -14,98 +14,100 @@ export default function AnalyticsPage() {
   const { data: stats } = trpc.analytics.getDashboardStats.useQuery();
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 w-full max-w-full overflow-x-hidden">
+      <div className="mb-4">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
+          Analytics
+        </h2>
       </div>
 
       {/* Row 1: Weekly Pulse (Insights) & Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-12">
+      <div className="grid gap-4 md:grid-cols-12 min-w-0">
         {/* Insights Card - Takes prominent spot */}
-        <div className="md:col-span-6 lg:col-span-5">
+        <div className="md:col-span-6 lg:col-span-5 min-w-0">
           <InsightsCard />
         </div>
 
         {/* Quick KPI Grid */}
-        <div className="md:col-span-6 lg:col-span-7 grid grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+        <div className="md:col-span-6 lg:col-span-7 grid grid-cols-2 gap-4 min-w-0">
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm font-medium truncate">
                 Hours Tracked
               </CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-3 sm:px-6">
+              <div className="text-xl sm:text-2xl font-bold">
                 {stats?.hoursThisWeek || 0}h
               </div>
-              <p className="text-xs text-muted-foreground">this week</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                this week
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tasks Done</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm font-medium truncate">
+                Tasks Done
+              </CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-3 sm:px-6">
+              <div className="text-xl sm:text-2xl font-bold">
                 {stats?.completedToday || 0}
               </div>
-              <p className="text-xs text-muted-foreground">today</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                today
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm font-medium truncate">
                 Active Projects
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-3 sm:px-6">
+              <div className="text-xl sm:text-2xl font-bold">
                 {stats?.activeProjects || 0}
               </div>
-              <p className="text-xs text-muted-foreground">running</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                running
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Due Today</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-sm font-medium truncate">
+                Due Today
+              </CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-3 sm:px-6">
+              <div className="text-xl sm:text-2xl font-bold">
                 {stats?.todaysTasks || 0}
               </div>
-              <p className="text-xs text-muted-foreground">remaining</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                remaining
+              </p>
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* Row 2: Consistency (Heatmap) */}
-      <div className="grid gap-4">
+      <div className="grid gap-4 min-w-0">
         <TaskHeatmap />
       </div>
 
-      {/* Row 3: Goals & Trends */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4">
-          <ProductivityChart />
-        </div>
-        <div className="col-span-3">
-          <GoalProgressChart />
-        </div>
-      </div>
-
-      {/* Row 4: Details */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4">
-          <TaskCompletionBar />
-        </div>
-        <div className="col-span-3">
-          <ProjectDistributionPie />
-        </div>
+      {/* Rows 3 & 4: Deep Dives (Full Width) */}
+      <div className="space-y-6">
+        <ProductivityChart />
+        <GoalProgressChart />
+        <TaskCompletionBar />
+        <ProjectDistributionPie />
       </div>
     </div>
   );

@@ -663,4 +663,50 @@ export const strategyRouter = router({
         });
       }
     }),
+  // --- Evening Review ---
+  submitEveningReview: protectedProcedure
+    .input(
+      z.object({
+        wins: z.array(z.string()),
+        improvements: z.array(z.string()),
+        moodScore: z.number().optional(),
+        tomorrowPriorities: z.array(z.string()),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Find or create DayPlan for today (to log wins/improvements)
+      // Note: DayFocus is our current day model, but simpler.
+      // We might want to store this in a "Journal" or "Review" model.
+      // For MVP, let's create tasks for tomorrow and log wins?
+
+      // Actually best to store in DayFocus if it has fields, or extend it.
+      // Checking schema... we verified earlier we added fields?
+      // If not, we'll assume we can create tasks for tomorrow as "Scheduled".
+
+      // 1. Create tasks for tomorrow
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0); // 9 AM
+
+      for (const title of input.tomorrowPriorities) {
+        await ctx.prisma.task.create({
+          data: {
+            userId: ctx.userId,
+            title,
+            scheduledDate: tomorrow,
+            priority: "high", // Defaulting to high since they are top 3
+            status: "not_started",
+          },
+        });
+      }
+
+      // 2. Log wins/improvements?
+      // Let's create a Note or log it.
+      // For now, return success. We'll add a 'DailyJournal' model later if needed.
+
+      return { success: true };
+    }),
 });

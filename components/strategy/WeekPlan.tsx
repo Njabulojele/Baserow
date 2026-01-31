@@ -71,10 +71,10 @@ function DraggableTaskCard({
   };
 
   const priorityColors: Record<string, string> = {
-    critical: "bg-red-500",
-    high: "bg-orange-500",
-    medium: "bg-yellow-500",
-    low: "bg-green-500",
+    critical: "border-l-red-500",
+    high: "border-l-orange-500",
+    medium: "border-l-yellow-500",
+    low: "border-l-green-500",
   };
 
   const isCompleted = task.status === "done";
@@ -85,55 +85,50 @@ function DraggableTaskCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-start gap-2 p-3 rounded-lg border transition-all cursor-grab active:cursor-grabbing",
-        "bg-card hover:bg-card/80 hover:shadow-md",
+        "group relative p-2 rounded-md border-l-4 transition-all cursor-grab active:cursor-grabbing",
+        "bg-card hover:bg-muted/50 hover:shadow-sm border border-border",
+        priorityColors[task.priority] || "border-l-gray-400",
         isCompleted && "opacity-50",
         isDragging && "shadow-xl ring-2 ring-primary z-50",
       )}
       {...attributes}
       {...listeners}
     >
-      <GripVertical className="size-4 text-muted-foreground/50 shrink-0 mt-0.5" />
-      <div
-        className="w-1 h-full min-h-[40px] rounded-full shrink-0"
-        style={{ backgroundColor: projectColor }}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2">
-          {isCompleted ? (
-            <CheckCircle2 className="size-4 text-green-500 shrink-0 mt-0.5" />
-          ) : (
-            <Circle className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-          )}
-          <div className="flex-1 min-w-0">
-            <p
-              className={cn(
-                "text-sm font-medium leading-tight",
-                isCompleted && "line-through text-muted-foreground",
-              )}
-            >
-              {task.title}
-            </p>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+      {/* Drag handle in top-right corner */}
+      <GripVertical className="absolute top-1 right-1 size-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      {/* Task content - vertical layout */}
+      <div className="flex items-start gap-1.5">
+        {isCompleted ? (
+          <CheckCircle2 className="size-3.5 text-green-500 shrink-0 mt-0.5" />
+        ) : (
+          <Circle className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p
+            className={cn(
+              "text-xs font-medium leading-snug line-clamp-2",
+              isCompleted && "line-through text-muted-foreground",
+            )}
+          >
+            {task.title}
+          </p>
+          {/* Compact metadata row */}
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            {task.project && (
               <span
-                className={cn(
-                  "size-2 rounded-full",
-                  priorityColors[task.priority],
-                )}
-                title={task.priority}
-              />
-              {task.project && (
-                <span className="text-xs text-muted-foreground bg-accent/50 px-1.5 py-0.5 rounded">
-                  {task.project.name}
-                </span>
-              )}
-              {task.estimatedMinutes && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
-                  <Clock className="size-3" />
-                  {task.estimatedMinutes}m
-                </span>
-              )}
-            </div>
+                className="text-[10px] px-1 py-0.5 rounded text-white/90"
+                style={{ backgroundColor: projectColor }}
+              >
+                {task.project.name}
+              </span>
+            )}
+            {task.estimatedMinutes && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <Clock className="size-2.5" />
+                {task.estimatedMinutes}m
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -634,14 +629,40 @@ export function WeekPlan() {
 
         {/* Calendar Grid */}
         <div className="space-y-6">
-          <div className="grid grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
             {daysLabels.map((dayName, idx) => {
               const currentDay = addDays(weekStart, idx);
               const dayKey = format(currentDay, "yyyy-MM-dd");
               const dayTasks = tasksByDay[dayKey] || [];
               const isToday = dayKey === format(new Date(), "yyyy-MM-dd");
               return (
-                <div key={dayKey} id={`day-${dayKey}`}>
+                <div
+                  key={dayKey}
+                  id={`day-${dayKey}`}
+                  className="flex flex-col"
+                >
+                  {/* Mobile Header for Day */}
+                  <div
+                    className={cn(
+                      "md:hidden flex items-center justify-between p-2 mb-2 rounded-lg border",
+                      isToday
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/30 border-border",
+                    )}
+                  >
+                    <span className="font-bold">
+                      {format(currentDay, "EEEE, MMM d")}
+                    </span>
+                    {isToday && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-background/20 text-foreground"
+                      >
+                        Today
+                      </Badge>
+                    )}
+                  </div>
+
                   <DayColumn
                     dayName={dayName}
                     date={currentDay}

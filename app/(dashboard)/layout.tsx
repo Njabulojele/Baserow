@@ -2,6 +2,8 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import Image from "next/image";
 import {
   SidebarProvider,
   SidebarInset,
@@ -47,12 +49,26 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
-          <SidebarTrigger className="-ml-1" />
+        <header className="sticky top-0 z-30 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-md">
+          <SidebarTrigger className="-ml-1 h-9 w-9" />
           <div className="w-px h-4 bg-border mx-2" />
+          <div className="flex items-center gap-2 lg:hidden">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={24}
+              height={24}
+              className="rounded"
+            />
+            <span className="font-bold text-sm tracking-tight text-white-smoke">
+              BaseRow
+            </span>
+          </div>
           {/* Add breadcrumbs here if needed later */}
         </header>
-        <div className="flex-1 space-y-4 p-4">{children}</div>
+        <DashboardShell>
+          <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">{children}</div>
+        </DashboardShell>
       </SidebarInset>
     </SidebarProvider>
   );

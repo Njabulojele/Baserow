@@ -187,19 +187,19 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1.5 text-xs sm:text-sm text-muted-foreground">
           {task.project && (
             <Badge
               variant="outline"
               style={{ borderColor: task.project.color || undefined }}
-              className="text-xs"
+              className="text-[10px] sm:text-xs"
             >
               {task.project.name}
             </Badge>
           )}
           {task.scheduledDate && (
             <span
-              className="flex items-center gap-1 text-blue-600 dark:text-blue-400"
+              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 whitespace-nowrap"
               title="Scheduled Date"
             >
               <Calendar className="h-3 w-3" />
@@ -209,7 +209,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           {task.dueDate && (
             <span
               className={cn(
-                "flex items-center gap-1",
+                "flex items-center gap-1 whitespace-nowrap",
                 task.dueDate < new Date() && "text-red-500",
               )}
               title="Due Date"
@@ -219,7 +219,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
             </span>
           )}
           {task.actualMinutes > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Flag className="h-3 w-3" />
               {formatTime(task.actualMinutes)}
             </span>

@@ -38,6 +38,7 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { EveningReview } from "@/components/dashboard/EveningReview";
 
 interface DayPlanningClientProps {
   initialData: any;
@@ -57,6 +58,7 @@ function getQuadrant(priority: string, dueDate: Date | null, today: Date) {
 export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [quickTask, setQuickTask] = useState("");
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -166,24 +168,26 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
   return (
     <div className="container mx-auto py-6 px-4 space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Day Navigation</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Day Navigation
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             {format(currentDate, "EEEE, MMMM do, yyyy")}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/planning/review">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Link href="/planning/review" className="w-full sm:w-auto">
             <Button
               size="sm"
-              className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-lg"
+              className="w-full bg-linear-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-lg"
             >
               <Heart className="size-4 mr-2" />
               Daily Review
             </Button>
           </Link>
-          <div className="flex items-center gap-1 border rounded-lg p-1">
+          <div className="flex items-center justify-between sm:justify-start gap-1 border rounded-lg p-1 bg-card">
             <Button
               variant="ghost"
               size="icon"
@@ -195,7 +199,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="px-3"
+              className="px-3 text-xs sm:text-sm"
               onClick={() => setCurrentDate(new Date())}
             >
               Today
@@ -209,21 +213,42 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          {format(currentDate, "yyyy-MM-dd") ===
+            format(new Date(), "yyyy-MM-dd") && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto border-indigo-500/30 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+              onClick={() => setIsReviewOpen(true)}
+            >
+              <Moon className="size-4 mr-2" />
+              Evening Review
+            </Button>
+          )}
         </div>
       </div>
 
+      <EveningReview open={isReviewOpen} onOpenChange={setIsReviewOpen} />
+
       {/* Quick Add Bar */}
-      <form onSubmit={handleQuickAdd} className="flex gap-2">
+      <form
+        onSubmit={handleQuickAdd}
+        className="flex flex-col sm:flex-row gap-3"
+      >
         <div className="relative flex-1">
           <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Quick add task... (press Enter)"
+            placeholder="Quick add task..."
             value={quickTask}
             onChange={(e) => setQuickTask(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11 sm:h-10"
           />
         </div>
-        <Button type="submit" disabled={createTaskMutation.isPending}>
+        <Button
+          type="submit"
+          disabled={createTaskMutation.isPending}
+          className="h-11 sm:h-10"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Task
         </Button>
@@ -234,7 +259,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
         {/* Left Column: Metrics & Focus */}
         <div className="lg:col-span-3 space-y-6">
           {/* Today's Metrics */}
-          <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+          <Card className="bg-linear-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-indigo-500" />
@@ -399,7 +424,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
         </div>
 
         {/* Center Column: Priority Matrix & Tasks */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-9 space-y-6">
           {/* Priority Matrix */}
           <Card>
             <CardHeader className="pb-2">
@@ -410,9 +435,9 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
               <CardDescription>Eisenhower Decision Matrix</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Do First */}
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-h-[120px]">
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-h-[100px] sm:min-h-[120px]">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     <span className="text-xs font-semibold text-red-600 uppercase">
@@ -439,11 +464,16 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                         +{quadrants.do.length - 3} more
                       </div>
                     )}
+                    {quadrants.do.length === 0 && (
+                      <div className="text-[10px] italic text-muted-foreground opacity-50">
+                        No critical tasks
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Schedule */}
-                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-h-[120px]">
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-h-[100px] sm:min-h-[120px]">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="h-4 w-4 text-blue-500" />
                     <span className="text-xs font-semibold text-blue-600 uppercase">
@@ -467,11 +497,16 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                         +{quadrants.schedule.length - 3} more
                       </div>
                     )}
+                    {quadrants.schedule.length === 0 && (
+                      <div className="text-[10px] italic text-muted-foreground opacity-50">
+                        Nothing scheduled
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Delegate */}
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 min-h-[120px]">
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 min-h-[100px] sm:min-h-[120px]">
                   <div className="flex items-center gap-2 mb-2">
                     <Play className="h-4 w-4 text-amber-500" />
                     <span className="text-xs font-semibold text-amber-600 uppercase">
@@ -498,11 +533,16 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                         +{quadrants.delegate.length - 3} more
                       </div>
                     )}
+                    {quadrants.delegate.length === 0 && (
+                      <div className="text-[10px] italic text-muted-foreground opacity-50">
+                        Nothing at risk
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Eliminate */}
-                <div className="p-3 rounded-lg bg-gray-500/10 border border-gray-500/20 min-h-[120px]">
+                <div className="p-3 rounded-lg bg-gray-500/10 border border-gray-500/20 min-h-[100px] sm:min-h-[120px]">
                   <div className="flex items-center gap-2 mb-2">
                     <Circle className="h-4 w-4 text-gray-500" />
                     <span className="text-xs font-semibold text-gray-600 uppercase">
@@ -524,6 +564,11 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                     {quadrants.eliminate.length > 3 && (
                       <div className="text-xs text-muted-foreground">
                         +{quadrants.eliminate.length - 3} more
+                      </div>
+                    )}
+                    {quadrants.eliminate.length === 0 && (
+                      <div className="text-[10px] italic text-muted-foreground opacity-50">
+                        Inbox is clear
                       </div>
                     )}
                   </div>
@@ -550,54 +595,6 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                 tasks={dayPlan?.tasks}
                 emptyMessage="No tasks scheduled for today. Add one above!"
               />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column: Time Blocks & Schedule */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Time Blocks */}
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5 text-violet-500" />
-                Time Blocks
-              </CardTitle>
-              <CardDescription>Your scheduled focus time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(dayPlan?.dayPlan?.timeBlocks?.length ?? 0) > 0 ? (
-                <div className="space-y-3">
-                  {dayPlan?.dayPlan?.timeBlocks?.map((block: any) => (
-                    <div
-                      key={block.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border group hover:bg-muted transition-colors"
-                    >
-                      <div className="text-xs font-mono text-muted-foreground w-20 shrink-0">
-                        {format(new Date(block.startTime), "HH:mm")} -{" "}
-                        {format(new Date(block.endTime), "HH:mm")}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {block.task?.title || block.type.replace("_", " ")}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground uppercase">
-                          {block.type}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {block.duration}m
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">
-                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No time blocks planned</p>
-                  <p className="text-xs mt-1">Schedule focused work sessions</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

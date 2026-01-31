@@ -53,40 +53,48 @@ export default function StrategyPage() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Strategy Hub</h2>
+    <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Strategy Hub
+        </h2>
       </div>
 
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-4"
+        className="space-y-6"
       >
-        <TabsList className="grid grid-cols-5 w-full lg:w-[600px]">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="year">Year</TabsTrigger>
-          <TabsTrigger value="quarter">Quarter</TabsTrigger>
-          <TabsTrigger value="month">Month</TabsTrigger>
-          <TabsTrigger value="week">Week</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+          <TabsList className="flex w-full min-w-[500px] sm:min-w-0 sm:grid sm:grid-cols-5 lg:w-[600px]">
+            <TabsTrigger value="overview" className="flex-1">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="year" className="flex-1">
+              Year
+            </TabsTrigger>
+            <TabsTrigger value="quarter" className="flex-1">
+              Quarter
+            </TabsTrigger>
+            <TabsTrigger value="month" className="flex-1">
+              Month
+            </TabsTrigger>
+            <TabsTrigger value="week" className="flex-1">
+              Week
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Year Plan Card */}
-            <Card className="col-span-2 md:col-span-1 lg:col-span-1 bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800">
-              <CardHeader>
+            <Card className="md:col-span-1 lg:col-span-1 bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800">
+              <CardHeader className="space-y-1">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
                     <Target className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     {currentYear} Vision
                   </CardTitle>
-                  <Badge
-                    variant="outline"
-                    className="border-indigo-200 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300"
-                  >
-                    Annual
-                  </Badge>
                 </div>
                 <CardDescription className="text-indigo-600/80 dark:text-indigo-400/80">
                   Long-term direction & focus
@@ -151,19 +159,13 @@ export default function StrategyPage() {
             </Card>
 
             {/* Quarter Plan Card */}
-            <Card className="col-span-2 md:col-span-1 lg:col-span-1 bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
-              <CardHeader>
+            <Card className="md:col-span-1 lg:col-span-1 bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
+              <CardHeader className="space-y-1">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
                     <Layout className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     Q{currentQuarter} Strategy
                   </CardTitle>
-                  <Badge
-                    variant="outline"
-                    className="border-emerald-200 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
-                  >
-                    Q{currentQuarter}
-                  </Badge>
                 </div>
                 <CardDescription className="text-emerald-600/80 dark:text-emerald-400/80">
                   Quarterly objectives (OKRs)
@@ -188,7 +190,7 @@ export default function StrategyPage() {
                         {quarterPlan.objectives.slice(0, 3).map((obj) => (
                           <li key={obj.id} className="flex items-start gap-2">
                             <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5" />
-                            <span className="text-emerald-800 dark:text-emerald-200">
+                            <span className="text-emerald-800 dark:text-emerald-200 line-clamp-2">
                               {obj.title}
                             </span>
                           </li>
@@ -205,15 +207,13 @@ export default function StrategyPage() {
             </Card>
 
             {/* Quick Actions Card */}
-            <Card className="col-span-2 md:col-span-1 lg:col-span-1 border-dashed">
-              <CardHeader>
+            <Card className="md:col-span-1 lg:col-span-1 border-dashed">
+              <CardHeader className="space-y-1">
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-sky-600" />
                   Tactical Focus
                 </CardTitle>
-                <CardDescription>
-                  Quick switch to planning detail
-                </CardDescription>
+                <CardDescription>Planning detail entry points</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
                 <Button

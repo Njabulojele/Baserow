@@ -127,6 +127,13 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
     onSuccess: () => utils.task.getTasks.invalidate(),
   });
 
+  const startTask = trpc.task.startTask.useMutation({
+    onSuccess: () => {
+      toast.success("Started working!");
+      utils.task.getTasks.invalidate();
+    },
+  });
+
   // Group tasks by date
   const groupedTasks = useMemo(() => {
     if (!tasks) return {};
@@ -141,14 +148,19 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
       groups[dateKey].push(task);
     });
 
-    // Sort each group by priority
+    // Sort each group by Status (Pending > Done) then Priority
     Object.keys(groups).forEach((key) => {
       groups[key].sort((a, b) => {
+        // 1. Status: Active first
+        if (a.status === "done" && b.status !== "done") return 1;
+        if (a.status !== "done" && b.status === "done") return -1;
+
+        // 2. Priority: Critical > High > Medium > Low
         const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-        return (
-          (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) -
-          (priorityOrder[b.priority as keyof typeof priorityOrder] || 2)
-        );
+        const pA = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+        const pB = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+
+        return pA - pB;
       });
     });
 
@@ -244,58 +256,70 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-          <CardContent className="pt-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-linear-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
+              <div className="p-2 bg-blue-500/20 rounded-lg shrink-0">
                 <ListTodo className="h-5 w-5 text-blue-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Tasks</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                  Total Tasks
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-          <CardContent className="pt-4">
+        <Card className="bg-linear-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
+              <div className="p-2 bg-green-500/20 rounded-lg shrink-0">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.completed}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">
+                  {stats.completed}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                  Completed
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-          <CardContent className="pt-4">
+        <Card className="bg-linear-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+          <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-lg">
+              <div className="p-2 bg-amber-500/20 rounded-lg shrink-0">
                 <Clock className="h-5 w-5 text-amber-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.inProgress}</p>
-                <p className="text-xs text-muted-foreground">In Progress</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">
+                  {stats.inProgress}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                  In Progress
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20">
-          <CardContent className="pt-4">
+        <Card className="bg-linear-to-br from-red-500/10 to-red-500/5 border-red-500/20">
+          <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/20 rounded-lg">
+              <div className="p-2 bg-red-500/20 rounded-lg shrink-0">
                 <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.overdue}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{stats.overdue}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                  Overdue
+                </p>
               </div>
             </div>
           </CardContent>
@@ -317,24 +341,26 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
 
       {/* Filter Tabs */}
       <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all" className="gap-2">
-            <ListTodo className="h-4 w-4" />
-            All
-          </TabsTrigger>
-          <TabsTrigger value="not_started" className="gap-2">
-            <Circle className="h-4 w-4" />
-            To Do
-          </TabsTrigger>
-          <TabsTrigger value="in_progress" className="gap-2">
-            <Play className="h-4 w-4" />
-            In Progress
-          </TabsTrigger>
-          <TabsTrigger value="done" className="gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Completed
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+          <TabsList className="flex w-full min-w-[360px] sm:min-w-0 sm:grid sm:grid-cols-4">
+            <TabsTrigger value="all" className="flex-1 gap-2">
+              <ListTodo className="h-4 w-4 shrink-0" />
+              <span className="truncate">All</span>
+            </TabsTrigger>
+            <TabsTrigger value="not_started" className="flex-1 gap-2">
+              <Circle className="h-4 w-4 shrink-0" />
+              <span className="truncate">To Do</span>
+            </TabsTrigger>
+            <TabsTrigger value="in_progress" className="flex-1 gap-2">
+              <Play className="h-4 w-4 shrink-0" />
+              <span className="truncate">Active</span>
+            </TabsTrigger>
+            <TabsTrigger value="done" className="flex-1 gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span className="truncate">Done</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value={status} className="space-y-4">
           {dateOrder.length === 0 ? (
@@ -407,7 +433,7 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                               }
                             }}
                             className={cn(
-                              "flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                              "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
                               task.status === "done"
                                 ? "bg-green-500 border-green-500 text-white"
                                 : "border-muted-foreground/30 hover:border-green-500",
@@ -461,35 +487,55 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                                   {task.estimatedMinutes}m
                                 </span>
                               )}
-                              {task.dueDate && (
-                                <span className="text-xs text-muted-foreground">
-                                  Due {format(new Date(task.dueDate), "MMM d")}
+                              {/* Show scheduled or due date with context */}
+                              {(task.scheduledDate || task.dueDate) && (
+                                <span
+                                  className={cn(
+                                    "text-xs text-muted-foreground",
+                                    task.dueDate &&
+                                      new Date(task.dueDate).getTime() <
+                                        new Date().setHours(0, 0, 0, 0) &&
+                                      "text-red-500 font-medium",
+                                  )}
+                                >
+                                  {task.scheduledDate &&
+                                  task.dueDate &&
+                                  new Date(
+                                    task.scheduledDate,
+                                  ).toDateString() !==
+                                    new Date(task.dueDate).toDateString()
+                                    ? `Scheduled • Due ${format(new Date(task.dueDate), "MMM d")}`
+                                    : task.dueDate
+                                      ? `Due ${format(new Date(task.dueDate), "MMM d")}`
+                                      : "Scheduled"}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Timer Button */}
+                          {/* Status Actions */}
                           <div className="flex items-center gap-2">
-                            {task.status !== "done" && (
+                            {task.status === "not_started" && (
                               <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  if (task.timerRunning) {
-                                    stopTimer.mutate({ id: task.id });
-                                  } else {
-                                    startTimer.mutate({ id: task.id });
-                                  }
-                                }}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() =>
+                                  startTask.mutate({ id: task.id })
+                                }
                               >
-                                {task.timerRunning ? (
-                                  <Pause className="h-4 w-4 text-amber-500" />
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
+                                <Play className="h-3 w-3 mr-1" />
+                                Start
                               </Button>
+                            )}
+                            {task.status === "in_progress" && (
+                              <Badge
+                                variant="secondary"
+                                className="bg-blue-500/10 text-blue-500 animate-pulse"
+                              >
+                                <Circle className="h-2 w-2 mr-1 fill-current" />
+                                Working
+                              </Badge>
                             )}
                             {task.actualMinutes > 0 && (
                               <span className="text-xs text-muted-foreground">

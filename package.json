@@ -67,7 +67,8 @@
     "svix": "^1.84.1",
     "tailwind-merge": "^3.4.0",
     "vaul": "^1.1.2",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@prisma/config": "^7.3.0",

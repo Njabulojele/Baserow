@@ -164,37 +164,43 @@ export function CalendarClient() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
+      <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex flex-col">
+        {/* Toolbar - Removed sticky to prevent covering global header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b bg-background gap-3 shrink-0">
+          <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="icon"
+                className="h-8 w-8 sm:h-9 sm:w-9"
                 onClick={() => navigate("prev")}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" onClick={() => navigate("today")}>
+              <Button
+                variant="outline"
+                className="h-8 sm:h-9 text-xs sm:text-sm"
+                onClick={() => navigate("today")}
+              >
                 Today
               </Button>
               <Button
                 variant="outline"
                 size="icon"
+                className="h-8 w-8 sm:h-9 sm:w-9"
                 onClick={() => navigate("next")}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <h2 className="text-xl font-semibold min-w-[200px]">
-              {format(date, view === "day" ? "MMMM do, yyyy" : "MMMM yyyy")}
+            <h2 className="text-lg sm:text-xl font-bold truncate text-white-smoke">
+              {format(date, view === "day" ? "MMMM do" : "MMMM yyyy")}
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px] h-8 sm:h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -207,9 +213,9 @@ export function CalendarClient() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
           {/* Main Calendar Grid */}
-          <div className="flex-1 overflow-auto bg-muted/20 relative">
+          <div className="flex-1 overflow-auto bg-muted/5 relative min-w-0">
             <CalendarView
               view={view}
               date={date}
@@ -218,10 +224,12 @@ export function CalendarClient() {
             />
           </div>
 
-          {/* Unscheduled Sidebar */}
-          <div className="w-80 border-l bg-background flex flex-col overflow-hidden">
+          {/* Unscheduled Sidebar - Desktop Only or Collapsible on Mobile */}
+          <div className="hidden lg:flex w-80 border-l bg-background flex-col overflow-hidden">
             <UnscheduledSidebar />
           </div>
+
+          {/* Mobile Bottom Sheet/Floating Button for Unscheduled could go here if needed */}
         </div>
       </div>
       {/* Drag Overlay for visual feedback */}

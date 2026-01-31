@@ -22,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -83,6 +84,13 @@ const routes = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -97,7 +105,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           />
           <div className="ml-2 flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
             <span className="font-bold">Baserow</span>
-            <span className="">v1.0</span>
+            <span className="text-xs">v1.0</span>
           </div>
         </div>
       </SidebarHeader>
@@ -109,6 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
+                onClick={handleLinkClick}
               >
                 <Link href={item.href}>
                   <item.icon />

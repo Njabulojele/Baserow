@@ -18,6 +18,7 @@ model User {
   analyticsEvents  AnalyticsEvent[]
   calendarEvents   CalendarEvent[]
   captures         Capture[]
+  meetings         Meeting[]
   clients          Client[]
   dayPlans         DayPlan[]
   projects         Project[]
@@ -339,6 +340,8 @@ model Task {
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   timeBlocks        TimeBlock[]
   timeEntries       TimeEntry[]
+  meetingId         String?
+  meeting           Meeting?    @relation(fields: [meetingId], references: [id])
 
   @@index([userId, status])
   @@index([userId, scheduledDate])
@@ -444,11 +447,13 @@ model Meeting {
   projectId         String?
   title             String
   description       String?
-  type              String
+  type              String   @default("meeting")
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   scheduledAt       DateTime
   duration          Int
-  timezone          String
-  organizer         String
+  timezone          String   @default("Africa/Johannesburg")
+  organizer         String   @default("me")
   requiredAttendees String[]
   optionalAttendees String[]
   location          String?
@@ -457,10 +462,11 @@ model Meeting {
   meetingNotes      String?
   actionItems       Json[]
   decisions         String[]
-  status            String
+  status            String   @default("scheduled")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   client            Client?  @relation(fields: [clientId], references: [id])
+  tasks             Task[]
 }
 
 model WellBeingEntry {

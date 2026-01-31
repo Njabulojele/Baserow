@@ -40,11 +40,11 @@ export function UrgencyDashboard() {
 
   return (
     <div className="space-y-4 mb-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="text-lg font-semibold tracking-tight">
           Focus & Attention
         </h3>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           {data.critical.length} Critical · {data.urgent.length} Urgent
         </span>
       </div>

@@ -47,7 +47,7 @@ export function ProjectDistributionPie() {
 
   if (isLoading) {
     return (
-      <Card className="col-span-4 lg:col-span-3">
+      <Card className="col-span-full min-w-0 overflow-hidden">
         <CardHeader>
           <Skeleton className="h-6 w-48 mb-2" />
           <Skeleton className="h-4 w-64" />
@@ -60,15 +60,15 @@ export function ProjectDistributionPie() {
   }
 
   return (
-    <Card className="col-span-4 lg:col-span-3">
-      <CardHeader>
-        <CardTitle>Project Distribution</CardTitle>
-        <CardDescription>
-          Time spent across your projects (all time).
+    <Card className="col-span-4 lg:col-span-3 min-w-0 overflow-hidden">
+      <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+        <CardTitle className="text-xl">Project Distribution</CardTitle>
+        <CardDescription className="text-white-smoke/60">
+          Time spent across your projects.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
+      <CardContent className="p-2 sm:p-6 shrink-0 min-h-0">
+        <div className="h-[400px] sm:h-[450px] w-full min-w-0">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -76,31 +76,43 @@ export function ProjectDistributionPie() {
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
+                  innerRadius={70}
+                  outerRadius={100}
                   paddingAngle={2}
                   dataKey="hours"
+                  strokeWidth={0}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.fill}
-                      strokeWidth={0}
-                    />
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [
-                    `${value} hours`,
-                    "Time Spent",
-                  ]}
-                  contentStyle={{ borderRadius: "8px" }}
+                  formatter={(value: number) => [`${value}h`, "Tracked"]}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    backgroundColor: "hsl(var(--background))",
+                    borderColor: "hsl(var(--border))",
+                    fontSize: "12px",
+                  }}
                 />
                 <Legend
-                  layout="vertical"
-                  verticalAlign="middle"
-                  align="right"
-                  wrapperStyle={{ fontSize: "12px" }}
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="center"
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{
+                    fontSize: "11px",
+                    paddingTop: "30px",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  formatter={(value) => (
+                    <span className="text-muted-foreground truncate max-w-[80px] sm:max-w-[120px]">
+                      {value}
+                    </span>
+                  )}
                 />
               </PieChart>
             </ResponsiveContainer>
