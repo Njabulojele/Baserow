@@ -373,65 +373,62 @@ export const planningRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { weekStart, ...data } = input;
-      const normalizedWeekStart = startOfWeek(weekStart, { weekStartsOn: 1 });
-      normalizedWeekStart.setUTCHours(0, 0, 0, 0);
+      try {
+        const { weekStart, ...data } = input;
+        const normalizedWeekStart = startOfWeek(weekStart, { weekStartsOn: 1 });
+        normalizedWeekStart.setUTCHours(0, 0, 0, 0);
 
-      const weekEnd = endOfWeek(normalizedWeekStart, { weekStartsOn: 1 });
-      weekEnd.setUTCHours(23, 59, 59, 999);
+        const weekEnd = endOfWeek(normalizedWeekStart, { weekStartsOn: 1 });
+        weekEnd.setUTCHours(23, 59, 59, 999);
 
-      const existingPlan = await ctx.prisma.weekPlan.findFirst({
-        where: {
-          userId: ctx.userId,
-          startDate: { gte: normalizedWeekStart },
-          endDate: { lte: weekEnd },
-        },
-      });
-
-      if (existingPlan) {
-        return ctx.prisma.weekPlan.update({
-          where: { id: existingPlan.id },
-          data,
-        });
-      }
-
-      // Find or create YearPlan -> QuarterPlan -> MonthPlan
-      let yearPlan = await ctx.prisma.yearPlan.findFirst({
-        where: {
-          userId: ctx.userId,
-          year: normalizedWeekStart.getUTCFullYear(),
-        },
-      });
-
-      if (!yearPlan) {
-        yearPlan = await ctx.prisma.yearPlan.create({
-          data: {
+        // Check for existing plan first (Plan C: Explicit check + update)
+        const existingPlan = await ctx.prisma.weekPlan.findFirst({
+          where: {
             userId: ctx.userId,
-            year: normalizedWeekStart.getUTCFullYear(),
-            theme: "New Year",
-            vision: "A successful year",
+            startDate: { gte: normalizedWeekStart },
+            endDate: { lte: weekEnd },
           },
         });
-      }
 
-      const quarter = Math.floor(normalizedWeekStart.getUTCMonth() / 3) + 1;
-      let quarterPlan = await ctx.prisma.quarterPlan.findFirst({
-        where: { yearPlanId: yearPlan.id, quarter },
-      });
+        if (existingPlan) {
+          return await ctx.prisma.weekPlan.update({
+            where: { id: existingPlan.id },
+            data,
+          });
+        }
 
-      if (!quarterPlan) {
-        const qStart = new Date(
-          normalizedWeekStart.getUTCFullYear(),
-          (quarter - 1) * 3,
-          1,
-        );
-        const qEnd = new Date(
-          normalizedWeekStart.getUTCFullYear(),
-          quarter * 3,
-          0,
-        );
-        quarterPlan = await ctx.prisma.quarterPlan.create({
-          data: {
+        // Find or create YearPlan -> QuarterPlan -> MonthPlan
+        const year = normalizedWeekStart.getUTCFullYear();
+        const yearPlan = await ctx.prisma.yearPlan.upsert({
+          where: {
+            userId_year: {
+              userId: ctx.userId,
+              year,
+            },
+          },
+          update: {},
+          create: {
+            userId: ctx.userId,
+            year,
+            theme: "New Year",
+            vision: "A successful year",
+            focusAreas: [],
+          },
+        });
+
+        const quarter = Math.floor(normalizedWeekStart.getUTCMonth() / 3) + 1;
+        const qStart = new Date(year, (quarter - 1) * 3, 1);
+        const qEnd = new Date(year, quarter * 3, 0);
+
+        const quarterPlan = await ctx.prisma.quarterPlan.upsert({
+          where: {
+            yearPlanId_quarter: {
+              yearPlanId: yearPlan.id,
+              quarter,
+            },
+          },
+          update: {},
+          create: {
             yearPlanId: yearPlan.id,
             quarter,
             theme: `Quarter ${quarter}`,
@@ -439,37 +436,46 @@ export const planningRouter = router({
             endDate: qEnd,
           },
         });
-      }
 
-      let monthPlan = await ctx.prisma.monthPlan.findFirst({
-        where: {
-          quarterPlanId: quarterPlan.id,
-          month: normalizedWeekStart.getUTCMonth() + 1,
-          year: normalizedWeekStart.getUTCFullYear(),
-        },
-      });
-
-      if (!monthPlan) {
-        monthPlan = await ctx.prisma.monthPlan.create({
-          data: {
+        const month = normalizedWeekStart.getUTCMonth() + 1;
+        const monthPlan = await ctx.prisma.monthPlan.upsert({
+          where: {
+            quarterPlanId_month: {
+              quarterPlanId: quarterPlan.id,
+              month,
+            },
+          },
+          update: {},
+          create: {
             quarterPlanId: quarterPlan.id,
-            month: normalizedWeekStart.getUTCMonth() + 1,
-            year: normalizedWeekStart.getUTCFullYear(),
+            month,
+            year,
+            objectives: [],
           },
         });
-      }
 
-      return ctx.prisma.weekPlan.create({
-        data: {
-          ...data,
-          userId: ctx.userId,
-          monthPlanId: monthPlan.id,
-          weekNumber: 1, // Simple fallback
-          year: normalizedWeekStart.getUTCFullYear(),
-          startDate: normalizedWeekStart,
-          endDate: weekEnd,
-        },
-      });
+        return await ctx.prisma.weekPlan.create({
+          data: {
+            ...data,
+            userId: ctx.userId,
+            monthPlanId: monthPlan.id,
+            weekNumber: 1, // Simple fallback
+            year,
+            startDate: normalizedWeekStart,
+            endDate: weekEnd,
+            topOutcomes: data.topOutcomes || [],
+            keyWins: data.keyWins || [],
+            challenges: data.challenges || [],
+            lessonsLearned: data.lessonsLearned || [],
+          },
+        });
+      } catch (error: any) {
+        console.error("Error in upsertWeekPlan:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to save week plan",
+        });
+      }
     }),
 
   // Update a day plan (for setting daily win, priorities etc)

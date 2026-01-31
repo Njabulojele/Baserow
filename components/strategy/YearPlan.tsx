@@ -38,6 +38,7 @@ import {
   Circle,
   Flag,
   Milestone as MilestoneIcon,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,6 +63,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 const yearPlanSchema = z.object({
@@ -99,6 +101,7 @@ const statusColors = {
 export function YearPlan() {
   const currentYear = new Date().getFullYear();
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<any>(null);
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
 
   const utils = trpc.useUtils();
@@ -128,6 +131,9 @@ export function YearPlan() {
   const updateGoal = trpc.strategy.updateGoal.useMutation({
     onSuccess: () => {
       toast.success("Goal updated");
+      setIsGoalDialogOpen(false);
+      setEditingGoal(null);
+      goalForm.reset();
       utils.strategy.getYearPlan.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -195,6 +201,34 @@ export function YearPlan() {
       return;
     }
 
+    if (editingGoal) {
+      updateGoal.mutate({
+        id: editingGoal.id,
+        data: {
+          title: values.title,
+          description: values.description,
+          category: values.category,
+          priority: values.priority,
+          targetDate: values.targetDate
+            ? new Date(values.targetDate)
+            : undefined,
+          strategies: values.strategies
+            ?.split("\n")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          kpis: values.kpis
+            ?.split("\n")
+            .map((k) => k.trim())
+            .filter(Boolean),
+          risks: values.risks
+            ?.split("\n")
+            .map((r) => r.trim())
+            .filter(Boolean),
+        },
+      });
+      return;
+    }
+
     const milestones = values.milestones
       ?.split("\n")
       .map((m) => m.trim())
@@ -222,6 +256,40 @@ export function YearPlan() {
         .filter(Boolean),
       milestones,
     });
+  }
+
+  function handleEditGoal(goal: any) {
+    setEditingGoal(goal);
+    goalForm.reset({
+      title: goal.title,
+      description: goal.description || "",
+      category: goal.category,
+      priority: goal.priority,
+      targetDate: goal.targetDate
+        ? new Date(goal.targetDate).toISOString().split("T")[0]
+        : "",
+      strategies: goal.strategies?.join("\n") || "",
+      kpis: goal.kpis?.join("\n") || "",
+      risks: goal.risks?.join("\n") || "",
+      milestones: goal.milestones?.map((m: any) => m.title).join("\n") || "",
+    });
+    setIsGoalDialogOpen(true);
+  }
+
+  function handleAddGoal() {
+    setEditingGoal(null);
+    goalForm.reset({
+      title: "",
+      description: "",
+      category: "career",
+      priority: "medium",
+      targetDate: "",
+      strategies: "",
+      kpis: "",
+      risks: "",
+      milestones: "",
+    });
+    setIsGoalDialogOpen(true);
   }
 
   function toggleGoalExpanded(goalId: string) {
@@ -438,13 +506,15 @@ export function YearPlan() {
             </div>
             <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" onClick={handleAddGoal}>
                   <Plus className="mr-2 h-4 w-4" /> Add Goal
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add Annual Goal</DialogTitle>
+                  <DialogTitle>
+                    {editingGoal ? "Edit Annual Goal" : "Add Annual Goal"}
+                  </DialogTitle>
                 </DialogHeader>
                 <Form {...goalForm}>
                   <form
@@ -654,7 +724,7 @@ export function YearPlan() {
                       {addGoal.isPending && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Add Goal
+                      {editingGoal ? "Save Changes" : "Add Goal"}
                     </Button>
                   </form>
                 </Form>
@@ -738,6 +808,17 @@ export function YearPlan() {
                             <Button
                               size="icon"
                               variant="ghost"
+                              className="h-8 w-8 text-muted-foreground opacity-50 hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditGoal(goal);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
                               className="h-8 w-8 text-destructive opacity-50 hover:opacity-100"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -755,147 +836,153 @@ export function YearPlan() {
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="p-4 pt-0 border-t bg-muted/20 space-y-4">
-                          {goal.description && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-1">
-                                Description
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {goal.description}
-                              </p>
-                            </div>
-                          )}
+                        <div className="border-t bg-muted/20">
+                          <ScrollArea className="h-[400px] w-full rounded-b-lg">
+                            <div className="p-4 space-y-4">
+                              {goal.description && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-1">
+                                    Description
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {goal.description}
+                                  </p>
+                                </div>
+                              )}
 
-                          {/* Progress Slider */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">
-                              Progress
-                            </h4>
-                            <div className="flex items-center gap-4">
-                              <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={goal.progress || 0}
-                                onChange={(e) =>
-                                  handleProgressChange(
-                                    goal.id,
-                                    parseInt(e.target.value),
-                                  )
-                                }
-                                className="flex-1 accent-primary"
-                              />
-                              <span className="text-sm font-medium w-12">
-                                {goal.progress || 0}%
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Strategies */}
-                          {goal.strategies?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-blue-500" />
-                                Strategies
-                              </h4>
-                              <ul className="space-y-1">
-                                {goal.strategies.map((s: string, i: number) => (
-                                  <li
-                                    key={i}
-                                    className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-500/30"
-                                  >
-                                    {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* KPIs */}
-                          {goal.kpis?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                <Target className="h-4 w-4 text-green-500" />
-                                Key Performance Indicators
-                              </h4>
-                              <ul className="space-y-1">
-                                {goal.kpis.map((k: string, i: number) => (
-                                  <li
-                                    key={i}
-                                    className="text-sm text-muted-foreground pl-4 border-l-2 border-green-500/30"
-                                  >
-                                    {k}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Risks */}
-                          {goal.risks?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                Risks
-                              </h4>
-                              <ul className="space-y-1">
-                                {goal.risks.map((r: string, i: number) => (
-                                  <li
-                                    key={i}
-                                    className="text-sm text-muted-foreground pl-4 border-l-2 border-amber-500/30"
-                                  >
-                                    {r}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Milestones */}
-                          {goal.milestones?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                <MilestoneIcon className="h-4 w-4 text-purple-500" />
-                                Milestones
-                              </h4>
-                              <ul className="space-y-2">
-                                {goal.milestones.map((m: any) => (
-                                  <li
-                                    key={m.id}
-                                    className="flex items-center gap-2 text-sm cursor-pointer"
-                                    onClick={() =>
-                                      updateMilestone.mutate({
-                                        id: m.id,
-                                        completed: !m.completed,
-                                      })
+                              {/* Progress Slider */}
+                              <div>
+                                <h4 className="text-sm font-medium mb-2">
+                                  Progress
+                                </h4>
+                                <div className="flex items-center gap-4">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={goal.progress || 0}
+                                    onChange={(e) =>
+                                      handleProgressChange(
+                                        goal.id,
+                                        parseInt(e.target.value),
+                                      )
                                     }
-                                  >
-                                    {m.completed ? (
-                                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <Circle className="h-4 w-4 text-muted-foreground" />
+                                    className="flex-1 accent-primary"
+                                  />
+                                  <span className="text-sm font-medium w-12">
+                                    {goal.progress || 0}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Strategies */}
+                              {goal.strategies?.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                                    Strategies
+                                  </h4>
+                                  <ul className="space-y-1">
+                                    {goal.strategies.map(
+                                      (s: string, i: number) => (
+                                        <li
+                                          key={i}
+                                          className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-500/30"
+                                        >
+                                          {s}
+                                        </li>
+                                      ),
                                     )}
-                                    <span
-                                      className={cn(
-                                        m.completed &&
-                                          "line-through text-muted-foreground",
-                                      )}
-                                    >
-                                      {m.title}
-                                    </span>
-                                    {m.targetDate && (
-                                      <span className="text-xs text-muted-foreground ml-auto">
-                                        {new Date(
-                                          m.targetDate,
-                                        ).toLocaleDateString()}
-                                      </span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* KPIs */}
+                              {goal.kpis?.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-green-500" />
+                                    Key Performance Indicators
+                                  </h4>
+                                  <ul className="space-y-1">
+                                    {goal.kpis.map((k: string, i: number) => (
+                                      <li
+                                        key={i}
+                                        className="text-sm text-muted-foreground pl-4 border-l-2 border-green-500/30"
+                                      >
+                                        {k}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Risks */}
+                              {goal.risks?.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    Risks
+                                  </h4>
+                                  <ul className="space-y-1">
+                                    {goal.risks.map((r: string, i: number) => (
+                                      <li
+                                        key={i}
+                                        className="text-sm text-muted-foreground pl-4 border-l-2 border-amber-500/30"
+                                      >
+                                        {r}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Milestones */}
+                              {goal.milestones?.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                    <MilestoneIcon className="h-4 w-4 text-purple-500" />
+                                    Milestones
+                                  </h4>
+                                  <ul className="space-y-2">
+                                    {goal.milestones.map((m: any) => (
+                                      <li
+                                        key={m.id}
+                                        className="flex items-center gap-2 text-sm cursor-pointer"
+                                        onClick={() =>
+                                          updateMilestone.mutate({
+                                            id: m.id,
+                                            completed: !m.completed,
+                                          })
+                                        }
+                                      >
+                                        {m.completed ? (
+                                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                        ) : (
+                                          <Circle className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                        <span
+                                          className={cn(
+                                            m.completed &&
+                                              "line-through text-muted-foreground",
+                                          )}
+                                        >
+                                          {m.title}
+                                        </span>
+                                        {m.targetDate && (
+                                          <span className="text-xs text-muted-foreground ml-auto">
+                                            {new Date(
+                                              m.targetDate,
+                                            ).toLocaleDateString()}
+                                          </span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </ScrollArea>
                         </div>
                       </CollapsibleContent>
                     </div>
