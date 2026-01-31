@@ -793,6 +793,7 @@ export const strategyRouter = router({
             scheduledDate: tomorrow,
             priority: "high", // Defaulting to high since they are top 3
             status: "not_started",
+            type: "deep_work",
           },
         });
       }
