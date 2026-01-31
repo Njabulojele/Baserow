@@ -38,7 +38,9 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+// import { toast } from "sonner";
 import { EveningReview } from "@/components/dashboard/EveningReview";
+import { NoteEditor } from "@/components/notes/NoteEditor";
 
 interface DayPlanningClientProps {
   initialData: any;
@@ -225,6 +227,11 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
               Evening Review
             </Button>
           )}
+
+          <NoteEditor
+            dayPlanId={dayPlan?.dayPlan?.id}
+            title={format(currentDate, "MMM do")}
+          />
         </div>
       </div>
 

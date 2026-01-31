@@ -22,6 +22,7 @@ import { YearPlan } from "@/components/strategy/YearPlan";
 import { QuarterPlan } from "@/components/strategy/QuarterPlan";
 import { MonthPlan } from "@/components/strategy/MonthPlan";
 import { WeekPlan } from "@/components/strategy/WeekPlan";
+import { StrategyAnalytics } from "@/components/strategy/StrategyAnalytics";
 
 export default function StrategyPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -86,6 +87,7 @@ export default function StrategyPage() {
         </div>
 
         <TabsContent value="overview" className="space-y-6">
+          <StrategyAnalytics />
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Year Plan Card */}
             <Card className="md:col-span-1 lg:col-span-1 bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800">

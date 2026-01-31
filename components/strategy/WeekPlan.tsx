@@ -28,6 +28,7 @@ import {
   GripVertical,
   Circle,
   Badge,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,10 +154,25 @@ function DayColumn({
     <div className="flex flex-col h-full">
       <div
         className={cn(
-          "p-3 rounded-t-lg text-center border-b transition-colors shrink-0",
+          "p-3 rounded-t-lg text-center border-b transition-colors shrink-0 relative group",
           isToday ? "bg-primary/20 border-primary" : "bg-card/50 border-muted",
         )}
       >
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <TaskForm
+            defaultDate={date}
+            onSuccess={() => {}}
+            trigger={
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            }
+          />
+        </div>
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {dayName}
         </div>
@@ -476,9 +492,28 @@ export function WeekPlan() {
                       <DialogTitle>Select Monthly Focus</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-2 mt-2">
-                      {availableFocuses?.length === 0 ? (
+                      {monthFocuses?.length === 0 ? (
                         <div className="text-center py-4 text-muted-foreground text-sm">
-                          No available monthly focuses.
+                          <p>
+                            No monthly focuses found for{" "}
+                            <span className="font-semibold">
+                              {format(weekStart, "MMMM")}
+                            </span>
+                            .
+                          </p>
+                          <p className="text-xs mt-1">
+                            Add them in your Month Plan first.
+                          </p>
+                        </div>
+                      ) : availableFocuses?.length === 0 ? (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          <p>
+                            All{" "}
+                            <span className="font-semibold">
+                              {format(weekStart, "MMMM")}
+                            </span>{" "}
+                            focuses are already linked.
+                          </p>
                         </div>
                       ) : (
                         availableFocuses?.map((mf) => (

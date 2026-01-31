@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import {
+  recalculateGoalProgress,
+  recalculateKeyStepProgress,
+} from "../progress-utils";
 
 export const strategyRouter = router({
   // --- Year Plans ---
@@ -19,6 +23,10 @@ export const strategyRouter = router({
           goals: {
             include: {
               milestones: true,
+              keySteps: {
+                include: { tasks: true },
+                orderBy: { order: "asc" },
+              },
               quarterFocuses: true,
             },
           },
@@ -204,6 +212,92 @@ export const strategyRouter = router({
     .mutation(async ({ ctx, input }) => {
       return await ctx.prisma.milestone.delete({
         where: { id: input.id },
+      });
+    }),
+
+  // --- KeySteps ---
+
+  createKeyStep: protectedProcedure
+    .input(
+      z.object({
+        goalId: z.string(),
+        title: z.string(),
+        description: z.string().optional(),
+        order: z.number().optional(),
+        targetDate: z.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const keyStep = await ctx.prisma.keyStep.create({
+        data: input,
+      });
+
+      // Recalculate goal progress as total steps changed
+      await recalculateGoalProgress(ctx.prisma, input.goalId);
+
+      return keyStep;
+    }),
+
+  updateKeyStep: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        completed: z.boolean().optional(),
+        progress: z.number().min(0).max(100).optional(),
+        targetDate: z.date().optional().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+
+      const keyStep = await ctx.prisma.keyStep.update({
+        where: { id },
+        data: {
+          ...data,
+          completedAt: data.completed ? new Date() : undefined,
+        },
+      });
+
+      // If manual progress update or completion, propagate up
+      if (data.completed !== undefined || data.progress !== undefined) {
+        if (keyStep.goalId) {
+          await recalculateGoalProgress(ctx.prisma, keyStep.goalId);
+        }
+      }
+
+      return keyStep;
+    }),
+
+  deleteKeyStep: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const keyStep = await ctx.prisma.keyStep.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!keyStep) return null;
+
+      await ctx.prisma.keyStep.delete({
+        where: { id: input.id },
+      });
+
+      // Recalculate goal progress
+      await recalculateGoalProgress(ctx.prisma, keyStep.goalId);
+
+      return keyStep;
+    }),
+
+  getKeySteps: protectedProcedure
+    .input(z.object({ goalId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.prisma.keyStep.findMany({
+        where: { goalId: input.goalId },
+        include: {
+          tasks: true,
+        },
+        orderBy: { order: "asc" },
       });
     }),
 

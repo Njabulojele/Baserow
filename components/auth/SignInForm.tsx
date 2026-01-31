@@ -1,8 +1,8 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs";
+import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,20 @@ import Image from "next/image";
 
 export function SignInForm() {
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // Redirect if already signed in
+  useEffect(() => {
+    if (isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isSignedIn, router]);
 
   // Handle manual email/password login
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +33,11 @@ export function SignInForm() {
     setIsLoading(true);
 
     if (!isLoaded) return;
+
+    if (isSignedIn) {
+      router.push("/dashboard");
+      return;
+    }
 
     try {
       const result = await signIn.create({
@@ -41,10 +54,18 @@ export function SignInForm() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(
-        err.errors?.[0]?.message ||
-          "Invalid email or password. Please try again.",
-      );
+      const errorMessage = err.errors?.[0]?.message || "";
+
+      // Strict handling for already logged in state
+      if (
+        errorMessage.toLowerCase().includes("already logged in") ||
+        errorMessage.toLowerCase().includes("session")
+      ) {
+        router.push("/dashboard");
+        return;
+      }
+
+      setError(errorMessage || "Invalid email or password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -53,6 +74,12 @@ export function SignInForm() {
   // Handle Social Login (Google)
   const handleGoogleLogin = async () => {
     if (!isLoaded) return;
+
+    if (isSignedIn) {
+      router.push("/dashboard");
+      return;
+    }
+
     try {
       setIsLoading(true);
       await signIn.authenticateWithRedirect({

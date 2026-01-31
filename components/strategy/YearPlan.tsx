@@ -39,7 +39,12 @@ import {
   Flag,
   Milestone as MilestoneIcon,
   Pencil,
+  FileText,
+  X,
+  Save,
 } from "lucide-react";
+import { InlineCreator } from "@/components/strategy/InlineCreator";
+import { NoteEditor } from "@/components/notes/NoteEditor";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +109,15 @@ export function YearPlan() {
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
 
+  // State for inline creation to replace prompts
+  const [addingKeyStepToGoalId, setAddingKeyStepToGoalId] = useState<
+    string | null
+  >(null);
+  const [addingTaskToKeyStepId, setAddingTaskToKeyStepId] = useState<
+    string | null
+  >(null);
+  const [editingKeyStepId, setEditingKeyStepId] = useState<string | null>(null); // For renaming
+
   const utils = trpc.useUtils();
 
   const { data: yearPlan, isLoading } = trpc.strategy.getYearPlan.useQuery({
@@ -148,6 +162,137 @@ export function YearPlan() {
 
   const updateMilestone = trpc.strategy.updateMilestone.useMutation({
     onSuccess: () => {
+      utils.strategy.getYearPlan.invalidate();
+    },
+  });
+
+  const createKeyStep = trpc.strategy.createKeyStep.useMutation({
+    onSuccess: () => {
+      toast.success("Key Step added");
+      setAddingKeyStepToGoalId(null);
+      utils.strategy.getYearPlan.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateKeyStep = trpc.strategy.updateKeyStep.useMutation({
+    onSuccess: () => {
+      utils.strategy.getYearPlan.invalidate();
+    },
+  });
+
+  const deleteKeyStep = trpc.strategy.deleteKeyStep.useMutation({
+    onSuccess: () => {
+      toast.success("Key Step deleted");
+      utils.strategy.getYearPlan.invalidate();
+    },
+  });
+
+  const createTask = trpc.task.createTask.useMutation({
+    onMutate: async (newTask) => {
+      await utils.strategy.getYearPlan.cancel();
+      const previousPlan = utils.strategy.getYearPlan.getData({
+        year: currentYear,
+      });
+
+      if (previousPlan) {
+        // Optimistically update the UI
+        utils.strategy.getYearPlan.setData(
+          { year: currentYear },
+          (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              goals: old.goals.map((g: any) => {
+                if (g.id !== newTask.goalId) return g;
+                return {
+                  ...g,
+                  keySteps: g.keySteps.map((ks: any) => {
+                    if (ks.id !== newTask.keyStepId) return ks;
+                    const optimisticTask = {
+                      id: "opt-" + Math.random().toString(36).substr(2, 9),
+                      title: newTask.title,
+                      status: "not_started",
+                      priority: newTask.priority || "medium",
+                      goalId: newTask.goalId,
+                      keyStepId: newTask.keyStepId,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+                    return {
+                      ...ks,
+                      tasks: [...(ks.tasks || []), optimisticTask],
+                    };
+                  }),
+                };
+              }),
+            };
+          },
+        );
+      }
+
+      setAddingTaskToKeyStepId(null);
+      return { previousPlan };
+    },
+    onError: (err, newTask, context) => {
+      toast.error("Failed to add task");
+      if (context?.previousPlan) {
+        utils.strategy.getYearPlan.setData(
+          { year: currentYear },
+          context.previousPlan,
+        );
+      }
+    },
+    onSettled: () => {
+      utils.strategy.getYearPlan.invalidate();
+    },
+    onSuccess: () => {
+      toast.success("Task added");
+    },
+  });
+
+  const updateTask = trpc.task.updateTask.useMutation({
+    onMutate: async (updatedTask) => {
+      await utils.strategy.getYearPlan.cancel();
+      const previousPlan = utils.strategy.getYearPlan.getData({
+        year: currentYear,
+      });
+
+      if (previousPlan) {
+        utils.strategy.getYearPlan.setData(
+          { year: currentYear },
+          (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              goals: old.goals.map((g: any) => ({
+                ...g,
+                keySteps: g.keySteps.map((ks: any) => ({
+                  ...ks,
+                  tasks: ks.tasks?.map((t: any) => {
+                    if (t.id === updatedTask.id) {
+                      return { ...t, ...updatedTask };
+                    }
+                    return t;
+                  }),
+                })),
+              })),
+            };
+          },
+        );
+      }
+      return { previousPlan };
+    },
+    onError: (err, newTodo, context) => {
+      toast.error("Failed to update task");
+      if (context?.previousPlan) {
+        utils.strategy.getYearPlan.setData(
+          { year: currentYear },
+          context.previousPlan,
+        );
+      }
+    },
+    onSettled: () => {
       utils.strategy.getYearPlan.invalidate();
     },
   });
@@ -805,6 +950,19 @@ export function YearPlan() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            <NoteEditor
+                              goalId={goal.id}
+                              title={goal.title}
+                              trigger={
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-muted-foreground opacity-50 hover:opacity-100"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
                             <Button
                               size="icon"
                               variant="ghost"
@@ -937,7 +1095,274 @@ export function YearPlan() {
                                 </div>
                               )}
 
-                              {/* Milestones */}
+                              {/* Key Steps (New System) */}
+                              <div className="mb-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium flex items-center gap-2">
+                                    <MilestoneIcon className="h-4 w-4 text-purple-500" />
+                                    Key Steps & Progress
+                                  </h4>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 text-xs"
+                                    onClick={() =>
+                                      setAddingKeyStepToGoalId(
+                                        goal.id === addingKeyStepToGoalId
+                                          ? null
+                                          : goal.id,
+                                      )
+                                    }
+                                  >
+                                    {addingKeyStepToGoalId === goal.id ? (
+                                      <X className="h-3 w-3 mr-1" />
+                                    ) : (
+                                      <Plus className="h-3 w-3 mr-1" />
+                                    )}
+                                    {addingKeyStepToGoalId === goal.id
+                                      ? "Cancel"
+                                      : "Add Step"}
+                                  </Button>
+                                </div>
+
+                                {addingKeyStepToGoalId === goal.id && (
+                                  <div className="mb-4">
+                                    <InlineCreator
+                                      placeholder="What is the next key step?"
+                                      buttonText="Add Key Step"
+                                      onSave={(title) =>
+                                        createKeyStep.mutate({
+                                          goalId: goal.id,
+                                          title,
+                                        })
+                                      }
+                                      onCancel={() =>
+                                        setAddingKeyStepToGoalId(null)
+                                      }
+                                    />
+                                  </div>
+                                )}
+
+                                {goal.keySteps?.length === 0 && (
+                                  <div className="text-sm text-muted-foreground italic pl-6">
+                                    No key steps defined. Add steps to track
+                                    progress.
+                                  </div>
+                                )}
+
+                                <div className="space-y-3">
+                                  {goal.keySteps?.map((step: any) => (
+                                    <div
+                                      key={step.id}
+                                      className="bg-card border rounded-md p-3"
+                                    >
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="space-y-1 flex-1">
+                                          <div className="flex items-center gap-2">
+                                            {editingKeyStepId === step.id ? (
+                                              <form
+                                                className="flex items-center gap-2 flex-1"
+                                                onSubmit={(e) => {
+                                                  e.preventDefault();
+                                                  const formData = new FormData(
+                                                    e.currentTarget,
+                                                  );
+                                                  const title = formData.get(
+                                                    "title",
+                                                  ) as string;
+                                                  if (title.trim()) {
+                                                    updateKeyStep.mutate({
+                                                      id: step.id,
+                                                      title: title.trim(),
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                <Input
+                                                  name="title"
+                                                  defaultValue={step.title}
+                                                  className="h-7 text-sm py-1"
+                                                  autoFocus
+                                                  onBlur={() =>
+                                                    setEditingKeyStepId(null)
+                                                  }
+                                                />
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-7 w-7"
+                                                  type="submit"
+                                                >
+                                                  <Save className="h-3 w-3" />
+                                                </Button>
+                                              </form>
+                                            ) : (
+                                              <span className="font-medium text-sm">
+                                                {step.title}
+                                              </span>
+                                            )}
+                                            {step.completed && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="text-[10px] bg-green-100 text-green-700"
+                                              >
+                                                Done
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {step.description && (
+                                            <p className="text-xs text-muted-foreground">
+                                              {step.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className={cn(
+                                              "h-6 w-6 text-muted-foreground hover:text-foreground",
+                                              addingTaskToKeyStepId ===
+                                                step.id && "bg-muted",
+                                            )}
+                                            title="Add Task"
+                                            onClick={() =>
+                                              setAddingTaskToKeyStepId(
+                                                addingTaskToKeyStepId ===
+                                                  step.id
+                                                  ? null
+                                                  : step.id,
+                                              )
+                                            }
+                                          >
+                                            {addingTaskToKeyStepId ===
+                                            step.id ? (
+                                              <X className="h-3 w-3" />
+                                            ) : (
+                                              <Plus className="h-3 w-3" />
+                                            )}
+                                          </Button>
+                                          <NoteEditor
+                                            keyStepId={step.id}
+                                            title={step.title}
+                                            trigger={
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                              >
+                                                <FileText className="h-3 w-3" />
+                                              </Button>
+                                            }
+                                          />
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                            onClick={() =>
+                                              setEditingKeyStepId(step.id)
+                                            }
+                                          >
+                                            <Pencil className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                            onClick={() => {
+                                              if (confirm("Delete this step?"))
+                                                deleteKeyStep.mutate({
+                                                  id: step.id,
+                                                });
+                                            }}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Progress Bar for Step */}
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                          <span>
+                                            {step.tasks?.length || 0} tasks
+                                            linked
+                                          </span>
+                                          <span>{step.progress}%</span>
+                                        </div>
+                                        <Progress
+                                          value={step.progress}
+                                          className="h-1.5"
+                                        />
+                                      </div>
+
+                                      {/* Tasks Preview */}
+                                      {step.tasks?.length > 0 && (
+                                        <div className="mt-2 space-y-1 pl-2 border-l-2 border-muted">
+                                          {step.tasks.map((task: any) => (
+                                            <div
+                                              key={task.id}
+                                              className="text-xs flex items-center gap-2 text-muted-foreground cursor-pointer group hover:text-foreground transition-colors"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newStatus =
+                                                  task.status === "done"
+                                                    ? "not_started"
+                                                    : "done";
+                                                updateTask.mutate({
+                                                  id: task.id,
+                                                  status: newStatus,
+                                                });
+                                              }}
+                                            >
+                                              <div className="relative">
+                                                {task.status === "done" ? (
+                                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                                ) : (
+                                                  <Circle className="h-3 w-3 group-hover:text-primary transition-colors" />
+                                                )}
+                                              </div>
+                                              <span
+                                                className={cn(
+                                                  "transition-all duration-200",
+                                                  task.status === "done"
+                                                    ? "line-through text-muted-foreground/60"
+                                                    : "",
+                                                )}
+                                              >
+                                                {task.title}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {addingTaskToKeyStepId === step.id && (
+                                        <div className="mt-2 mb-2 pl-2 border-l-2 border-muted">
+                                          <InlineCreator
+                                            placeholder="Add a task to this step..."
+                                            buttonText="Add Task"
+                                            onSave={(title) =>
+                                              createTask.mutate({
+                                                title,
+                                                keyStepId: step.id,
+                                                goalId: goal.id,
+                                                priority: "medium",
+                                                type: "shallow_work",
+                                              })
+                                            }
+                                            onCancel={() =>
+                                              setAddingTaskToKeyStepId(null)
+                                            }
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Legacy Milestones */}
                               {goal.milestones?.length > 0 && (
                                 <div>
                                   <h4 className="text-sm font-medium mb-2 flex items-center gap-2">

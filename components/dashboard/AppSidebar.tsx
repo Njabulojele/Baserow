@@ -70,16 +70,16 @@ const routes = [
     icon: LineChart,
     href: "/analytics",
   },
-  {
-    label: "Well-being",
-    icon: Heart,
-    href: "/well-being",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/settings",
-  },
+  // {
+  //   label: "Well-being",
+  //   icon: Heart,
+  //   href: "/well-being",
+  // },
+  // {
+  //   label: "Settings",
+  //   icon: Settings,
+  //   href: "/settings",
+  // },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

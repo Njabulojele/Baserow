@@ -18,6 +18,7 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { trpc } from "@/lib/trpc/client";
 import { UrgencyDashboard } from "@/components/dashboard/UrgencyDashboard";
 import { SmartInsight } from "@/components/dashboard/SmartInsight";
+import { StrategyAnalytics } from "@/components/strategy/StrategyAnalytics";
 
 interface DashboardStats {
   todaysTasks: number;
@@ -226,6 +227,9 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       <div className="space-y-6 min-w-0">
         <SmartInsight />
         <UrgencyDashboard />
+        <div className="mb-8">
+          <StrategyAnalytics />
+        </div>
       </div>
 
       {/* Active Timer */}

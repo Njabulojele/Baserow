@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, BarChart3, Zap, Shield } from "lucide-react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
+import Image from "next/image";
 
 export default function LandingPage() {
   return (
@@ -9,9 +10,13 @@ export default function LandingPage() {
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tighter">
-            <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center">
-              L
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Baserow"
+              width={32}
+              height={32}
+              className="rounded-md"
+            />
             Baserow
           </div>
           <div className="flex items-center gap-4">
@@ -161,7 +166,7 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section className="py-24 px-6">
         <div className="container mx-auto max-w-4xl">
-          <div className="rounded-3xl bg-linear-to-br from-primary via-indigo-600 to-purple-700 p-8 sm:p-16 text-center text-white relative overflow-hidden shadow-2xl">
+          <div className="rounded-3xl bg-linear-to-br from-sidebar via-muted to-sidebar-border p-8 sm:p-16 text-center text-white relative overflow-hidden shadow-2xl">
             {/* Background pattern */}
             <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('/noise.svg')]"></div>
 
@@ -169,13 +174,13 @@ export default function LandingPage() {
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
                 Ready to take control?
               </h2>
-              <p className="text-lg text-primary-foreground/90 max-w-xl mx-auto">
+              <p className="text-lg text-whitw max-w-xl mx-auto">
                 Join the waitlist today and get early access to the future of
                 personal productivity.
               </p>
               <Link
                 href="/register"
-                className="inline-flex h-14 px-8 rounded-full bg-white text-primary font-bold text-lg items-center justify-center hover:bg-gray-100 transition-colors shadow-lg"
+                className="inline-flex h-14 px-8 rounded-full bg-white text-sidebar font-bold text-lg items-center justify-center hover:bg-gray-100 transition-colors shadow-lg"
               >
                 Get Started for Free
               </Link>
@@ -188,9 +193,13 @@ export default function LandingPage() {
       <footer className="py-12 px-6 border-t border-border bg-muted/20">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 font-bold text-lg">
-            <div className="w-6 h-6 rounded bg-primary/20 text-primary flex items-center justify-center text-xs">
-              L
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Baserow"
+              width={32}
+              height={32}
+              className="rounded-md"
+            />
             Baserow
           </div>
           <p className="text-sm text-muted-foreground">

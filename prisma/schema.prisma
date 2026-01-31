@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  // previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -28,6 +28,7 @@ model User {
   weekPlans        WeekPlan[]
   wellBeingEntries WellBeingEntry[]
   yearPlans        YearPlan[]
+  notes            Note[]
 }
 
 model YearPlan {
@@ -49,22 +50,25 @@ model YearPlan {
 }
 
 model Goal {
-  id              String      @id @default(cuid())
+  id              String        @id @default(cuid())
   yearPlanId      String
   title           String
   description     String?
   category        String
-  status          String      @default("not_started")
-  progress        Float       @default(0)
-  priority        String      @default("medium") // critical, high, medium, low
+  status          String        @default("not_started")
+  progress        Float         @default(0)
+  priority        String        @default("medium") // critical, high, medium, low
   targetDate      DateTime?
-  strategies      String[]    // Strategies to achieve this goal
-  kpis            String[]    // Key Performance Indicators
-  risks           String[]    // Risk assessment
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  yearPlan        YearPlan    @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
+  strategies      String[]      // Strategies to achieve this goal
+  kpis            String[]      // Key Performance Indicators
+  risks           String[]      // Risk assessment
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  yearPlan        YearPlan      @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
   milestones      Milestone[]
+  keySteps        KeyStep[]     // Key steps that move progress bar
+  tasks           Task[]        // Direct tasks (no keystep)
+  notes           Note[]        // Notes attached to this goal
   quarterFocuses  QuarterFocus[]
 
   @@index([yearPlanId])
@@ -81,6 +85,45 @@ model Milestone {
   goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@index([goalId])
+}
+
+model KeyStep {
+  id          String    @id @default(cuid())
+  goalId      String
+  title       String
+  description String?
+  order       Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  progress    Float     @default(0)
+  targetDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  notes       Note[]
+
+  @@index([goalId])
+}
+
+model Note {
+  id        String    @id @default(cuid())
+  userId    String
+  content   String
+  goalId    String?
+  keyStepId String?
+  dayPlanId String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal      Goal?     @relation(fields: [goalId], references: [id])
+  keyStep   KeyStep?  @relation(fields: [keyStepId], references: [id])
+  dayPlan   DayPlan?  @relation(fields: [dayPlanId], references: [id])
+
+  @@index([userId])
+  @@index([goalId])
+  @@index([keyStepId])
+  @@index([dayPlanId])
 }
 
 model QuarterPlan {
@@ -226,6 +269,7 @@ model DayPlan {
   weekPlan        WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
   timeBlocks      TimeBlock[]
   dayFocuses      DayFocus[]
+  notes           Note[]      // Notes for this day
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -313,6 +357,8 @@ model Task {
   id                String      @id @default(cuid())
   userId            String
   projectId         String?
+  goalId            String?     // Link to annual goal
+  keyStepId         String?     // Link to goal key step
   title             String
   description       String?
   status            String      @default("not_started")
@@ -337,6 +383,8 @@ model Task {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   project           Project?    @relation(fields: [projectId], references: [id])
+  goal              Goal?       @relation(fields: [goalId], references: [id])
+  keyStep           KeyStep?    @relation(fields: [keyStepId], references: [id])
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   timeBlocks        TimeBlock[]
   timeEntries       TimeEntry[]
@@ -349,6 +397,8 @@ model Task {
   @@index([userId, completedAt])
   @@index([userId, timerRunning])
   @@index([projectId])
+  @@index([goalId])
+  @@index([keyStepId])
 }
 
 model TimeEntry {

@@ -5,7 +5,7 @@ import { ProjectDistributionPie } from "@/components/analytics/ProjectDistributi
 import { TaskCompletionBar } from "@/components/analytics/TaskCompletionBar";
 import { InsightsCard } from "@/components/analytics/InsightsCard";
 import { TaskHeatmap } from "@/components/analytics/TaskHeatmap";
-import { GoalProgressChart } from "@/components/analytics/GoalProgressChart";
+import { StrategyAnalytics } from "@/components/strategy/StrategyAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc/client";
 import { Activity, CheckCircle2, Clock, TrendingUp } from "lucide-react";
@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
       {/* Rows 3 & 4: Deep Dives (Full Width) */}
       <div className="space-y-6">
         <ProductivityChart />
-        <GoalProgressChart />
+        <StrategyAnalytics />
         <TaskCompletionBar />
         <ProjectDistributionPie />
       </div>

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, Trophy } from "lucide-react";
 
-export function GoalProgressChart() {
+export function StrategyAnalytics() {
   const { data, isLoading } = trpc.analytics.getGoalProgressStats.useQuery();
 
   if (isLoading) {

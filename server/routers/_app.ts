@@ -9,6 +9,7 @@ import { communicationRouter } from "./communication";
 import { strategyRouter } from "./strategy";
 import { calendarRouter } from "./calendar";
 import { meetingRouter } from "./meeting";
+import { noteRouter } from "./note";
 
 export const appRouter = router({
   task: taskRouter,
@@ -21,6 +22,7 @@ export const appRouter = router({
   strategy: strategyRouter,
   calendar: calendarRouter,
   meeting: meetingRouter,
+  note: noteRouter,
 });
 
 export type AppRouter = typeof appRouter;

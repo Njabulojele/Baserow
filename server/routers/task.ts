@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import {
+  recalculateKeyStepProgress,
+  recalculateGoalProgress,
+} from "../progress-utils";
 
 export const taskRouter = router({
   // Get all tasks for the current user
@@ -80,6 +84,8 @@ export const taskRouter = router({
         estimatedMinutes: z.number().optional(),
         energyRequired: z.number().min(1).max(10).optional(),
         tags: z.array(z.string()).optional(),
+        goalId: z.string().optional(),
+        keyStepId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -112,6 +118,8 @@ export const taskRouter = router({
         estimatedMinutes: z.number().nullable().optional(),
         energyRequired: z.number().min(1).max(10).nullable().optional(),
         tags: z.array(z.string()).optional(),
+        goalId: z.string().nullable().optional(),
+        keyStepId: z.string().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -139,7 +147,17 @@ export const taskRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      return ctx.prisma.task.delete({ where: { id: input.id } });
+      await ctx.prisma.task.delete({ where: { id: input.id } });
+
+      // Recalculate progress if linked
+      if (task.keyStepId) {
+        await recalculateKeyStepProgress(ctx.prisma, task.keyStepId);
+      } else if (task.goalId) {
+        // If linked directly to goal, we might want to handle that too
+        // For now, let's just re-check direct goal tasks if we support that
+      }
+
+      return task;
     }),
 
   // Start working on a task (simple status-based tracking, no timer complexity)
@@ -284,7 +302,7 @@ export const taskRouter = router({
         });
       }
 
-      return ctx.prisma.task.update({
+      const updatedTask = await ctx.prisma.task.update({
         where: { id: input.id },
         data: {
           status: "done",
@@ -294,6 +312,13 @@ export const taskRouter = router({
           actualMinutes: task.actualMinutes + additionalMinutes,
         },
       });
+
+      // Propagate progress
+      if (updatedTask.keyStepId) {
+        await recalculateKeyStepProgress(ctx.prisma, updatedTask.keyStepId);
+      }
+
+      return updatedTask;
     }),
 
   // Get active timer
