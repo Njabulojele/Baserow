@@ -15,7 +15,7 @@ export async function recalculateKeyStepProgress(
 
   if (tasks.length === 0) return 0;
 
-  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const completedCount = tasks.filter((t) => t.status === "done").length;
   const progress = Math.round((completedCount / tasks.length) * 100);
 
   // Update KeyStep
@@ -63,7 +63,11 @@ export async function recalculateGoalProgress(
     return 0;
   }
 
-  const totalProgress = keySteps.reduce((sum, ks) => sum + ks.progress, 0);
+  // If a KeyStep is marked completed, treat it as 100% regardless of progress field
+  const totalProgress = keySteps.reduce((sum, ks) => {
+    const stepProgress = ks.completed ? 100 : ks.progress;
+    return sum + stepProgress;
+  }, 0);
   const goalProgress = Math.round(totalProgress / keySteps.length);
 
   await prisma.goal.update({

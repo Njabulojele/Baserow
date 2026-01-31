@@ -256,6 +256,8 @@ export const strategyRouter = router({
         where: { id },
         data: {
           ...data,
+          // When marked completed, also set progress to 100
+          progress: data.completed ? 100 : data.progress,
           completedAt: data.completed ? new Date() : undefined,
         },
       });

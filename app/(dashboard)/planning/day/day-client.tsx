@@ -3,15 +3,9 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import {
-  Zap,
-  Smile,
-  Brain,
   Moon,
-  Dumbbell,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   Target,
   Heart,
   Plus,
@@ -21,6 +15,7 @@ import {
   Flag,
   AlertTriangle,
   Play,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -99,20 +94,14 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
     setCurrentDate(d);
   };
 
-  const energyLevel = todayWellbeing?.morningEnergy || 0;
-  const moodLevel = todayWellbeing?.mood || 0;
-  const focusLevel = todayWellbeing?.focusQuality || 0;
-
   // Calculate metrics
   const completedTasks = dayPlan?.completedTasks || 0;
   const totalTasks = dayPlan?.totalTasks || 0;
   const completionRate =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Calculate focus score (average of energy, mood, focus)
-  const focusScore = Math.round(
-    ((energyLevel + moodLevel + focusLevel) / 3) * 10,
-  );
+  // Focus score based on completion rate (0-100)
+  const focusScore = completionRate;
 
   // Organize tasks by priority matrix quadrants
   const quadrants = useMemo(() => {
@@ -337,42 +326,30 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
             </CardContent>
           </Card>
 
-          {/* Vitals */}
+          {/* Goal Progress - Shows goals linked to today's tasks */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="h-5 w-5 text-yellow-500" />
-                Vitals
+                <Target className="h-5 w-5 text-indigo-500" />
+                Today's Goal Progress
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Zap className="size-3 text-yellow-500" /> Energy
-                  </span>
-                  <span>{energyLevel}/10</span>
+            <CardContent className="space-y-3">
+              {dayPlan?.tasks?.filter((t: any) => t.keyStepId).length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No goal-linked tasks today. Link tasks to goals for progress
+                  tracking.
+                </p>
+              ) : (
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Tasks linked to goals:{" "}
+                    {dayPlan?.tasks?.filter((t: any) => t.keyStepId).length ||
+                      0}
+                  </p>
+                  <p>Complete tasks to update goal progress automatically.</p>
                 </div>
-                <Progress value={energyLevel * 10} className="h-1.5" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Smile className="size-3 text-pink-500" /> Mood
-                  </span>
-                  <span>{moodLevel}/10</span>
-                </div>
-                <Progress value={moodLevel * 10} className="h-1.5" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Brain className="size-3 text-blue-500" /> Focus
-                  </span>
-                  <span>{focusLevel}/10</span>
-                </div>
-                <Progress value={focusLevel * 10} className="h-1.5" />
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -389,42 +366,6 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                 {dayPlan?.dayPlan?.dailyWin ||
                   todayWellbeing?.dailyWin ||
                   "What's your one big win for today?"}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Habits */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-                Habits
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="flex items-center gap-2 text-sm">
-                  <Dumbbell className="size-4 text-blue-400" /> Exercise
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {todayWellbeing?.exerciseMinutes || 0}m
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="flex items-center gap-2 text-sm">
-                  <Moon className="size-4 text-indigo-400" /> Sleep
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {todayWellbeing?.sleepHours || 0}h
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="flex items-center gap-2 text-sm">
-                  <BookOpen className="size-4 text-purple-400" /> Learning
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  Track
-                </Badge>
               </div>
             </CardContent>
           </Card>

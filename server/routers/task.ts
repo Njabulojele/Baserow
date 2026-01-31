@@ -98,7 +98,7 @@ export const taskRouter = router({
       });
     }),
 
-  // Update a task
+  // Update a task (triggering rebuild)
   updateTask: protectedProcedure
     .input(
       z.object({
@@ -130,10 +130,17 @@ export const taskRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      return ctx.prisma.task.update({
+      const updatedTask = await ctx.prisma.task.update({
         where: { id },
         data,
       });
+
+      // Trigger progress recalculation if task has a keyStepId and status changed
+      if (updatedTask.keyStepId && input.status) {
+        await recalculateKeyStepProgress(ctx.prisma, updatedTask.keyStepId);
+      }
+
+      return updatedTask;
     }),
 
   // Delete a task
