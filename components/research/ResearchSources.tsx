@@ -27,10 +27,10 @@ interface ResearchSourcesProps {
 }
 
 export function ResearchSources({
-  sources,
+  sources = [],
   onStartAnalysis,
 }: ResearchSourcesProps) {
-  if (sources.length === 0) {
+  if (!sources || sources.length === 0) {
     return (
       <div className="py-12 text-center bg-[#1a252f] rounded-xl border border-[#2f3e46]">
         <Globe className="w-12 h-12 mx-auto text-gray-600 mb-3" />
@@ -38,6 +38,14 @@ export function ResearchSources({
       </div>
     );
   }
+
+  const getHostname = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return "External Source";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -47,14 +55,13 @@ export function ResearchSources({
             key={index}
             className="bg-[#1a252f] border-[#2f3e46] p-5 hover:border-[#6b9080] transition-colors group"
           >
-            {/* ... card content ... */}
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex-1 min-w-0">
                 <h4 className="text-white font-semibold truncate group-hover:text-[#6b9080] transition-colors">
                   {source.title || "Untitled Source"}
                 </h4>
                 <p className="text-xs text-[#a9927d] font-mono truncate mt-0.5">
-                  {new URL(source.url).hostname}
+                  {getHostname(source.url)}
                 </p>
               </div>
               <a
