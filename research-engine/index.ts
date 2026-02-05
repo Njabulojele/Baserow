@@ -1,10 +1,8 @@
-import express from "express";
+import "dotenv/config"; // MUST be first import
+import express, { Request, Response } from "express";
 import { serve } from "inngest/express";
 import { Inngest } from "inngest";
 import { researchAgent, generateLeadsAgent } from "./agent";
-import * as dotenv from "dotenv";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3010;
@@ -16,7 +14,6 @@ const inngest = new Inngest({
 });
 
 // Serve the Inngest handler
-// Render deployment will use this endpoint (e.g., https://your-service.onrender.com/api/inngest)
 app.use(express.json());
 app.use(
   "/api/inngest",
@@ -25,8 +22,6 @@ app.use(
     functions: [researchAgent, generateLeadsAgent],
   }),
 );
-
-import { Request, Response } from "express";
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Research Engine is running!");
