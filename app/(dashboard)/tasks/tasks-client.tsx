@@ -243,7 +243,7 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
+    <div className="w-full max-w-5xl mx-auto py-8 px-4 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -341,8 +341,8 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
 
       {/* Filter Tabs */}
       <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-          <TabsList className="flex w-full min-w-[360px] sm:min-w-0 sm:grid sm:grid-cols-4">
+        <div className="overflow-x-auto pb-1 w-full scrollbar-none">
+          <TabsList className="bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex flex-wrap sm:grid sm:grid-cols-4 w-full">
             <TabsTrigger value="all" className="flex-1 gap-2">
               <ListTodo className="h-4 w-4 shrink-0" />
               <span className="truncate">All</span>

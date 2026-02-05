@@ -14,6 +14,7 @@ import {
   Target,
   Settings,
   PlusCircle,
+  Search,
   LogOut,
 } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
@@ -72,6 +73,12 @@ const routes = [
     label: "Settings",
     icon: Settings,
     href: "/settings",
+  },
+  {
+    label: "Research Agent",
+    icon: Search,
+    href: "/research",
+    color: "text-amber-500",
   },
 ];
 

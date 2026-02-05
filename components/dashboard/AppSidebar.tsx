@@ -8,6 +8,7 @@ import {
   Heart,
   LayoutDashboard,
   LineChart,
+  Search,
   Settings,
   Target,
   Users,
@@ -75,11 +76,16 @@ const routes = [
   //   icon: Heart,
   //   href: "/well-being",
   // },
-  // {
-  //   label: "Settings",
-  //   icon: Settings,
-  //   href: "/settings",
-  // },
+  {
+    label: "Settings",
+    icon: Settings,
+    href: "/settings",
+  },
+  {
+    label: "Research Agent",
+    icon: Search,
+    href: "/research",
+  },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

@@ -1,6 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
-  // previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -15,20 +14,27 @@ model User {
   timezone         String           @default("Africa/Johannesburg")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  geminiApiKey     String?
+  geminiModel      String           @default("gemini-2.0-flash")
+  groqApiKey       String?
+  llmProvider      String           @default("GEMINI")
+  serperApiKey     String?
+  researchLimit    Int              @default(10)
   analyticsEvents  AnalyticsEvent[]
   calendarEvents   CalendarEvent[]
   captures         Capture[]
-  meetings         Meeting[]
   clients          Client[]
   dayPlans         DayPlan[]
+  meetings         Meeting[]
+  notes            Note[]
   projects         Project[]
+  researches       Research[]
   tasks            Task[]
   timeEntries      TimeEntry[]
   voiceSessions    VoiceSession[]
   weekPlans        WeekPlan[]
   wellBeingEntries WellBeingEntry[]
   yearPlans        YearPlan[]
-  notes            Note[]
 }
 
 model YearPlan {
@@ -50,26 +56,27 @@ model YearPlan {
 }
 
 model Goal {
-  id              String        @id @default(cuid())
-  yearPlanId      String
-  title           String
-  description     String?
-  category        String
-  status          String        @default("not_started")
-  progress        Float         @default(0)
-  priority        String        @default("medium") // critical, high, medium, low
-  targetDate      DateTime?
-  strategies      String[]      // Strategies to achieve this goal
-  kpis            String[]      // Key Performance Indicators
-  risks           String[]      // Risk assessment
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  yearPlan        YearPlan      @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
-  milestones      Milestone[]
-  keySteps        KeyStep[]     // Key steps that move progress bar
-  tasks           Task[]        // Direct tasks (no keystep)
-  notes           Note[]        // Notes attached to this goal
-  quarterFocuses  QuarterFocus[]
+  id             String         @id @default(cuid())
+  yearPlanId     String
+  title          String
+  description    String?
+  category       String
+  status         String         @default("not_started")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  kpis           String[]
+  priority       String         @default("medium")
+  progress       Float          @default(0)
+  risks          String[]
+  strategies     String[]
+  targetDate     DateTime?
+  yearPlan       YearPlan       @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
+  keySteps       KeyStep[]
+  milestones     Milestone[]
+  notes          Note[]
+  quarterFocuses QuarterFocus[]
+  researches     Research[]
+  tasks          Task[]
 
   @@index([yearPlanId])
 }
@@ -100,25 +107,25 @@ model KeyStep {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  tasks       Task[]
   notes       Note[]
+  tasks       Task[]
 
   @@index([goalId])
 }
 
 model Note {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   content   String
   goalId    String?
   keyStepId String?
   dayPlanId String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal      Goal?     @relation(fields: [goalId], references: [id])
-  keyStep   KeyStep?  @relation(fields: [keyStepId], references: [id])
-  dayPlan   DayPlan?  @relation(fields: [dayPlanId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dayPlan   DayPlan? @relation(fields: [dayPlanId], references: [id])
+  goal      Goal?    @relation(fields: [goalId], references: [id])
+  keyStep   KeyStep? @relation(fields: [keyStepId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([goalId])
@@ -134,8 +141,8 @@ model QuarterPlan {
   startDate      DateTime
   endDate        DateTime
   monthPlans     MonthPlan[]
-  objectives     QuarterObjective[]
   quarterFocuses QuarterFocus[]
+  objectives     QuarterObjective[]
   yearPlan       YearPlan           @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
 
   @@unique([yearPlanId, quarter])
@@ -156,17 +163,17 @@ model QuarterObjective {
 }
 
 model QuarterFocus {
-  id            String        @id @default(cuid())
+  id            String       @id @default(cuid())
   quarterPlanId String
   goalId        String
-  priority      Int           @default(1)
-  progress      Float         @default(0)
+  priority      Int          @default(1)
+  progress      Float        @default(0)
   notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  goal          Goal          @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  quarterPlan   QuarterPlan   @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   monthFocuses  MonthFocus[]
+  goal          Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  quarterPlan   QuarterPlan  @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
 
   @@unique([quarterPlanId, goalId])
   @@index([quarterPlanId])
@@ -184,26 +191,26 @@ model MonthPlan {
   rating         Int?
   reviewNotes    String?
   theme          String?
+  monthFocuses   MonthFocus[]
   quarterPlan    QuarterPlan  @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
   weekPlans      WeekPlan[]
-  monthFocuses   MonthFocus[]
 
   @@unique([quarterPlanId, month])
   @@index([quarterPlanId])
 }
 
 model MonthFocus {
-  id              String        @id @default(cuid())
-  monthPlanId     String
-  quarterFocusId  String
-  priority        Int           @default(1)
-  progress        Float         @default(0)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  quarterFocus    QuarterFocus  @relation(fields: [quarterFocusId], references: [id], onDelete: Cascade)
-  monthPlan       MonthPlan     @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
-  weekFocuses     WeekFocus[]
+  id             String       @id @default(cuid())
+  monthPlanId    String
+  quarterFocusId String
+  priority       Int          @default(1)
+  progress       Float        @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  monthPlan      MonthPlan    @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
+  quarterFocus   QuarterFocus @relation(fields: [quarterFocusId], references: [id], onDelete: Cascade)
+  weekFocuses    WeekFocus[]
 
   @@unique([monthPlanId, quarterFocusId])
   @@index([monthPlanId])
@@ -220,32 +227,32 @@ model WeekPlan {
   topOutcomes          String[]
   plannedClientHours   Float?
   plannedPersonalHours Float?
-  keyWins             String[]    // Weekly review: Wins
-  challenges          String[]    // Weekly review: Challenges
-  lessonsLearned      String[]    // Weekly review: Lessons
-  rating              Int?        // Weekly review: 1-10
-  reviewNotes         String?     // Weekly review: General notes
-  userId              String
-  dayPlans            DayPlan[]
-  weekFocuses         WeekFocus[]
-  monthPlan           MonthPlan   @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
-  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  challenges           String[]
+  keyWins              String[]
+  lessonsLearned       String[]
+  rating               Int?
+  reviewNotes          String?
+  dayPlans             DayPlan[]
+  weekFocuses          WeekFocus[]
+  monthPlan            MonthPlan   @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, startDate, endDate])
 }
 
 model WeekFocus {
-  id            String      @id @default(cuid())
-  weekPlanId    String
-  monthFocusId  String
-  priority      Int         @default(1)
-  progress      Float       @default(0)
-  notes         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  monthFocus    MonthFocus  @relation(fields: [monthFocusId], references: [id], onDelete: Cascade)
-  weekPlan      WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
-  dayFocuses    DayFocus[]
+  id           String     @id @default(cuid())
+  weekPlanId   String
+  monthFocusId String
+  priority     Int        @default(1)
+  progress     Float      @default(0)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  dayFocuses   DayFocus[]
+  monthFocus   MonthFocus @relation(fields: [monthFocusId], references: [id], onDelete: Cascade)
+  weekPlan     WeekPlan   @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
 
   @@unique([weekPlanId, monthFocusId])
   @@index([weekPlanId])
@@ -265,11 +272,11 @@ model DayPlan {
   tomorrowPrep    String[]
   completionRate  Float       @default(0)
   userId          String
+  dayFocuses      DayFocus[]
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   weekPlan        WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  notes           Note[]
   timeBlocks      TimeBlock[]
-  dayFocuses      DayFocus[]
-  notes           Note[]      // Notes for this day
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -285,8 +292,8 @@ model DayFocus {
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  weekFocus   WeekFocus @relation(fields: [weekFocusId], references: [id], onDelete: Cascade)
   dayPlan     DayPlan   @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  weekFocus   WeekFocus @relation(fields: [weekFocusId], references: [id], onDelete: Cascade)
 
   @@unique([dayPlanId, weekFocusId])
   @@index([dayPlanId])
@@ -357,8 +364,6 @@ model Task {
   id                String      @id @default(cuid())
   userId            String
   projectId         String?
-  goalId            String?     // Link to annual goal
-  keyStepId         String?     // Link to goal key step
   title             String
   description       String?
   status            String      @default("not_started")
@@ -382,14 +387,17 @@ model Task {
   recurringPattern  String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
-  project           Project?    @relation(fields: [projectId], references: [id])
+  meetingId         String?
+  goalId            String?
+  keyStepId         String?
+  actionItem        ActionItem?
   goal              Goal?       @relation(fields: [goalId], references: [id])
   keyStep           KeyStep?    @relation(fields: [keyStepId], references: [id])
+  meeting           Meeting?    @relation(fields: [meetingId], references: [id])
+  project           Project?    @relation(fields: [projectId], references: [id])
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   timeBlocks        TimeBlock[]
   timeEntries       TimeEntry[]
-  meetingId         String?
-  meeting           Meeting?    @relation(fields: [meetingId], references: [id])
 
   @@index([userId, status])
   @@index([userId, scheduledDate])
@@ -498,8 +506,6 @@ model Meeting {
   title             String
   description       String?
   type              String   @default("meeting")
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   scheduledAt       DateTime
   duration          Int
   timezone          String   @default("Africa/Johannesburg")
@@ -515,7 +521,9 @@ model Meeting {
   status            String   @default("scheduled")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  userId            String
   client            Client?  @relation(fields: [clientId], references: [id])
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks             Task[]
 }
 
@@ -625,4 +633,138 @@ model AnalyticsEvent {
   sessionId String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Research {
+  id             String            @id @default(cuid())
+  userId         String
+  title          String
+  scope          ResearchScope
+  searchMethod   SearchMethod      @default(GEMINI_GROUNDING)
+  status         ResearchStatus    @default(PENDING)
+  originalPrompt String
+  refinedPrompt  String
+  rawData        Json?
+  progress       Int               @default(0)
+  errorMessage   String?
+  goalId         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  completedAt    DateTime?
+  actionItems    ActionItem[]
+  leadData       LeadData?
+  goal           Goal?             @relation(fields: [goalId], references: [id])
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insights       ResearchInsight[]
+  sources        ResearchSource[]
+
+  @@index([userId, status])
+  @@index([goalId])
+}
+
+model ResearchSource {
+  id              String   @id @default(cuid())
+  researchId      String
+  url             String
+  title           String
+  content         String   @default("")
+  excerpt         String
+  credibility     Float    @default(0.5)
+  citedInSections String[]
+  scrapedAt       DateTime @default(now())
+  research        Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model ResearchInsight {
+  id         String   @id @default(cuid())
+  researchId String
+  title      String
+  content    String
+  category   String
+  visualData Json?
+  confidence Float    @default(0.8)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  research   Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model ActionItem {
+  id                String         @id @default(cuid())
+  researchId        String
+  description       String
+  priority          ActionPriority @default(MEDIUM)
+  effort            Int            @default(3)
+  convertedToTaskId String?        @unique
+  convertedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  convertedToTask   Task?          @relation(fields: [convertedToTaskId], references: [id])
+  research          Research       @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model LeadData {
+  id         String    @id @default(cuid())
+  researchId String    @unique
+  totalFound Int       @default(0)
+  exportedAt DateTime?
+  leads      Lead[]
+  research   Research  @relation(fields: [researchId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id              String    @id @default(cuid())
+  leadDataId      String
+  name            String
+  company         String?
+  email           String?
+  phone           String?
+  website         String?
+  industry        String?
+  location        String?
+  painPoints      String[]
+  suggestedDM     String
+  suggestedEmail  String
+  personalization Json?
+  contacted       Boolean   @default(false)
+  contactedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
+
+  @@index([leadDataId])
+}
+
+enum ResearchScope {
+  MARKET_ANALYSIS
+  LEAD_GENERATION
+  COMPETITIVE_INTELLIGENCE
+  BUSINESS_STRATEGY
+  INDUSTRY_TRENDS
+  CUSTOMER_INSIGHTS
+  GENERAL_RESEARCH
+}
+
+enum ResearchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ActionPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SearchMethod {
+  GEMINI_GROUNDING
+  SERPER_API
+  GEMINI_DEEP_RESEARCH
+  JINA_SERPER
 }

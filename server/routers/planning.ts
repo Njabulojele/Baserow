@@ -601,4 +601,15 @@ export const planningRouter = router({
         },
       });
     }),
+
+  // List all active goals
+  listGoals: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.prisma.goal.findMany({
+      where: {
+        yearPlan: { userId: ctx.userId },
+        status: { not: "completed" },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  }),
 });
