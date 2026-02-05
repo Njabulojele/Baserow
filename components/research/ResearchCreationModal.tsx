@@ -166,11 +166,17 @@ export function ResearchCreationModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(val) =>
-        !val && step !== "refining" && step !== "starting" && onClose()
-      }
+      onOpenChange={(val) => {
+        if (!val && step !== "starting") {
+          onClose();
+          // Reset to create step if closed mid-process
+          if (step === "refining" || step === "review") {
+            setStep("create");
+          }
+        }
+      }}
     >
-      <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white max-w-2xl overflow-hidden p-0">
+      <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white max-w-2xl w-[95vw] md:w-full overflow-hidden p-0 rounded-xl">
         {/* Progress bar */}
         <div className="h-1 w-full bg-black/20">
           <div
@@ -188,7 +194,7 @@ export function ResearchCreationModal({
           />
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               {step === "create" && "New Research Mission"}
@@ -219,10 +225,13 @@ export function ResearchCreationModal({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Scope */}
                 <div className="space-y-2">
-                  <Label htmlFor="scope" className="text-gray-400">
+                  <Label
+                    htmlFor="scope"
+                    className="text-gray-400 whitespace-nowrap"
+                  >
                     Research Scope
                   </Label>
                   <Select
@@ -234,8 +243,8 @@ export function ResearchCreationModal({
                       })
                     }
                   >
-                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12">
-                      <SelectValue />
+                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12 w-full min-w-0">
+                      <SelectValue className="truncate" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
                       {Object.values(ResearchScope).map((s) => (
@@ -249,7 +258,10 @@ export function ResearchCreationModal({
 
                 {/* Goal Link */}
                 <div className="space-y-2">
-                  <Label htmlFor="goal" className="text-gray-400">
+                  <Label
+                    htmlFor="goal"
+                    className="text-gray-400 whitespace-nowrap"
+                  >
                     Link to Strategic Goal
                   </Label>
                   <Select
@@ -258,8 +270,11 @@ export function ResearchCreationModal({
                       setFormData({ ...formData, goalId: value })
                     }
                   >
-                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12">
-                      <SelectValue placeholder="Unlinked" />
+                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12 w-full min-w-0">
+                      <SelectValue
+                        placeholder="Unlinked"
+                        className="truncate"
+                      />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
                       {goals?.map((goal: any) => (
@@ -389,16 +404,16 @@ export function ResearchCreationModal({
               </div>
 
               {/* Actions */}
-              <div className="flex justify-between pt-4">
+              <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4">
                 <Button
                   variant="ghost"
                   onClick={handleSkipRefinement}
                   disabled={createMutation.isPending || startMutation.isPending}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white order-2 sm:order-1"
                 >
                   Skip Refinement →
                 </Button>
-                <div className="flex gap-3">
+                <div className="flex gap-3 justify-end order-1 sm:order-2">
                   <Button
                     variant="ghost"
                     onClick={onClose}
@@ -411,7 +426,7 @@ export function ResearchCreationModal({
                     disabled={
                       createMutation.isPending || refineMutation.isPending
                     }
-                    className="bg-[#a9927d] hover:bg-[#8f7a68] text-white px-8 h-12"
+                    className="bg-[#a9927d] hover:bg-[#8f7a68] text-white px-8 h-12 whitespace-nowrap"
                   >
                     Refine Mission <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>

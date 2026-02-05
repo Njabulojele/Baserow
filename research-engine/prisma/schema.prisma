@@ -1,0 +1,770 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  avatar           String?
+  timezone         String           @default("Africa/Johannesburg")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  geminiApiKey     String?
+  geminiModel      String           @default("gemini-2.0-flash")
+  groqApiKey       String?
+  llmProvider      String           @default("GEMINI")
+  serperApiKey     String?
+  researchLimit    Int              @default(10)
+  analyticsEvents  AnalyticsEvent[]
+  calendarEvents   CalendarEvent[]
+  captures         Capture[]
+  clients          Client[]
+  dayPlans         DayPlan[]
+  meetings         Meeting[]
+  notes            Note[]
+  projects         Project[]
+  researches       Research[]
+  tasks            Task[]
+  timeEntries      TimeEntry[]
+  voiceSessions    VoiceSession[]
+  weekPlans        WeekPlan[]
+  wellBeingEntries WellBeingEntry[]
+  yearPlans        YearPlan[]
+}
+
+model YearPlan {
+  id           String        @id @default(cuid())
+  userId       String
+  year         Int
+  theme        String
+  vision       String
+  focusAreas   String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  status       String        @default("active")
+  goals        Goal[]
+  quarterPlans QuarterPlan[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@index([userId])
+}
+
+model Goal {
+  id             String         @id @default(cuid())
+  yearPlanId     String
+  title          String
+  description    String?
+  category       String
+  status         String         @default("not_started")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  kpis           String[]
+  priority       String         @default("medium")
+  progress       Float          @default(0)
+  risks          String[]
+  strategies     String[]
+  targetDate     DateTime?
+  yearPlan       YearPlan       @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
+  keySteps       KeyStep[]
+  milestones     Milestone[]
+  notes          Note[]
+  quarterFocuses QuarterFocus[]
+  researches     Research[]
+  tasks          Task[]
+
+  @@index([yearPlanId])
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  goalId      String
+  title       String
+  targetDate  DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+}
+
+model KeyStep {
+  id          String    @id @default(cuid())
+  goalId      String
+  title       String
+  description String?
+  order       Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  progress    Float     @default(0)
+  targetDate  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  notes       Note[]
+  tasks       Task[]
+
+  @@index([goalId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  goalId    String?
+  keyStepId String?
+  dayPlanId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dayPlan   DayPlan? @relation(fields: [dayPlanId], references: [id])
+  goal      Goal?    @relation(fields: [goalId], references: [id])
+  keyStep   KeyStep? @relation(fields: [keyStepId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([goalId])
+  @@index([keyStepId])
+  @@index([dayPlanId])
+}
+
+model QuarterPlan {
+  id             String             @id @default(cuid())
+  yearPlanId     String
+  quarter        Int
+  theme          String
+  startDate      DateTime
+  endDate        DateTime
+  monthPlans     MonthPlan[]
+  quarterFocuses QuarterFocus[]
+  objectives     QuarterObjective[]
+  yearPlan       YearPlan           @relation(fields: [yearPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([yearPlanId, quarter])
+  @@index([yearPlanId])
+}
+
+model QuarterObjective {
+  id            String      @id @default(cuid())
+  quarterPlanId String
+  title         String
+  description   String?
+  status        String      @default("in_progress")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  quarterPlan   QuarterPlan @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
+
+  @@index([quarterPlanId])
+}
+
+model QuarterFocus {
+  id            String       @id @default(cuid())
+  quarterPlanId String
+  goalId        String
+  priority      Int          @default(1)
+  progress      Float        @default(0)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  monthFocuses  MonthFocus[]
+  goal          Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  quarterPlan   QuarterPlan  @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([quarterPlanId, goalId])
+  @@index([quarterPlanId])
+  @@index([goalId])
+}
+
+model MonthPlan {
+  id             String       @id @default(cuid())
+  quarterPlanId  String
+  month          Int
+  year           Int
+  objectives     String[]
+  completionRate Float        @default(0)
+  energyRating   Float?
+  rating         Int?
+  reviewNotes    String?
+  theme          String?
+  monthFocuses   MonthFocus[]
+  quarterPlan    QuarterPlan  @relation(fields: [quarterPlanId], references: [id], onDelete: Cascade)
+  weekPlans      WeekPlan[]
+
+  @@unique([quarterPlanId, month])
+  @@index([quarterPlanId])
+}
+
+model MonthFocus {
+  id             String       @id @default(cuid())
+  monthPlanId    String
+  quarterFocusId String
+  priority       Int          @default(1)
+  progress       Float        @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  monthPlan      MonthPlan    @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
+  quarterFocus   QuarterFocus @relation(fields: [quarterFocusId], references: [id], onDelete: Cascade)
+  weekFocuses    WeekFocus[]
+
+  @@unique([monthPlanId, quarterFocusId])
+  @@index([monthPlanId])
+  @@index([quarterFocusId])
+}
+
+model WeekPlan {
+  id                   String      @id @default(cuid())
+  monthPlanId          String
+  weekNumber           Int
+  year                 Int
+  startDate            DateTime
+  endDate              DateTime
+  topOutcomes          String[]
+  plannedClientHours   Float?
+  plannedPersonalHours Float?
+  userId               String
+  challenges           String[]
+  keyWins              String[]
+  lessonsLearned       String[]
+  rating               Int?
+  reviewNotes          String?
+  dayPlans             DayPlan[]
+  weekFocuses          WeekFocus[]
+  monthPlan            MonthPlan   @relation(fields: [monthPlanId], references: [id], onDelete: Cascade)
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startDate, endDate])
+}
+
+model WeekFocus {
+  id           String     @id @default(cuid())
+  weekPlanId   String
+  monthFocusId String
+  priority     Int        @default(1)
+  progress     Float      @default(0)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  dayFocuses   DayFocus[]
+  monthFocus   MonthFocus @relation(fields: [monthFocusId], references: [id], onDelete: Cascade)
+  weekPlan     WeekPlan   @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([weekPlanId, monthFocusId])
+  @@index([weekPlanId])
+  @@index([monthFocusId])
+}
+
+model DayPlan {
+  id              String      @id @default(cuid())
+  weekPlanId      String
+  date            DateTime    @db.Date
+  topPriorities   String[]
+  morningEnergy   Float?
+  afternoonEnergy Float?
+  eveningEnergy   Float?
+  dailyWin        String?
+  gratitude       String[]
+  tomorrowPrep    String[]
+  completionRate  Float       @default(0)
+  userId          String
+  dayFocuses      DayFocus[]
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekPlan        WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  notes           Note[]
+  timeBlocks      TimeBlock[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model DayFocus {
+  id          String    @id @default(cuid())
+  dayPlanId   String
+  weekFocusId String
+  priority    Int       @default(1)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  dayPlan     DayPlan   @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  weekFocus   WeekFocus @relation(fields: [weekFocusId], references: [id], onDelete: Cascade)
+
+  @@unique([dayPlanId, weekFocusId])
+  @@index([dayPlanId])
+  @@index([weekFocusId])
+}
+
+model TimeBlock {
+  id              String    @id @default(cuid())
+  dayPlanId       String
+  startTime       DateTime
+  endTime         DateTime
+  duration        Int
+  type            String
+  taskId          String?
+  projectId       String?
+  clientId        String?
+  actualStartTime DateTime?
+  actualEndTime   DateTime?
+  actualDuration  Int?
+  energyBefore    Float?
+  energyAfter     Float?
+  focusQuality    Float?
+  notes           String?
+  client          Client?   @relation(fields: [clientId], references: [id])
+  dayPlan         DayPlan   @relation(fields: [dayPlanId], references: [id], onDelete: Cascade)
+  project         Project?  @relation(fields: [projectId], references: [id])
+  task            Task?     @relation(fields: [taskId], references: [id])
+}
+
+model Project {
+  id                   String      @id @default(cuid())
+  userId               String
+  name                 String
+  description          String?
+  type                 String
+  status               String
+  clientId             String?
+  billable             Boolean     @default(false)
+  hourlyRate           Float?
+  budgetHours          Float?
+  startDate            DateTime?
+  deadline             DateTime?
+  estimatedHours       Float?
+  actualHoursSpent     Float       @default(0)
+  completionPercentage Float       @default(0)
+  goalId               String?
+  parentProjectId      String?
+  priority             String
+  tags                 String[]
+  color                String?     @default("#000000")
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  completedAt          DateTime?
+  archivedAt           DateTime?
+  icon                 String?
+  client               Client?     @relation(fields: [clientId], references: [id])
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks                Task[]
+  timeBlocks           TimeBlock[]
+  timeEntries          TimeEntry[]
+
+  @@index([userId, status])
+  @@index([userId, archivedAt])
+  @@index([clientId])
+}
+
+model Task {
+  id                String      @id @default(cuid())
+  userId            String
+  projectId         String?
+  title             String
+  description       String?
+  status            String      @default("not_started")
+  startedAt         DateTime?
+  completedAt       DateTime?
+  estimatedMinutes  Int?
+  actualMinutes     Int         @default(0)
+  timerRunning      Boolean     @default(false)
+  currentTimerStart DateTime?
+  scheduledDate     DateTime?
+  dueDate           DateTime?
+  priority          String
+  type              String
+  tags              String[]
+  parentTaskId      String?
+  dependsOn         String[]
+  blocks            String[]
+  energyRequired    Float?
+  isAdHoc           Boolean     @default(false)
+  isRecurring       Boolean     @default(false)
+  recurringPattern  String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  meetingId         String?
+  goalId            String?
+  keyStepId         String?
+  actionItem        ActionItem?
+  goal              Goal?       @relation(fields: [goalId], references: [id])
+  keyStep           KeyStep?    @relation(fields: [keyStepId], references: [id])
+  meeting           Meeting?    @relation(fields: [meetingId], references: [id])
+  project           Project?    @relation(fields: [projectId], references: [id])
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBlocks        TimeBlock[]
+  timeEntries       TimeEntry[]
+
+  @@index([userId, status])
+  @@index([userId, scheduledDate])
+  @@index([userId, dueDate])
+  @@index([userId, completedAt])
+  @@index([userId, timerRunning])
+  @@index([projectId])
+  @@index([goalId])
+  @@index([keyStepId])
+}
+
+model TimeEntry {
+  id           String    @id @default(cuid())
+  userId       String
+  taskId       String?
+  projectId    String?
+  clientId     String?
+  startTime    DateTime
+  endTime      DateTime?
+  duration     Int
+  type         String
+  description  String?
+  tags         String[]
+  focusQuality Float?
+  energyBefore Float?
+  energyAfter  Float?
+  distractions Int       @default(0)
+  billable     Boolean   @default(false)
+  hourlyRate   Float?
+  amount       Float     @default(0)
+  invoiced     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  client       Client?   @relation(fields: [clientId], references: [id])
+  project      Project?  @relation(fields: [projectId], references: [id])
+  task         Task?     @relation(fields: [taskId], references: [id])
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startTime])
+  @@index([userId, billable])
+  @@index([taskId])
+  @@index([projectId])
+}
+
+model Client {
+  id                     String          @id @default(cuid())
+  userId                 String
+  name                   String
+  companyName            String?
+  email                  String
+  phone                  String?
+  primaryContact         Json?
+  additionalContacts     Json[]
+  industry               String?
+  website                String?
+  timezone               String?
+  relationshipHealth     Float?
+  lastContactedAt        DateTime?
+  preferredCommunication String?
+  defaultHourlyRate      Float?
+  paymentTerms           String?
+  outstandingBalance     Float           @default(0)
+  notes                  String?
+  tags                   String[]
+  status                 String          @default("active")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  lastInteractionAt      DateTime?
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communications         Communication[]
+  meetings               Meeting[]
+  projects               Project[]
+  timeBlocks             TimeBlock[]
+  timeEntries            TimeEntry[]
+}
+
+model Communication {
+  id               String    @id @default(cuid())
+  clientId         String
+  projectId        String?
+  type             String
+  direction        String
+  subject          String
+  content          String
+  summary          String?
+  from             String?
+  to               String[]
+  cc               String[]
+  attachments      Json[]
+  meetingDate      DateTime?
+  meetingDuration  Int?
+  attendees        String[]
+  meetingNotes     String?
+  sentiment        String?
+  requiresFollowUp Boolean   @default(false)
+  followUpDate     DateTime?
+  createdAt        DateTime  @default(now())
+  responseTime     Int?
+  client           Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Meeting {
+  id                String   @id @default(cuid())
+  clientId          String?
+  projectId         String?
+  title             String
+  description       String?
+  type              String   @default("meeting")
+  scheduledAt       DateTime
+  duration          Int
+  timezone          String   @default("Africa/Johannesburg")
+  organizer         String   @default("me")
+  requiredAttendees String[]
+  optionalAttendees String[]
+  location          String?
+  meetingLink       String?
+  agenda            String?
+  meetingNotes      String?
+  actionItems       Json[]
+  decisions         String[]
+  status            String   @default("scheduled")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String
+  client            Client?  @relation(fields: [clientId], references: [id])
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks             Task[]
+}
+
+model WellBeingEntry {
+  id                String   @id @default(cuid())
+  userId            String
+  date              DateTime @db.Date
+  morningEnergy     Float?
+  afternoonEnergy   Float?
+  eveningEnergy     Float?
+  averageEnergy     Float?
+  exerciseMinutes   Int      @default(0)
+  exerciseType      String?
+  readingMinutes    Int      @default(0)
+  learningMinutes   Int      @default(0)
+  meditationMinutes Int      @default(0)
+  sleepHours        Float?
+  sleepQuality      Float?
+  morningJournal    String?
+  eveningReflection String?
+  gratitude         String[]
+  dailyWin          String?
+  mood              Float?
+  stressLevel       Float?
+  focusQuality      Float?
+  notes             String?
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Capture {
+  id                String    @id @default(cuid())
+  userId            String
+  type              String
+  content           String
+  transcription     String?
+  status            String    @default("inbox")
+  convertedToTaskId String?
+  convertedToNoteId String?
+  suggestedProject  String?
+  suggestedDueDate  DateTime?
+  suggestedPriority String?
+  tags              String[]
+  createdAt         DateTime  @default(now())
+  processedAt       DateTime?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VoiceSession {
+  id            String    @id @default(cuid())
+  userId        String
+  title         String
+  duration      Int
+  recordedAt    DateTime
+  audioFileUrl  String
+  waveformData  Json?
+  transcription String?
+  speakers      Json[]
+  timestamps    Json[]
+  summary       String?
+  keyPoints     String[]
+  actionItems   Json[]
+  projectId     String?
+  tags          String[]
+  processed     Boolean   @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CalendarEvent {
+  id                 String   @id @default(cuid())
+  userId             String
+  title              String
+  description        String?
+  startTime          DateTime
+  endTime            DateTime
+  allDay             Boolean  @default(false)
+  timezone           String
+  isRecurring        Boolean  @default(false)
+  recurrenceRule     String?
+  projectId          String?
+  taskId             String?
+  clientId           String?
+  meetingId          String?
+  type               String
+  reminders          Json[]
+  color              String?
+  location           String?
+  attendees          String[]
+  externalCalendarId String?
+  externalEventId    String?
+  syncStatus         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  eventType String
+  eventData Json?
+  sessionId String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Research {
+  id             String            @id @default(cuid())
+  userId         String
+  title          String
+  scope          ResearchScope
+  searchMethod   SearchMethod      @default(GEMINI_GROUNDING)
+  status         ResearchStatus    @default(PENDING)
+  originalPrompt String
+  refinedPrompt  String
+  rawData        Json?
+  progress       Int               @default(0)
+  errorMessage   String?
+  goalId         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  completedAt    DateTime?
+  actionItems    ActionItem[]
+  leadData       LeadData?
+  goal           Goal?             @relation(fields: [goalId], references: [id])
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insights       ResearchInsight[]
+  sources        ResearchSource[]
+
+  @@index([userId, status])
+  @@index([goalId])
+}
+
+model ResearchSource {
+  id              String   @id @default(cuid())
+  researchId      String
+  url             String
+  title           String
+  content         String   @default("")
+  excerpt         String
+  credibility     Float    @default(0.5)
+  citedInSections String[]
+  scrapedAt       DateTime @default(now())
+  research        Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model ResearchInsight {
+  id         String   @id @default(cuid())
+  researchId String
+  title      String
+  content    String
+  category   String
+  visualData Json?
+  confidence Float    @default(0.8)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  research   Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model ActionItem {
+  id                String         @id @default(cuid())
+  researchId        String
+  description       String
+  priority          ActionPriority @default(MEDIUM)
+  effort            Int            @default(3)
+  convertedToTaskId String?        @unique
+  convertedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  convertedToTask   Task?          @relation(fields: [convertedToTaskId], references: [id])
+  research          Research       @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId])
+}
+
+model LeadData {
+  id         String    @id @default(cuid())
+  researchId String    @unique
+  totalFound Int       @default(0)
+  exportedAt DateTime?
+  leads      Lead[]
+  research   Research  @relation(fields: [researchId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id              String    @id @default(cuid())
+  leadDataId      String
+  name            String
+  company         String?
+  email           String?
+  phone           String?
+  website         String?
+  industry        String?
+  location        String?
+  painPoints      String[]
+  suggestedDM     String
+  suggestedEmail  String
+  personalization Json?
+  contacted       Boolean   @default(false)
+  contactedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
+
+  @@index([leadDataId])
+}
+
+enum ResearchScope {
+  MARKET_ANALYSIS
+  LEAD_GENERATION
+  COMPETITIVE_INTELLIGENCE
+  BUSINESS_STRATEGY
+  INDUSTRY_TRENDS
+  CUSTOMER_INSIGHTS
+  GENERAL_RESEARCH
+}
+
+enum ResearchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ActionPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SearchMethod {
+  GEMINI_GROUNDING
+  SERPER_API
+  GEMINI_DEEP_RESEARCH
+  JINA_SERPER
+}

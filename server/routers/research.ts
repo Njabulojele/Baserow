@@ -337,7 +337,7 @@ export const researchRouter = router({
       return task;
     }),
 
-  // Generate leads manually
+  // Generate leads (now triggers Inngest background job)
   generateLeads: protectedProcedure
     .input(z.object({ researchId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -350,108 +350,19 @@ export const researchRouter = router({
       if (research.userId !== ctx.userId)
         throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      const rawData = research.rawData as any;
-      if (!rawData?.summary || !rawData?.insights) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Research analysis not found. Please run analysis first.",
-        });
-      }
-
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: ctx.userId },
-        select: {
-          geminiApiKey: true,
-          geminiModel: true,
-          groqApiKey: true,
-          llmProvider: true,
+      // Trigger Inngest event for lead generation
+      await inngest.send({
+        name: "research/generate-leads-requested",
+        data: {
+          researchId: input.researchId,
+          userId: ctx.userId,
         },
       });
 
-      if (!user?.geminiApiKey && !user?.groqApiKey) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "No LLM API keys found",
-        });
-      }
-
-      const { client: llmClient } = await getLLMClientWithFallback(
-        (user.llmProvider as any) || "GEMINI",
-        user.geminiApiKey || "",
-        "GROQ",
-        user.groqApiKey || "",
-        user.geminiModel,
-      );
-
-      const prompt = `
-        Based on these research findings, identify potential business leads.
-        
-        Goal: ${research.refinedPrompt}
-        Summary: ${rawData.summary}
-        
-        Key Insights:
-        ${rawData.insights
-          .map((i: any) => `- ${i.title}: ${i.content}`)
-          .join("\n")}
-        
-        Extract details for up to 10 high-quality leads.
-        Return as a JSON array:
-        [
-          {
-            "name": "Contact Name or 'General Inquiry'",
-            "company": "Company Name",
-            "email": "Email if found or null",
-            "phone": "Phone if found or null",
-            "website": "Website URL",
-            "industry": "Industry segment",
-            "location": "City/Country",
-            "painPoints": ["pain point 1", "pain point 2"],
-            "suggestedDM": "Suggested Decision Maker Role",
-            "suggestedEmail": "Predicted email pattern or specific email"
-          }
-        ]
-      `;
-
-      const leads = await llmClient.generateJSON<any[]>(prompt);
-
-      let leadDataId = research.leadData?.id;
-
-      if (!leadDataId) {
-        const leadData = await ctx.prisma.leadData.create({
-          data: {
-            researchId: input.researchId,
-            totalFound: 0,
-          },
-        });
-        leadDataId = leadData.id;
-      }
-
-      if (leads.length > 0) {
-        await ctx.prisma.lead.createMany({
-          data: leads.map((lead: any) => ({
-            leadDataId: leadDataId!,
-            name: lead.name || "Unknown Contact",
-            company: lead.company || "Unknown Company",
-            email: lead.email,
-            phone: lead.phone,
-            website: lead.website,
-            industry: lead.industry,
-            location: lead.location,
-            painPoints: lead.painPoints || [],
-            suggestedDM: lead.suggestedDM || "Relevant Decision Maker",
-            suggestedEmail: lead.suggestedEmail || "Not available",
-          })),
-        });
-
-        // Update total count
-        const total = await ctx.prisma.lead.count({ where: { leadDataId } });
-        await ctx.prisma.leadData.update({
-          where: { id: leadDataId },
-          data: { totalFound: total },
-        });
-      }
-
-      return { success: true, count: leads.length };
+      return {
+        success: true,
+        message: "Lead generation started in background",
+      };
     }),
 
   // Delete research

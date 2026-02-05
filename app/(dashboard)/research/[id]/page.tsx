@@ -214,32 +214,17 @@ export default function ResearchDetailPage({
               <h1 className="text-4xl font-bold text-white">
                 {research.title}
               </h1>
-              {research.status === "IN_PROGRESS" ? (
-                <div className="flex-1 max-w-xs">
-                  <div className="w-full bg-black/40 rounded-full h-1.5 mb-2 overflow-hidden">
-                    <div
-                      className="bg-[#6b9080] h-1.5 rounded-full transition-all duration-500 relative"
-                      style={{ width: `${research.progress}%` }}
-                    >
-                      <div className="absolute inset-0 bg-white/20 animate-pulse w-full h-full" />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground items-center">
-                    <span className="flex items-center text-[#6b9080] font-medium animate-pulse">
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      {getProgressStep(research.progress)}
-                    </span>
-                    <span>{research.progress}%</span>
-                  </div>
-                </div>
-              ) : (
+              {research.status === "IN_PROGRESS" && (
+                <Badge className="bg-[#6b9080] animate-pulse">
+                  IN PROGRESS
+                </Badge>
+              )}
+              {research.status !== "IN_PROGRESS" && (
                 <Badge
                   className={
                     research.status === "COMPLETED"
                       ? "bg-[#a9927d]"
-                      : research.status === "IN_PROGRESS"
-                        ? "bg-[#6b9080]"
-                        : "bg-destructive"
+                      : "bg-destructive"
                   }
                 >
                   {research.status}
@@ -350,13 +335,40 @@ export default function ResearchDetailPage({
           </div>
         </div>
       </div>
+      {/* Huge & Visible Progress Section */}
+      {research.status === "IN_PROGRESS" && (
+        <div className="mb-12 py-12 px-6 bg-black/40 border border-[#6b9080]/30 rounded-3xl flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-700 shadow-2xl">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-[#6b9080]/20 blur-3xl rounded-full animate-pulse" />
+            <div className="text-7xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
+              {research.progress}%
+            </div>
+          </div>
 
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-6 tracking-tight uppercase px-4">
+            {getProgressStep(research.progress)}
+          </h2>
+
+          <div className="w-full max-w-2xl bg-[#1a252f] rounded-full h-4 overflow-hidden border border-[#2f3e46] mb-4">
+            <div
+              className="bg-gradient-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
+              style={{ width: `${research.progress}%` }}
+            >
+              <div className="absolute inset-0 bg-white/10 animate-pulse" />
+            </div>
+          </div>
+
+          <p className="text-[#6b9080] text-sm font-medium flex items-center gap-2 animate-pulse">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Live Research Node Active
+          </p>
+        </div>
+      )}
       <RetryAnalysisDialog
         open={showRetryDialog}
         onOpenChange={setShowRetryDialog}
         onConfirm={handleRetryAnalysis}
       />
-
       <Dialog open={showKeyDialog} onOpenChange={setShowKeyDialog}>
         <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white">
           <DialogHeader>
@@ -386,7 +398,6 @@ export default function ResearchDetailPage({
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Tabs */}
       <Tabs
         value={activeTab}

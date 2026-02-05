@@ -46,7 +46,7 @@ export class GeminiClient {
   public model: GenerativeModel;
   private apiKey: string;
 
-  constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-flash") {
+  constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-pro") {
     const apiKey = decryptApiKey(encryptedApiKey);
     if (!apiKey) {
       throw new Error("Invalid or missing API key after decryption");
