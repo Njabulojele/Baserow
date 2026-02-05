@@ -10,19 +10,15 @@ const globalForPrisma = globalThis as unknown as {
 const prismaClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    // During build time on Vercel, DATABASE_URL might be missing
-    return new PrismaClient({
-      adapter: new PrismaPg({
-        connectionString: process.env.DATABASE_URL,
-      }),
-    });
+    // During build time, DATABASE_URL might be missing
+    console.warn("[Prisma] DATABASE_URL not set, using default client");
+    return new PrismaClient();
   }
 
-  return new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
-    }),
-  });
+  // PrismaPg expects a Pool instance, NOT a config object
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter });
 };
 
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
