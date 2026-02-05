@@ -1,27 +1,19 @@
-import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-// Instantiate Prisma Client
+// Instantiate Prisma Client - Standard client for Vercel
+// The PrismaPg adapter is ONLY used in research-engine (Render deployment)
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const prismaClientSingleton = () => {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    // During build time, DATABASE_URL might be missing
-    console.warn("[Prisma] DATABASE_URL not set, using default client");
-    return new PrismaClient();
-  }
-
-  // PrismaPg expects a Pool instance, NOT a config object
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
-  return new PrismaClient({ adapter });
-};
-
-export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    adapter: new PrismaPg({
+      connectionString: process.env.DATABASE_URL!,
+    }),
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

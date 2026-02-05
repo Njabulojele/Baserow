@@ -83,21 +83,6 @@ export const settingsRouter = router({
 
       // Only update API key if provided and not empty
       if (input.geminiApiKey && input.geminiApiKey.trim() !== "") {
-        // Validate key against Gemini API before saving
-        try {
-          const genAI = new GoogleGenerativeAI(input.geminiApiKey);
-          // Use 2.0-flash for validation as it's the current stable standard
-          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-          await model.generateContent("test");
-        } catch (error: any) {
-          console.error("Gemini Key Validation Failed:", error);
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Invalid Gemini API key. Please check your key and try again.",
-            cause: error,
-          });
-        }
         data.geminiApiKey = encryptApiKey(input.geminiApiKey);
       }
 
