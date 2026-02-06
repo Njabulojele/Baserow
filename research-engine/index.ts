@@ -14,7 +14,8 @@ const inngest = new Inngest({
 });
 
 // Serve the Inngest handler
-app.use(express.json());
+// Serve the Inngest handler with increased payload limits
+app.use(express.json({ limit: "50mb" }));
 app.use(
   "/api/inngest",
   serve({

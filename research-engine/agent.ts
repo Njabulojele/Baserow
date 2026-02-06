@@ -197,7 +197,11 @@ export const researchAgent = inngest.createFunction(
           data: { progress: 70 },
         });
 
-        return scrapedData;
+        return scrapedData.map((s: any) => ({
+          url: s.url,
+          title: s.title,
+          excerpt: s.excerpt,
+        }));
       });
     } else {
       // 🌐 STANDARD MODES (SCRAPE + ANALYZE)
@@ -388,7 +392,11 @@ export const researchAgent = inngest.createFunction(
             data: { progress: 30 },
           });
 
-          return scrapedData;
+          return scrapedData.map((s: any) => ({
+            url: s.url,
+            title: s.title,
+            excerpt: s.excerpt,
+          }));
         } finally {
           await scraper.close();
         }
@@ -431,9 +439,17 @@ export const researchAgent = inngest.createFunction(
         primaryModel,
       );
 
+      // 🔄 Fetch content fresh from DB if not present (optimization for large payloads)
+      const fullSources = await prisma.researchSource.findMany({
+        where: {
+          researchId,
+          url: { in: sources.map((s: any) => s.url) },
+        },
+      });
+
       const result = await llmClient.analyzeContent(
         research.refinedPrompt,
-        sources
+        fullSources
           .map((s: any) => `Source: ${s.title} (${s.url})\n${s.content}`)
           .join("\n\n---\n\n"),
       );
