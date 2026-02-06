@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   CheckCircle,
   Clock,
@@ -15,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskList } from "@/components/tasks/TaskList";
 import { trpc } from "@/lib/trpc/client";
+import { UrgencyDashboard } from "@/components/dashboard/UrgencyDashboard";
+import { SmartInsight } from "@/components/dashboard/SmartInsight";
+import { StrategyAnalytics } from "@/components/strategy/StrategyAnalytics";
 
 interface DashboardStats {
   todaysTasks: number;
@@ -82,15 +86,19 @@ function StatsCard({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+    <Card className="min-w-0 overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+        <CardTitle className="text-sm font-medium truncate mr-2">
+          {title}
+        </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="px-3 sm:px-6">
+        <div className="text-xl sm:text-2xl font-bold truncate">{value}</div>
         {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+            {subtitle}
+          </p>
         )}
       </CardContent>
     </Card>
@@ -104,6 +112,31 @@ function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
     refetchInterval: 10000, // Refresh every 10s for accurate time
   });
   const utils = trpc.useUtils();
+
+  // Live elapsed time state that updates every second
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!activeTimer?.currentTimerStart) {
+      setElapsed(0);
+      return;
+    }
+
+    // Calculate initial elapsed time
+    const calculateElapsed = () => {
+      const start = new Date(activeTimer.currentTimerStart!).getTime();
+      return Math.floor((Date.now() - start) / 60000);
+    };
+
+    setElapsed(calculateElapsed());
+
+    // Update every second
+    const interval = setInterval(() => {
+      setElapsed(calculateElapsed());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTimer?.currentTimerStart]);
 
   const stopTimer = trpc.task.stopTimer.useMutation({
     // Optimistic update
@@ -124,30 +157,30 @@ function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
 
   if (!activeTimer) return null;
 
-  const elapsed = activeTimer.currentTimerStart
-    ? Math.floor(
-        (Date.now() - new Date(activeTimer.currentTimerStart).getTime()) /
-          60000,
-      )
-    : 0;
-
   return (
-    <Card className="border-primary/50 bg-primary/5 mb-6">
-      <CardContent className="p-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <Card className="border-primary/50 bg-primary/5 mb-8">
+      <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="relative">
-            <Timer className="h-8 w-8 text-primary animate-pulse" />
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Timer className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse" />
+            </div>
           </div>
           <div>
-            <h3 className="font-semibold">{activeTimer.title}</h3>
-            <p className="text-sm text-muted-foreground">
-              {activeTimer.project?.name || "No project"} • {elapsed}m elapsed
+            <h3 className="font-semibold text-base sm:text-lg">
+              {activeTimer.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {activeTimer.project?.name || "No project"} •{" "}
+              <span className="font-medium text-primary">{elapsed}m</span>{" "}
+              elapsed
             </p>
           </div>
         </div>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
+          className="w-full sm:w-auto font-medium"
           onClick={() => stopTimer.mutate({ id: activeTimer.id })}
           disabled={stopTimer.isPending}
         >
@@ -180,59 +213,74 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   if (energyStats?.trend === "declining") energySubtitle = "Trending Down";
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="w-full max-w-full overflow-x-hidden">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white-smoke">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
           Dashboard
         </h1>
-        <p className="text-muted-foreground mt-1 text-white-smoke/60">
+        <p className="text-sm sm:text-base text-muted-foreground mt-1 text-white-smoke/60">
           Your productivity at a glance
         </p>
+      </div>
+
+      {/* Smart Insights & Urgency */}
+      <div className="space-y-6 min-w-0">
+        <SmartInsight />
+        <UrgencyDashboard />
+        <div className="mb-8">
+          <StrategyAnalytics />
+        </div>
       </div>
 
       {/* Active Timer */}
       <ActiveTimerWidget initialTimer={initialData.activeTimer} />
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-8 min-w-0">
         <StatsCard
-          title="Tasks Due Today"
+          title="Tasks Due"
           value={stats?.todaysTasks ?? 0}
-          subtitle={`${stats?.completedToday ?? 0} completed`}
+          subtitle={`${stats?.completedToday ?? 0} done`}
           icon={CheckCircle}
         />
         <StatsCard
-          title="Active Projects"
+          title="Projects"
           value={stats?.activeProjects ?? 0}
           subtitle="In progress"
           icon={FolderKanban}
         />
         <StatsCard
-          title="Hours This Week"
+          title="Focus Hours"
           value={`${stats?.hoursThisWeek ?? 0}h`}
-          subtitle="Time tracked"
+          subtitle="This week"
           icon={Clock}
         />
         <StatsCard
-          title="Energy Level"
+          title="Energy"
           value={energyValue}
           subtitle={energySubtitle}
           icon={Play}
         />
       </div>
 
-      {/* Today's Tasks */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Today&apos;s Tasks</CardTitle>
+      {/* Today's Tasks and Quick Actions */}
+      <div className="grid gap-6 md:grid-cols-2 min-w-0">
+        <Card className="flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-xl truncate">
+              Today&apos;s Tasks
+            </CardTitle>
             <Link href="/tasks">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs sm:text-sm"
+              >
                 View All
               </Button>
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex-1 overflow-hidden">
             <TaskList
               tasks={todaysTasks}
               emptyMessage="No tasks scheduled for today"
@@ -240,33 +288,45 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-xl">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            <Link href="/tasks">
-              <Button variant="outline" className="w-full justify-start">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                View All Tasks
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 flex-1">
+            <Link href="/tasks" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
+              >
+                <CheckCircle className="h-4 w-4 mr-2 text-primary shrink-0" />
+                <span className="truncate">View All Tasks</span>
               </Button>
             </Link>
-            <Link href="/projects">
-              <Button variant="outline" className="w-full justify-start">
-                <FolderKanban className="h-4 w-4 mr-2" />
-                Manage Projects
+            <Link href="/projects" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
+              >
+                <FolderKanban className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                <span className="truncate">Manage Projects</span>
               </Button>
             </Link>
-            <Link href="/planning/day">
-              <Button variant="outline" className="w-full justify-start">
-                <Calendar className="h-4 w-4 mr-2" />
-                Plan Your Day
+            <Link href="/planning/day" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
+              >
+                <Calendar className="h-4 w-4 mr-2 text-green-500 shrink-0" />
+                <span className="truncate">Plan Your Day</span>
               </Button>
             </Link>
-            <Link href="/planning/review">
-              <Button variant="outline" className="w-full justify-start">
-                <Target className="h-4 w-4 mr-2" />
-                Complete Daily Review
+            <Link href="/planning/review" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
+              >
+                <Target className="h-4 w-4 mr-2 text-orange-500 shrink-0" />
+                <span className="truncate">Daily Review</span>
               </Button>
             </Link>
           </CardContent>

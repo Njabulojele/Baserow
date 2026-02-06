@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import {
+  recalculateKeyStepProgress,
+  recalculateGoalProgress,
+} from "../progress-utils";
 
 export const taskRouter = router({
   // Get all tasks for the current user
@@ -80,6 +84,8 @@ export const taskRouter = router({
         estimatedMinutes: z.number().optional(),
         energyRequired: z.number().min(1).max(10).optional(),
         tags: z.array(z.string()).optional(),
+        goalId: z.string().optional(),
+        keyStepId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -92,7 +98,7 @@ export const taskRouter = router({
       });
     }),
 
-  // Update a task
+  // Update a task (triggering rebuild)
   updateTask: protectedProcedure
     .input(
       z.object({
@@ -112,6 +118,8 @@ export const taskRouter = router({
         estimatedMinutes: z.number().nullable().optional(),
         energyRequired: z.number().min(1).max(10).nullable().optional(),
         tags: z.array(z.string()).optional(),
+        goalId: z.string().nullable().optional(),
+        keyStepId: z.string().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -122,10 +130,17 @@ export const taskRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      return ctx.prisma.task.update({
+      const updatedTask = await ctx.prisma.task.update({
         where: { id },
         data,
       });
+
+      // Trigger progress recalculation if task has a keyStepId and status changed
+      if (updatedTask.keyStepId && input.status) {
+        await recalculateKeyStepProgress(ctx.prisma, updatedTask.keyStepId);
+      }
+
+      return updatedTask;
     }),
 
   // Delete a task
@@ -139,7 +154,40 @@ export const taskRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      return ctx.prisma.task.delete({ where: { id: input.id } });
+      await ctx.prisma.task.delete({ where: { id: input.id } });
+
+      // Recalculate progress if linked
+      if (task.keyStepId) {
+        await recalculateKeyStepProgress(ctx.prisma, task.keyStepId);
+      } else if (task.goalId) {
+        // If linked directly to goal, we might want to handle that too
+        // For now, let's just re-check direct goal tasks if we support that
+      }
+
+      return task;
+    }),
+
+  // Start working on a task (simple status-based tracking, no timer complexity)
+  startTask: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+      });
+      if (!task || task.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      // Only set startedAt if not already started
+      const startedAt = task.startedAt || new Date();
+
+      return ctx.prisma.task.update({
+        where: { id: input.id },
+        data: {
+          status: "in_progress",
+          startedAt,
+        },
+      });
     }),
 
   // Start timer on a task
@@ -242,9 +290,26 @@ export const taskRouter = router({
             type: "timer",
           },
         });
+      } else if (task.startedAt && task.actualMinutes === 0) {
+        // If no timer was used but task was started, calculate from startedAt
+        additionalMinutes = Math.floor(
+          (Date.now() - task.startedAt.getTime()) / 60000,
+        );
+
+        await ctx.prisma.timeEntry.create({
+          data: {
+            userId: ctx.userId,
+            taskId: task.id,
+            projectId: task.projectId,
+            startTime: task.startedAt,
+            endTime: new Date(),
+            duration: additionalMinutes,
+            type: "work_session",
+          },
+        });
       }
 
-      return ctx.prisma.task.update({
+      const updatedTask = await ctx.prisma.task.update({
         where: { id: input.id },
         data: {
           status: "done",
@@ -254,6 +319,13 @@ export const taskRouter = router({
           actualMinutes: task.actualMinutes + additionalMinutes,
         },
       });
+
+      // Propagate progress
+      if (updatedTask.keyStepId) {
+        await recalculateKeyStepProgress(ctx.prisma, updatedTask.keyStepId);
+      }
+
+      return updatedTask;
     }),
 
   // Get active timer
@@ -298,6 +370,25 @@ export const taskRouter = router({
         status: {
           not: "done",
         },
+      },
+      include: {
+        project: {
+          select: { id: true, name: true, color: true },
+        },
+      },
+      orderBy: { priority: "asc" },
+    });
+  }),
+
+  // Get backlog tasks (unscheduled)
+  getBacklogTasks: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.task.findMany({
+      where: {
+        userId: ctx.userId,
+        // Remove strictly null filter for now so user can see their tasks
+        // and drag them to reschedule or time block them.
+        // scheduledDate: null,
+        status: { not: "done" },
       },
       include: {
         project: {

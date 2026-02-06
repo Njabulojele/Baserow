@@ -44,6 +44,7 @@ const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   type: z.enum(["client", "personal", "life_area", "recurring"]),
+  clientId: z.string().optional(),
   status: z.enum(["planning", "active", "on_hold", "completed", "cancelled"]),
   priority: z.enum(["critical", "high", "medium", "low"]),
   deadline: z.date().optional(),
@@ -72,6 +73,8 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
   const [open, setOpen] = useState(false);
   const utils = trpc.useUtils();
 
+  const { data: clients } = trpc.clients.getClients.useQuery();
+
   const createProject = trpc.project.createProject.useMutation({
     onSuccess: () => {
       utils.project.getProjects.invalidate();
@@ -93,6 +96,8 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
       color: "#8b5cf6",
     },
   });
+
+  const projectType = form.watch("type");
 
   const onSubmit = (data: ProjectFormData) => {
     createProject.mutate(data);
@@ -198,6 +203,36 @@ export function ProjectForm({ onSuccess }: ProjectFormProps) {
                 )}
               />
             </div>
+
+            {projectType === "client" && (
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

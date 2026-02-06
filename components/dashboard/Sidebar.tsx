@@ -11,11 +11,14 @@ import {
   Users,
   LineChart,
   Heart,
+  Target,
   Settings,
   PlusCircle,
+  Search,
   LogOut,
 } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import Image from "next/image";
 
 const routes = [
   {
@@ -35,6 +38,12 @@ const routes = [
     icon: FolderOpen,
     href: "/projects",
     color: "text-pink-700",
+  },
+  {
+    label: "Strategy",
+    icon: Target,
+    href: "/strategy",
+    color: "text-indigo-500",
   },
   {
     label: "Calendar",
@@ -65,6 +74,12 @@ const routes = [
     icon: Settings,
     href: "/settings",
   },
+  {
+    label: "Research Agent",
+    icon: Search,
+    href: "/research",
+    color: "text-amber-500",
+  },
 ];
 
 export function Sidebar() {
@@ -74,10 +89,8 @@ export function Sidebar() {
     <div className="space-y-4 py-4 flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
       <div className="px-3 py-2 flex-1">
         <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <div className="relative w-8 h-8 mr-4 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold">
-            L
-          </div>
-          <h1 className="text-2xl font-bold">LifeOS</h1>
+          <Image src="/logo.png" alt="Baserow" width={32} height={32} />
+          <h1 className="text-2xl font-bold">Baserow</h1>
         </Link>
         <div className="space-y-1">
           {routes.map((route) => (

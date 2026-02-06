@@ -8,7 +8,9 @@ import {
   Heart,
   LayoutDashboard,
   LineChart,
+  Search,
   Settings,
+  Target,
   Users,
 } from "lucide-react";
 
@@ -21,10 +23,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const routes = [
   {
@@ -38,9 +42,9 @@ const routes = [
     href: "/planning/day",
   },
   {
-    label: "Week Planning",
-    icon: LayoutDashboard,
-    href: "/planning/week",
+    label: "Strategy",
+    icon: Target,
+    href: "/strategy",
   },
   {
     label: "Tasks",
@@ -67,31 +71,47 @@ const routes = [
     icon: LineChart,
     href: "/analytics",
   },
-  {
-    label: "Well-being",
-    icon: Heart,
-    href: "/well-being",
-  },
+  // {
+  //   label: "Well-being",
+  //   icon: Heart,
+  //   href: "/well-being",
+  // },
   {
     label: "Settings",
     icon: Settings,
     href: "/settings",
   },
+  {
+    label: "Research Agent",
+    icon: Search,
+    href: "/research",
+  },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex items-center p-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shrink-0">
-            L
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Baserow"
+            width={32}
+            height={32}
+            className="rounded-md"
+          />
           <div className="ml-2 flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-            <span className="font-bold">LifeOS</span>
-            <span className="">v1.0</span>
+            <span className="font-bold">Baserow</span>
+            <span className="text-xs">v1.0</span>
           </div>
         </div>
       </SidebarHeader>
@@ -103,6 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
+                onClick={handleLinkClick}
               >
                 <Link href={item.href}>
                   <item.icon />

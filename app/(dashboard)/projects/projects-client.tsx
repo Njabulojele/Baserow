@@ -40,25 +40,41 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto py-6 sm:py-8 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Projects
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 text-white-smoke/60">
             Organize and track your work
           </p>
         </div>
-        <ProjectForm />
+        <div className="w-full sm:w-auto">
+          <ProjectForm />
+        </div>
       </div>
 
       <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="planning">Planning</TabsTrigger>
-          <TabsTrigger value="on_hold">On Hold</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+          <TabsList className="flex w-full min-w-[400px] sm:min-w-0 sm:grid sm:grid-cols-5">
+            <TabsTrigger value="active" className="flex-1">
+              Active
+            </TabsTrigger>
+            <TabsTrigger value="planning" className="flex-1">
+              Planning
+            </TabsTrigger>
+            <TabsTrigger value="on_hold" className="flex-1">
+              On Hold
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex-1">
+              Completed
+            </TabsTrigger>
+            <TabsTrigger value="all" className="flex-1">
+              All
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value={status}>
           {isLoading ? (

@@ -40,66 +40,135 @@ const statusColors = {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const hoursSpent = Math.round(project.actualHoursSpent * 10) / 10;
-  const statusClass =
-    statusColors[project.status as keyof typeof statusColors] ||
-    statusColors.active;
+  // Fallback color if none provided
+  const accentColor = project.color || "#6366f1";
+
+  // Status mapping to colors/labels
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    active: {
+      label: "Active",
+      className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    },
+    planning: {
+      label: "Planning",
+      className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    },
+    on_hold: {
+      label: "On Hold",
+      className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    },
+    completed: {
+      label: "Completed",
+      className: "bg-slate-100 text-slate-600 border-slate-200",
+    },
+    cancelled: {
+      label: "Cancelled",
+      className: "bg-red-500/10 text-red-600 border-red-500/20",
+    },
+  };
+
+  const statusInfo = statusConfig[project.status] || statusConfig.active;
 
   return (
-    <Link href={`/projects/${project.id}`}>
-      <div
-        className={cn(
-          "group p-6 rounded-xl border transition-all cursor-pointer",
-          "bg-card hover:bg-accent/50 hover:shadow-lg hover:-translate-y-1",
-        )}
-        style={{
-          borderLeftColor: project.color || undefined,
-          borderLeftWidth: project.color ? 4 : 1,
-        }}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-              {project.name}
-            </h3>
-            {project.client && (
-              <p className="text-sm text-muted-foreground">
-                {project.client.name}
+    <Link href={`/projects/${project.id}`} className="block h-full group">
+      <div className="h-full flex flex-col bg-card hover:bg-gradient-to-br hover:from-card hover:to-primary/5 border rounded-xl shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
+        {/* Color Indicator Strip */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1.5 transition-all group-hover:w-2"
+          style={{ backgroundColor: accentColor }}
+        />
+
+        <div className="p-5 pl-7 flex flex-col h-full">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-bold text-lg leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
+                {project.name}
+              </h3>
+              {project.client && (
+                <p className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
+                  {project.client.name}
+                </p>
+              )}
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 h-6",
+                statusInfo.className,
+              )}
+            >
+              {statusInfo.label}
+            </Badge>
+          </div>
+
+          {/* Description / Content (Flex Grow) */}
+          <div className="flex-1 min-h-[3rem] mb-6">
+            {project.description ? (
+              <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                {project.description}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground/40 italic">
+                No description provided.
               </p>
             )}
           </div>
-          <Badge variant="outline" className={cn("capitalize", statusClass)}>
-            {project.status.replace("_", " ")}
-          </Badge>
-        </div>
 
-        {project.description && (
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {project.description}
-          </p>
-        )}
+          {/* Progress & Stats Footer */}
+          <div className="mt-auto space-y-4">
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-muted-foreground">Progress</span>
+                <span
+                  className={cn(
+                    "text-foreground",
+                    project.completionPercentage >= 100
+                      ? "text-emerald-600"
+                      : "",
+                  )}
+                >
+                  {Math.round(project.completionPercentage)}%
+                </span>
+              </div>
+              <Progress
+                value={project.completionPercentage}
+                className="h-1.5 bg-muted/50"
+                // We can dynamically color the indicator if ShadCN Progress supports supports child class or style
+                // For now standard primary color is fine, but let's try to pass style if possible or just stick to component default
+              />
+            </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">
-              {Math.round(project.completionPercentage)}%
-            </span>
+            <div className="pt-4 border-t border-dashed flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <ListTodo className="h-3.5 w-3.5" />
+                  <span>{project._count.tasks}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{hoursSpent}h</span>
+                </div>
+              </div>
+
+              {project.deadline && (
+                <div
+                  className={cn(
+                    "px-2 py-1 rounded bg-muted/50 font-medium",
+                    new Date(project.deadline) < new Date() &&
+                      project.status !== "completed"
+                      ? "text-red-500 bg-red-50"
+                      : "",
+                  )}
+                >
+                  {new Date(project.deadline).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-          <Progress value={project.completionPercentage} className="h-2" />
-        </div>
-
-        <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <ListTodo className="h-4 w-4" />
-            {project._count.tasks} tasks
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            {hoursSpent}h logged
-          </span>
-          {project.deadline && (
-            <span>Due {new Date(project.deadline).toLocaleDateString()}</span>
-          )}
         </div>
       </div>
     </Link>

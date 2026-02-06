@@ -49,6 +49,8 @@ const taskSchema = z.object({
   dueDate: z.date().optional(),
   scheduledDate: z.date().optional(),
   estimatedMinutes: z.number().optional(),
+  goalId: z.string().optional(),
+  keyStepId: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -56,13 +58,24 @@ type TaskFormData = z.infer<typeof taskSchema>;
 interface TaskFormProps {
   onSuccess?: () => void;
   defaultProjectId?: string;
+  defaultDate?: Date;
+  trigger?: React.ReactNode;
 }
 
-export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
+export function TaskForm({
+  onSuccess,
+  defaultProjectId,
+  defaultDate,
+  trigger,
+}: TaskFormProps) {
   const [open, setOpen] = useState(false);
   const utils = trpc.useUtils();
+  const currentYear = new Date().getFullYear();
 
   const { data: projects } = trpc.project.getProjects.useQuery();
+  const { data: yearPlan } = trpc.strategy.getYearPlan.useQuery({
+    year: currentYear,
+  });
 
   const createTask = trpc.task.createTask.useMutation({
     onSuccess: () => {
@@ -88,8 +101,12 @@ export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
       projectId: defaultProjectId || undefined,
       priority: "medium",
       type: "shallow_work",
+      scheduledDate: defaultDate,
     },
   });
+
+  const selectedGoalId = form.watch("goalId");
+  const selectedGoal = yearPlan?.goals.find((g) => g.id === selectedGoalId);
 
   const onSubmit = (data: TaskFormData) => {
     createTask.mutate(data);
@@ -98,12 +115,14 @@ export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
+        {trigger || (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
         </DialogHeader>
@@ -137,7 +156,7 @@ export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="projectId"
@@ -197,7 +216,82 @@ export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Strategy Links */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="goalId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Link to Goal</FormLabel>
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val === "none" ? undefined : val);
+                        form.setValue("keyStepId", undefined); // Reset keystep
+                      }}
+                      defaultValue={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full overflow-hidden [&>span]:truncate [&>span]:min-w-0">
+                          <SelectValue placeholder="Select Goal" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No Goal</SelectItem>
+                        {yearPlan?.goals.map((goal) => (
+                          <SelectItem key={goal.id} value={goal.id}>
+                            {goal.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="keyStepId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Link to Key Step</FormLabel>
+                    <Select
+                      onValueChange={(val) =>
+                        field.onChange(val === "none" ? undefined : val)
+                      }
+                      defaultValue={field.value || "none"}
+                      disabled={
+                        !selectedGoalId || !selectedGoal?.keySteps?.length
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full overflow-hidden [&>span]:truncate [&>span]:min-w-0">
+                          <SelectValue
+                            placeholder={
+                              !selectedGoalId
+                                ? "Select a goal first"
+                                : "Select Key Step"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No Key Step</SelectItem>
+                        {selectedGoal?.keySteps?.map((step: any) => (
+                          <SelectItem key={step.id} value={step.id}>
+                            {step.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="type"
@@ -254,7 +348,7 @@ export function TaskForm({ onSuccess, defaultProjectId }: TaskFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="dueDate"

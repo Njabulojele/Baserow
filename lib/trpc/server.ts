@@ -76,4 +76,14 @@ export const prefetch = {
     const caller = await createServerCaller();
     return caller.planning.getWeeklyOverview(filters);
   }),
+
+  /**
+   * Prefetch calendar events
+   */
+  calendar: {
+    getEvents: cache(async (input: { start: Date; end: Date }) => {
+      const caller = await createServerCaller();
+      return caller.calendar.getEvents(input);
+    }),
+  },
 };
