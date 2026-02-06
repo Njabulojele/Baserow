@@ -67,7 +67,7 @@ export default async function DashboardLayout({
           {/* Add breadcrumbs here if needed later */}
         </header>
         <DashboardShell>
-          <div className="flex-1 overflow-x-hidden overflow-y-auto w-full min-w-0">
+          <div className="flex-1 overflow-x-hidden overflow-y-auto w-6xl min-w-0">
             {children}
           </div>
         </DashboardShell>

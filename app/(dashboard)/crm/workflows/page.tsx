@@ -13,31 +13,34 @@ export default function WorkflowsPage() {
   >(undefined);
 
   return (
-    <div className="p-4 md:p-8 pt-6 overflow-hidden w-full min-w-0 flex flex-col">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full min-w-0">
+      <div className="flex items-center justify-between shrink-0 mb-6">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600">
+          <div className="p-2 bg-accent/20 rounded-lg text-accent ring-1 ring-accent/30">
             <Zap className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Workflows</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+              Workflows
+            </h2>
             <p className="text-muted-foreground">Automate your CRM actions</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
+            className="bg-accent hover:bg-accent/90 text-white font-bold"
             onClick={() => {
               setSelectedWorkflowId(undefined);
               setIsWorkflowBuilderOpen(true);
             }}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4 text-white" />
             New Workflow
           </Button>
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="flex-1 overflow-hidden min-h-0 w-full min-w-0">
         <WorkflowList
           onCreateNew={() => {
             setSelectedWorkflowId(undefined);

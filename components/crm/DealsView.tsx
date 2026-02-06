@@ -30,6 +30,7 @@ import {
   User,
   CheckCircle,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -231,23 +232,38 @@ export default function DealsView({ onAddDeal }: DealsViewProps) {
                                     onClick={() =>
                                       handleMoveStage(deal.id, s.id)
                                     }
+                                    disabled={moveStageMutation.isPending}
                                   >
-                                    <ArrowRight className="h-4 w-4 mr-2" />
+                                    {moveStageMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <ArrowRight className="h-4 w-4 mr-2" />
+                                    )}
                                     Move to {s.name}
                                   </DropdownMenuItem>
                                 ))}
                               <DropdownMenuItem
                                 onClick={() => handleClose(deal.id, true)}
                                 className="text-green-600"
+                                disabled={closeDealMutation.isPending}
                               >
-                                <CheckCircle className="h-4 w-4 mr-2" />
+                                {closeDealMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                )}
                                 Mark as Won
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleClose(deal.id, false)}
                                 className="text-red-600"
+                                disabled={closeDealMutation.isPending}
                               >
-                                <XCircle className="h-4 w-4 mr-2" />
+                                {closeDealMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                )}
                                 Mark as Lost
                               </DropdownMenuItem>
                             </DropdownMenuContent>

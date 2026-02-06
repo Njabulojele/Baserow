@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -95,9 +96,13 @@ export function LeadFormDialog({
   });
 
   const onSubmit = (values: FormValues) => {
+    // Clean up empty strings to undefined/null for the server
     const data = {
       ...values,
+      phone: values.phone || undefined,
+      title: values.title || undefined,
       companyWebsite: values.companyWebsite || undefined,
+      industry: values.industry || undefined,
       estimatedValue: values.estimatedValue
         ? parseFloat(values.estimatedValue)
         : undefined,
@@ -298,11 +303,16 @@ export function LeadFormDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading
-                  ? "Saving..."
-                  : initialData
-                    ? "Update Lead"
-                    : "Create Lead"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : initialData ? (
+                  "Update Lead"
+                ) : (
+                  "Create Lead"
+                )}
               </Button>
             </div>
           </form>

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -299,11 +300,16 @@ export function DealFormDialog({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading
-                    ? "Saving..."
-                    : initialData
-                      ? "Update Deal"
-                      : "Create Deal"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : initialData ? (
+                    "Update Deal"
+                  ) : (
+                    "Create Deal"
+                  )}
                 </Button>
               </div>
             </form>

@@ -12,7 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, GripVertical, Check, Settings } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  Check,
+  Settings,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -147,6 +154,9 @@ export function PipelineSetupDialog({
                     onClick={() => getOrCreateDefaultMutation.mutate()}
                     disabled={getOrCreateDefaultMutation.isPending}
                   >
+                    {getOrCreateDefaultMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
                     Create Default Pipeline
                   </Button>
                 </div>
@@ -195,7 +205,11 @@ export function PipelineSetupDialog({
                   !newPipelineName.trim() || createPipelineMutation.isPending
                 }
               >
-                <Plus className="h-4 w-4 mr-1" />
+                {createPipelineMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-1" />
+                )}
                 Add
               </Button>
             </div>
@@ -285,7 +299,11 @@ export function PipelineSetupDialog({
                     }
                     disabled={createStageMutation.isPending}
                   >
-                    <Plus className="h-4 w-4 mr-1" />
+                    {createStageMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-1" />
+                    )}
                     Add Stage
                   </Button>
                 </div>

@@ -11,10 +11,12 @@ import {
   Loader2,
   Plus,
   Sparkles,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ResearchLeadsProps {
   leadData: any;
@@ -23,6 +25,8 @@ interface ResearchLeadsProps {
 
 export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  // const [isGenerating, setIsGenerating] = useState(false);
+  const [addedLeads, setAddedLeads] = useState<Record<string, boolean>>({});
   const utils = trpc.useContext();
   const generateLeads = trpc.research.generateLeads.useMutation({
     onSuccess: () => {
@@ -37,8 +41,10 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
   });
 
   const createCrmLead = trpc.crmLead.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Lead added to CRM! Scoring & Workflows triggered.");
+      const emailKey = variables.email.toLowerCase().trim();
+      setAddedLeads((prev) => ({ ...prev, [emailKey]: true }));
     },
     onError: (err) => {
       toast.error(`Failed to add lead: ${err.message}`);
@@ -314,12 +320,40 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                 )}
 
                 <Button
-                  className="w-full bg-[#a9927d] hover:bg-[#8f7a68] text-white text-xs h-9"
+                  className={cn(
+                    "w-full text-xs h-9",
+                    addedLeads[
+                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
+                    ]
+                      ? "bg-green-600 hover:bg-green-600 text-white cursor-default"
+                      : "bg-[#a9927d] hover:bg-[#8f7a68] text-white",
+                  )}
                   onClick={() => handleAddToCrm(lead)}
-                  disabled={createCrmLead.isLoading}
+                  disabled={
+                    createCrmLead.isPending ||
+                    addedLeads[
+                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
+                    ]
+                  }
                 >
-                  <UserPlus className="w-3 h-3 mr-2" />
-                  {createCrmLead.isLoading ? "Adding..." : "Add to CRM"}
+                  {createCrmLead.isPending ? (
+                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                  ) : addedLeads[
+                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
+                    ] ? (
+                    <Check className="w-3 h-3 mr-2" />
+                  ) : (
+                    <UserPlus className="w-3 h-3 mr-2" />
+                  )}
+                  {createCrmLead.isPending
+                    ? "Adding..."
+                    : addedLeads[
+                          (lead.email || lead.suggestedEmail)
+                            ?.toLowerCase()
+                            .trim()
+                        ]
+                      ? "Added to CRM"
+                      : "Add to CRM"}
                 </Button>
               </div>
             </div>

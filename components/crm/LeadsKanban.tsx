@@ -23,6 +23,7 @@ import {
   Building2,
   Star,
   UserCheck,
+  Loader2,
 } from "lucide-react";
 import { CrmLeadStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -204,16 +205,26 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
                                   onClick={() =>
                                     handleStatusChange(lead.id, s.status)
                                   }
+                                  disabled={updateStatusMutation.isPending}
                                 >
-                                  <ArrowRight className="h-4 w-4 mr-2" />
+                                  {updateStatusMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <ArrowRight className="h-4 w-4 mr-2" />
+                                  )}
                                   Move to {s.label}
                                 </DropdownMenuItem>
                               ))}
                               <DropdownMenuItem
                                 onClick={() => handleConvert(lead.id)}
                                 className="text-green-600"
+                                disabled={convertToClientMutation.isPending}
                               >
-                                <UserCheck className="h-4 w-4 mr-2" />
+                                {convertToClientMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                )}
                                 Convert to Client
                               </DropdownMenuItem>
                             </DropdownMenuContent>

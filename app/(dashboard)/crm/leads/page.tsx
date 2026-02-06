@@ -12,25 +12,38 @@ export default function LeadsPage() {
   const [view, setView] = useState("kanban");
 
   return (
-    <div className="p-4 md:p-8 pt-6 h-full flex flex-col overflow-hidden w-full min-w-0">
-      <div className="flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-full min-w-0">
+      <div className="flex items-center justify-between shrink-0 mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Leads</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+            Leads
+          </h2>
           <p className="text-muted-foreground">Manage and track your leads</p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={setView}>
-            <TabsList>
-              <TabsTrigger value="kanban" title="Kanban View">
+            <TabsList className="bg-muted/50 border-none">
+              <TabsTrigger
+                value="kanban"
+                title="Kanban View"
+                className="data-[state=active]:bg-accent data-[state=active]:text-white"
+              >
                 <LayoutGrid className="w-4 h-4" />
               </TabsTrigger>
-              <TabsTrigger value="list" title="List View">
+              <TabsTrigger
+                value="list"
+                title="List View"
+                className="data-[state=active]:bg-accent data-[state=active]:text-white"
+              >
                 <List className="w-4 h-4" />
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => setIsLeadFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Lead
+          <Button
+            onClick={() => setIsLeadFormOpen(true)}
+            className="bg-accent hover:bg-accent/90 text-white font-bold"
+          >
+            <Plus className="mr-2 h-4 w-4 text-white" /> New Lead
           </Button>
         </div>
       </div>
@@ -39,7 +52,7 @@ export default function LeadsPage() {
         {view === "kanban" ? (
           <LeadsKanban onAddLead={() => setIsLeadFormOpen(true)} />
         ) : (
-          <div className="flex items-center justify-center h-40 border rounded-lg m-4 text-muted-foreground">
+          <div className="flex items-center justify-center h-40 border border-dashed rounded-lg text-muted-foreground bg-muted/20">
             List view coming soon
           </div>
         )}

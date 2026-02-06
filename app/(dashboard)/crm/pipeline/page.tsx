@@ -12,10 +12,12 @@ export default function PipelinePage() {
   const [isPipelineSetupOpen, setIsPipelineSetupOpen] = useState(false);
 
   return (
-    <div className="p-4 md:p-8 pt-6 h-full flex flex-col overflow-hidden w-full min-w-0">
-      <div className="flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-full min-w-0">
+      <div className="flex items-center justify-between shrink-0 mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Pipeline</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+            Pipeline
+          </h2>
           <p className="text-muted-foreground">Manage deal flow and stages</p>
         </div>
         <div className="flex items-center gap-2">
@@ -23,12 +25,16 @@ export default function PipelinePage() {
             variant="outline"
             size="sm"
             onClick={() => setIsPipelineSetupOpen(true)}
+            className="border-accent text-accent hover:bg-accent/10"
           >
             <Settings className="mr-2 h-4 w-4" />
             Pipelines
           </Button>
-          <Button onClick={() => setIsDealFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Deal
+          <Button
+            onClick={() => setIsDealFormOpen(true)}
+            className="bg-accent hover:bg-accent/90 text-white font-bold"
+          >
+            <Plus className="mr-2 h-4 w-4 text-white" /> New Deal
           </Button>
         </div>
       </div>

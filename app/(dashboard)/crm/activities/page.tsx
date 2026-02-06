@@ -1,25 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Activity,
-  Plus,
-  Phone,
-  Mail,
-  Video,
-  FileText,
-  Users,
-} from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
-import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,40 +14,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Activity,
+  Calendar,
+  Phone,
+  Mail,
+  MessageSquare,
+  Users,
+  Search,
+  Plus,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const ACTIVITY_TYPES = [
   { value: "CALL", label: "Call", icon: Phone },
   { value: "EMAIL", label: "Email", icon: Mail },
-  { value: "MEETING", label: "Meeting", icon: Video },
-  { value: "NOTE", label: "Note", icon: FileText },
-  { value: "OTHER", label: "Other", icon: Activity },
+  { value: "MEETING", label: "Meeting", icon: Calendar },
+  { value: "NOTE", label: "Note", icon: MessageSquare },
 ];
 
 export default function ActivitiesPage() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState<string>("CALL");
+  const [type, setType] = useState("CALL");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedLeadId, setSelectedLeadId] = useState<string>("");
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [search, setSearch] = useState("");
 
   const utils = trpc.useUtils();
-
-  const { data: activities, isLoading } = trpc.crmActivity.list.useQuery({
-    limit: 50,
-  });
-
-  const { data: leadsData } = trpc.crmLead.list.useQuery({});
+  const { data: activities, isLoading: activitiesLoading } =
+    trpc.crmActivity.list.useQuery({});
+  const { data: leadsData } = trpc.crmLead.list.useQuery();
   const leads = leadsData?.leads;
-  const { data: clients } = trpc.clients.getClients.useQuery({});
+  const { data: clients } = trpc.clients.getClients.useQuery();
 
   const createActivity = trpc.crmActivity.create.useMutation({
     onSuccess: () => {
-      toast.success("Activity logged!");
-      utils.crmActivity.list.invalidate();
-      setIsOpen(false);
+      toast.success("Activity logged");
       resetForm();
+      utils.crmActivity.list.invalidate();
     },
     onError: (err) => {
       toast.error(err.message);
@@ -100,110 +91,115 @@ export default function ActivitiesPage() {
     });
   };
 
-  const getActivityIcon = (activityType: string) => {
-    const found = ACTIVITY_TYPES.find((t) => t.value === activityType);
+  const getActivityIcon = (type: string) => {
+    const found = ACTIVITY_TYPES.find((t) => t.value === type);
     const Icon = found?.icon || Activity;
     return <Icon className="h-4 w-4" />;
   };
 
   return (
-    <div className="p-4 md:p-8 pt-6 overflow-hidden w-full min-w-0 flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col h-full min-w-0">
+      <div className="flex items-center justify-between shrink-0 mb-6">
         <div className="flex items-center gap-2">
-          <Activity className="h-6 w-6 text-blue-500" />
+          <Activity className="h-8 w-8 text-accent" />
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">
-              Recent Activities
+            <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+              Activities
             </h2>
-            <p className="text-muted-foreground">Log of all interactions</p>
+            <p className="text-muted-foreground">Log and track interactions</p>
           </div>
         </div>
+      </div>
 
-        {/* Log Activity Button */}
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Log Activity
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Log New Activity</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              {/* Activity Type */}
+      <div className="grid gap-6 md:grid-cols-12 flex-1 overflow-hidden min-h-0">
+        {/* Form (Left) */}
+        <Card className="md:col-span-5 h-fit bg-card border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-white-smoke">Log New Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Type */}
               <div className="space-y-2">
-                <Label>Activity Type</Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACTIVITY_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        <div className="flex items-center gap-2">
-                          <t.icon className="h-4 w-4" />
-                          {t.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-white-smoke">Activity Type *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ACTIVITY_TYPES.map((t) => (
+                    <Button
+                      key={t.value}
+                      type="button"
+                      variant={type === t.value ? "default" : "outline"}
+                      className={
+                        type === t.value
+                          ? "bg-accent text-white"
+                          : "border-border text-muted-foreground hover:bg-muted/50"
+                      }
+                      onClick={() => setType(t.value)}
+                    >
+                      <t.icon className="mr-2 h-4 w-4" />
+                      {t.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               {/* Subject */}
               <div className="space-y-2">
-                <Label htmlFor="subject">Subject *</Label>
+                <Label htmlFor="subject" className="text-white-smoke">
+                  Subject *
+                </Label>
                 <Input
                   id="subject"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="e.g., Follow-up call about proposal"
+                  className="bg-black/20 border-border"
                 />
               </div>
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="text-white-smoke">
+                  Description
+                </Label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add notes about this activity..."
-                  className="min-h-[80px]"
+                  placeholder="Details about the interaction..."
+                  className="bg-black/20 border-border h-24"
                 />
               </div>
 
-              {/* Link to Lead (Optional) */}
+              {/* Related To (Lead) */}
               <div className="space-y-2">
-                <Label>Link to Lead (Optional)</Label>
+                <Label className="text-white-smoke">Lead</Label>
                 <Select
                   value={selectedLeadId}
                   onValueChange={setSelectedLeadId}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-black/20 border-border">
                     <SelectValue placeholder="Select a lead" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">None</SelectItem>
-                    {leads?.map((lead) => (
+                    {leadsData?.leads?.map((lead) => (
                       <SelectItem key={lead.id} value={lead.id}>
                         {lead.firstName} {lead.lastName}
-                        {lead.company && ` - ${lead.company}`}
+                        {lead.companyName && ` - ${lead.companyName}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Link to Client (Optional) */}
+              {/* Related To (Client) */}
               <div className="space-y-2">
-                <Label>Link to Client (Optional)</Label>
+                <Label className="text-white-smoke">Client</Label>
                 <Select
                   value={selectedClientId}
                   onValueChange={setSelectedClientId}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-black/20 border-border">
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,69 +214,100 @@ export default function ActivitiesPage() {
                 </Select>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createActivity.isPending}>
-                  {createActivity.isPending ? "Saving..." : "Log Activity"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
-        {isLoading && (
-          <div className="text-center p-4">Loading activities...</div>
-        )}
-
-        {activities?.map((activity) => (
-          <div
-            key={activity.id}
-            className="flex items-start gap-4 p-4 bg-card border rounded-lg shadow-sm"
-          >
-            <div className="p-2 bg-blue-100 rounded-full text-blue-600">
-              {getActivityIcon(activity.type)}
-            </div>
-            <div className="flex-1">
-              <div className="flex justify-between">
-                <h4 className="font-semibold">{activity.subject}</h4>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(activity.completedAt), {
-                    addSuffix: true,
-                  })}
-                </span>
-              </div>
-              {activity.description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {activity.description}
-                </p>
-              )}
-              <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                <span className="bg-white text-black px-2 py-0.5 rounded">
-                  {activity.type}
-                </span>
-                {activity.lead && (
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {activity.lead.firstName} {activity.lead.lastName}
-                  </span>
+              <Button
+                type="submit"
+                className="w-full bg-accent hover:bg-accent/90 text-white font-bold"
+                disabled={createActivity.isPending}
+              >
+                {createActivity.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging...
+                  </>
+                ) : (
+                  "Log Activity"
                 )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* List (Right) */}
+        <Card className="md:col-span-7 flex flex-col overflow-hidden bg-card border-none shadow-sm">
+          <CardHeader className="shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-white-smoke">Activity Log</CardTitle>
+              <div className="relative w-48">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 h-9 bg-black/20 border-border"
+                />
               </div>
             </div>
-          </div>
-        ))}
-        {activities?.length === 0 && (
-          <div className="text-center py-10 text-muted-foreground">
-            No recent activities found. Click "Log Activity" to create one!
-          </div>
-        )}
+          </CardHeader>
+          <CardContent className="flex-1 overflow-y-auto min-h-0">
+            <div className="space-y-4">
+              {activitiesLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-48 bg-muted animate-pulse rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                activities?.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex gap-4 p-3 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors bg-black/5"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent ring-2 ring-accent/20 shrink-0">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="font-semibold text-sm text-white-smoke truncate">
+                          {activity.subject}
+                        </h4>
+                        <span className="text-[10px] text-muted-foreground shrink-0 mt-1">
+                          {format(
+                            new Date(activity.completedAt),
+                            "MMM d, HH:mm",
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2 italic">
+                        {activity.description}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                        {(activity.lead || activity.client) && (
+                          <span className="flex items-center gap-1 font-medium text-foreground/70">
+                            <Users className="h-3 w-3 text-accent" />
+                            {activity.lead
+                              ? `${activity.lead.firstName} ${activity.lead.lastName} (Lead)`
+                              : `${activity.client?.name} (Client)`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {activities?.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  No activities found
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
