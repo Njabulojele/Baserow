@@ -13,6 +13,14 @@ import { noteRouter } from "./note";
 import { researchRouter } from "./research";
 import { settingsRouter } from "./settings";
 
+// CRM routers
+import { crmLeadRouter } from "./crmLead";
+import { pipelineRouter } from "./pipeline";
+import { dealRouter } from "./deal";
+import { clientHealthRouter } from "./clientHealth";
+import { crmAutomationRouter } from "./crmAutomation";
+import { crmActivityRouter } from "./crmActivity";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -27,6 +35,14 @@ export const appRouter = router({
   note: noteRouter,
   research: researchRouter,
   settings: settingsRouter,
+
+  // CRM routes
+  crmLead: crmLeadRouter,
+  pipeline: pipelineRouter,
+  deal: dealRouter,
+  clientHealth: clientHealthRouter,
+  crmAutomation: crmAutomationRouter,
+  crmActivity: crmActivityRouter,
 });
 
 export type AppRouter = typeof appRouter;
