@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { CalendarService } from "../services/calendarService";
+import { ClientHealthService } from "../services/clientHealthService";
 
 export const meetingRouter = router({
   // Get meetings for a client or project
@@ -45,7 +47,7 @@ export const meetingRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.meeting.create({
+      const meeting = await ctx.prisma.meeting.create({
         data: {
           userId: ctx.userId,
           title: input.title,
@@ -54,8 +56,42 @@ export const meetingRouter = router({
           clientId: input.clientId,
           projectId: input.projectId,
           type: input.type || "meeting",
+          meetingNotes: input.notes,
         },
       });
+
+      // Update Client Last Interaction
+      if (input.clientId) {
+        await ctx.prisma.client.update({
+          where: { id: input.clientId },
+          data: { lastInteractionAt: new Date() },
+        });
+
+        // Trigger Health Recalculation
+        try {
+          const healthService = new ClientHealthService(ctx.prisma);
+          await healthService.calculateHealth(input.clientId);
+        } catch (e) {
+          console.error("Failed to calc health", e);
+        }
+      }
+
+      // Sync to Calendar
+      try {
+        const calendar = new CalendarService();
+        await calendar.createEvent({
+          summary: meeting.title,
+          startTime: meeting.scheduledAt,
+          endTime: new Date(
+            meeting.scheduledAt.getTime() + meeting.duration * 60000,
+          ),
+          description: input.notes,
+        });
+      } catch (e) {
+        console.error("Failed to sync calendar:", e);
+      }
+
+      return meeting;
     }),
 
   // Update meeting notes

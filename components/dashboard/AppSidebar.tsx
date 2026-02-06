@@ -12,6 +12,11 @@ import {
   Settings,
   Target,
   Users,
+  UserPlus,
+  TrendingUp,
+  Activity,
+  Briefcase,
+  Zap,
 } from "lucide-react";
 
 import {
@@ -23,6 +28,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { UserButton } from "@clerk/nextjs";
@@ -30,7 +38,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
-const routes = [
+const mainRoutes = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -61,21 +69,47 @@ const routes = [
     icon: Calendar,
     href: "/calendar",
   },
+];
+
+const crmRoutes = [
+  {
+    label: "Overview",
+    icon: LayoutDashboard,
+    href: "/crm",
+  },
+  {
+    label: "Leads",
+    icon: UserPlus,
+    href: "/crm/leads",
+  },
+  {
+    label: "Pipeline",
+    icon: TrendingUp,
+    href: "/crm/pipeline",
+  },
   {
     label: "Clients",
     icon: Users,
-    href: "/clients",
+    href: "/clients", // Keeping existing path for now
   },
+  {
+    label: "Activities",
+    icon: Activity,
+    href: "/crm/activities",
+  },
+  {
+    label: "Workflows",
+    icon: Zap,
+    href: "/crm/workflows",
+  },
+];
+
+const otherRoutes = [
   {
     label: "Analytics",
     icon: LineChart,
     href: "/analytics",
   },
-  // {
-  //   label: "Well-being",
-  //   icon: Heart,
-  //   href: "/well-being",
-  // },
   {
     label: "Settings",
     icon: Settings,
@@ -116,23 +150,77 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          {routes.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-                tooltip={item.label}
-                onClick={handleLinkClick}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {/* Main Routes */}
+        <SidebarGroup>
+          <SidebarGroupLabel>General</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {mainRoutes.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    onClick={handleLinkClick}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* CRM Routes */}
+        <SidebarGroup>
+          <SidebarGroupLabel>CRM</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {crmRoutes.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    onClick={handleLinkClick}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Other Routes */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Tools</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {otherRoutes.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    onClick={handleLinkClick}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <div className="p-2 flex items-center gap-2">

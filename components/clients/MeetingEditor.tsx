@@ -134,7 +134,7 @@ export function MeetingEditor({
   const isLoading = isMeetingLoading || createMeeting.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-h-[calc(100vh-100px)] overflow-y-auto">
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h2 className="text-lg font-semibold">
@@ -206,7 +206,7 @@ export function MeetingEditor({
               <Label>Notes (Markdown supported)</Label>
               <Textarea
                 {...form.register("notes")}
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-[90px] max-h-[300px] font-mono text-sm overflow-y-auto"
                 placeholder="- Point 1\n- Point 2..."
               />
             </div>
@@ -227,10 +227,11 @@ export function MeetingEditor({
             </div>
 
             <form onSubmit={handleCreateActionItem} className="flex gap-2">
-              <Input
+              <Textarea
                 placeholder="Add an action item..."
                 value={actionItemTitle}
                 onChange={(e) => setActionItemTitle(e.target.value)}
+                className="min-h-[60px] max-h-[200px] font-mono text-sm"
               />
               <Button
                 size="icon"

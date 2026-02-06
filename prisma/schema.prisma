@@ -35,6 +35,18 @@ model User {
   weekPlans        WeekPlan[]
   wellBeingEntries WellBeingEntry[]
   yearPlans        YearPlan[]
+
+  // CRM Relations
+  crmLeads         CrmLead[]
+  pipelines        Pipeline[]
+  deals            Deal[]
+  crmActivities    CrmActivity[]
+  crmLeadNotes     CrmLeadNote[]
+  dealNotes        DealNote[]
+  
+  // CRM Automation
+  crmWorkflows     CrmWorkflow[]
+  emailTemplates   EmailTemplate[]
 }
 
 model YearPlan {
@@ -443,7 +455,7 @@ model TimeEntry {
 }
 
 model Client {
-  id                     String          @id @default(cuid())
+  id                     String              @id @default(cuid())
   userId                 String
   name                   String
   companyName            String?
@@ -459,19 +471,35 @@ model Client {
   preferredCommunication String?
   defaultHourlyRate      Float?
   paymentTerms           String?
-  outstandingBalance     Float           @default(0)
+  outstandingBalance     Float               @default(0)
   notes                  String?
   tags                   String[]
-  status                 String          @default("active")
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
+  status                 String              @default("active")
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
   lastInteractionAt      DateTime?
-  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // CRM Fields
+  lifetimeValue          Float               @default(0)
+  contractStartDate      DateTime?
+  contractEndDate        DateTime?
+  renewalDate            DateTime?
+  accountTier            String?
+
+  // Existing Relations
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   communications         Communication[]
   meetings               Meeting[]
   projects               Project[]
   timeBlocks             TimeBlock[]
   timeEntries            TimeEntry[]
+
+  // CRM Relations
+  convertedFromLead      CrmLead?
+  healthScore            ClientHealthScore?
+  milestones             ClientMilestone[]
+  deals                  Deal[]
+  crmActivities          CrmActivity[]
 }
 
 model Communication {
@@ -767,4 +795,565 @@ enum SearchMethod {
   SERPER_API
   GEMINI_DEEP_RESEARCH
   JINA_SERPER
+}
+
+// ============================================
+// CRM SYSTEM ENUMS
+// ============================================
+
+enum CrmLeadSource {
+  INBOUND
+  REFERRAL
+  OUTBOUND
+  PARTNERSHIP
+  EVENT
+  WEBSITE
+  SOCIAL
+  ADVERTISEMENT
+  OTHER
+}
+
+enum CrmLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+  UNQUALIFIED
+}
+
+enum PipelineType {
+  SALES
+  PARTNERSHIP
+  RECRUITING
+  CUSTOM
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum ActivityType {
+  EMAIL
+  CALL
+  MEETING
+  DEMO
+  PROPOSAL
+  CONTRACT
+  NOTE
+  TASK
+  LINKEDIN_MESSAGE
+  SMS
+}
+
+// ============================================
+// CRM LEAD & PIPELINE MANAGEMENT
+// ============================================
+
+model CrmLead {
+  id                    String                 @id @default(cuid())
+  userId                String
+  source                CrmLeadSource          @default(OTHER)
+  status                CrmLeadStatus          @default(NEW)
+  score                 Float                  @default(0)
+
+  // Contact Information
+  firstName             String
+  lastName              String
+  email                 String
+  phone                 String?
+  linkedInUrl           String?
+  title                 String?
+
+  // Company Information
+  companyName           String
+  companyWebsite        String?
+  companySize           String?
+  industry              String?
+  revenue               String?
+
+  // Enrichment Data (auto-populated)
+  technographics        Json?
+  firmographics         Json?
+  socialProfiles        Json?
+
+  // Relationship Intelligence
+  relationshipStrength  Float                  @default(0)
+  lastEnrichmentAt      DateTime?
+
+  // Engagement Tracking
+  firstTouchpoint       DateTime               @default(now())
+  lastEngagement        DateTime               @default(now())
+  engagementScore       Float                  @default(0)
+  emailOpens            Int                    @default(0)
+  emailClicks           Int                    @default(0)
+  websiteVisits         Int                    @default(0)
+  contentDownloads      Int                    @default(0)
+
+  // Sales Process
+  pipelineId            String?
+  pipelineStageId       String?
+  assignedTo            String?
+  estimatedValue        Float?
+  estimatedCloseDate    DateTime?
+  lostReason            String?
+
+  // Pain Points & Needs (AI-extracted)
+  painPoints            String[]
+  identifiedNeeds       String[]
+  buyingSignals         String[]
+
+  // Conversion
+  convertedAt           DateTime?
+  convertedToClientId   String?                @unique
+
+  // Metadata
+  tags                  String[]
+  customFields          Json?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  // Relations
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pipeline              Pipeline?              @relation(fields: [pipelineId], references: [id])
+  pipelineStage         PipelineStage?         @relation(fields: [pipelineStageId], references: [id])
+  convertedToClient     Client?                @relation(fields: [convertedToClientId], references: [id])
+  activities            CrmActivity[]
+  notes                 CrmLeadNote[]
+  communications        CrmLeadCommunication[]
+  deals                 Deal[]
+
+  @@index([userId, status])
+  @@index([userId, score])
+  @@index([pipelineId, pipelineStageId])
+  @@index([email])
+}
+
+model Pipeline {
+  id                String          @id @default(cuid())
+  userId            String
+  name              String
+  type              PipelineType    @default(SALES)
+  isDefault         Boolean         @default(false)
+  color             String          @default("#3B82F6")
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stages            PipelineStage[]
+  leads             CrmLead[]
+  deals             Deal[]
+
+  @@index([userId])
+}
+
+model PipelineStage {
+  id                String    @id @default(cuid())
+  pipelineId        String
+  name              String
+  order             Int
+  probability       Float     @default(0)
+  isClosed          Boolean   @default(false)
+  isWon             Boolean   @default(false)
+  autoActions       Json?
+  daysInStageAlert  Int?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  pipeline          Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads             CrmLead[]
+  deals             Deal[]
+
+  @@index([pipelineId, order])
+}
+
+model Deal {
+  id                  String         @id @default(cuid())
+  userId              String
+  leadId              String?
+  clientId            String?
+
+  // Deal Details
+  name                String
+  description         String?
+  value               Float
+  probability         Float          @default(0.5)
+  weightedValue       Float          @default(0)
+
+  // Pipeline
+  pipelineId          String
+  pipelineStageId     String
+  stageEnteredAt      DateTime       @default(now())
+  daysInCurrentStage  Int            @default(0)
+
+  // Dates
+  expectedCloseDate   DateTime
+  actualCloseDate     DateTime?
+
+  // Status
+  status              DealStatus     @default(OPEN)
+  lostReason          String?
+  competitors         String[]
+
+  // Relationship
+  primaryContact      String?
+  decisionMakers      String[]
+  influencers         String[]
+  champions           String[]
+
+  // Next Actions
+  nextStep            String?
+  nextStepDueDate     DateTime?
+
+  // Metadata
+  tags                String[]
+  customFields        Json?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  // Relations
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead                CrmLead?       @relation(fields: [leadId], references: [id])
+  client              Client?        @relation(fields: [clientId], references: [id])
+  pipeline            Pipeline       @relation(fields: [pipelineId], references: [id])
+  pipelineStage       PipelineStage  @relation(fields: [pipelineStageId], references: [id])
+  activities          CrmActivity[]
+  notes               DealNote[]
+
+  @@index([userId, status])
+  @@index([pipelineId, pipelineStageId])
+  @@index([expectedCloseDate])
+}
+
+// ============================================
+// CLIENT HEALTH & RETENTION
+// ============================================
+
+model ClientHealthScore {
+  id                      String    @id @default(cuid())
+  clientId                String    @unique
+
+  // Overall Score (0-100)
+  overallScore            Float     @default(50)
+  previousScore           Float?
+  trend                   String    @default("stable")
+
+  // Component Scores (0-100 each)
+  engagementScore         Float     @default(50)
+  relationshipScore       Float     @default(50)
+  paymentScore            Float     @default(50)
+
+  // Engagement Metrics
+  lastContactDate         DateTime?
+  daysSinceLastContact    Int       @default(0)
+  communicationFrequency  Float     @default(0)
+
+  // Predictions (AI-generated)
+  churnRisk               Float     @default(0)
+  churnRiskReason         String?
+  expansionPotential      Float     @default(0)
+  renewalProbability      Float     @default(0.8)
+
+  // Lifecycle
+  lifecycleStage          String    @default("onboarding")
+
+  // Alerts & Actions
+  activeAlerts            String[]
+  recommendedActions      Json[]
+
+  // Metadata
+  lastCalculatedAt        DateTime  @default(now())
+
+  client                  Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([overallScore])
+  @@index([churnRisk])
+}
+
+model ClientMilestone {
+  id                String    @id @default(cuid())
+  clientId          String
+  type              String
+  title             String
+  description       String?
+  achievedAt        DateTime  @default(now())
+  impactOnHealth    Float?
+
+  client            Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, achievedAt])
+}
+
+// ============================================
+// ACTIVITY & ENGAGEMENT TRACKING
+// ============================================
+
+model CrmActivity {
+  id                String         @id @default(cuid())
+  userId            String
+
+  // Associated Records
+  leadId            String?
+  clientId          String?
+  dealId            String?
+
+  // Activity Details
+  type              ActivityType
+  direction         String?
+  subject           String
+  description       String?
+  outcome           String?
+
+  // Communication Data
+  duration          Int?
+  attendees         String[]
+  sentiment         Float?
+  keyTopics         String[]
+  actionItems       Json[]
+
+  // Engagement Signals
+  engagementLevel   String?
+  buyingSignals     String[]
+
+  // Timestamps
+  scheduledAt       DateTime?
+  completedAt       DateTime       @default(now())
+
+  // Metadata
+  createdAt         DateTime       @default(now())
+  recordedBy        String         @default("auto")
+
+  // Relations
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead              CrmLead?       @relation(fields: [leadId], references: [id])
+  client            Client?        @relation(fields: [clientId], references: [id])
+  deal              Deal?          @relation(fields: [dealId], references: [id])
+
+  @@index([userId, completedAt])
+  @@index([leadId])
+  @@index([clientId])
+  @@index([dealId])
+}
+
+// ============================================
+// NOTES & DOCUMENTATION
+// ============================================
+
+model CrmLeadNote {
+  id                String    @id @default(cuid())
+  leadId            String
+  userId            String
+
+  content           String
+  isPinned          Boolean   @default(false)
+  mentions          String[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  lead              CrmLead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+model DealNote {
+  id                String    @id @default(cuid())
+  dealId            String
+  userId            String
+
+  content           String
+  isPinned          Boolean   @default(false)
+  mentions          String[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  deal              Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([dealId, createdAt])
+}
+
+model CrmLeadCommunication {
+  id                String    @id @default(cuid())
+  leadId            String
+
+  type              String
+  direction         String
+  subject           String?
+  body              String?
+  sentiment         Float?
+
+  // Email-specific
+  opened            Boolean   @default(false)
+  clicked           Boolean   @default(false)
+  replied           Boolean   @default(false)
+  bounced           Boolean   @default(false)
+
+  sentAt            DateTime  @default(now())
+
+  lead              CrmLead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, sentAt])
+}
+
+// ============================================
+// CRM AUTOMATION & WORKFLOWS
+// ============================================
+
+enum WorkflowTriggerType {
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  LEAD_SCORE_THRESHOLD
+  DEAL_CREATED
+  DEAL_STAGE_CHANGED
+  DEAL_CLOSED_WON
+  DEAL_CLOSED_LOST
+  CLIENT_HEALTH_ALERT
+  INACTIVITY_ALERT
+  SCHEDULED
+  MANUAL
+}
+
+enum WorkflowActionType {
+  SEND_EMAIL
+  CREATE_TASK
+  UPDATE_LEAD_FIELD
+  UPDATE_DEAL_FIELD
+  ADD_TAG
+  REMOVE_TAG
+  NOTIFY_USER
+  MOVE_TO_STAGE
+  CREATE_ACTIVITY
+  WEBHOOK
+  DELAY
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+  ARCHIVED
+}
+
+model CrmWorkflow {
+  id                String              @id @default(cuid())
+  userId            String
+  
+  name              String
+  description       String?
+  status            WorkflowStatus      @default(DRAFT)
+  
+  // Execution stats
+  executionCount    Int                 @default(0)
+  lastExecutedAt    DateTime?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  triggers          WorkflowTrigger[]
+  actions           WorkflowAction[]
+  executions        WorkflowExecution[]
+  
+  @@index([userId, status])
+}
+
+model WorkflowTrigger {
+  id                String              @id @default(cuid())
+  workflowId        String
+  
+  type              WorkflowTriggerType
+  conditions        Json                @default("{}") // Flexible condition config
+  
+  // For scheduled triggers
+  cronExpression    String?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  workflow          CrmWorkflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId])
+}
+
+model WorkflowAction {
+  id                String              @id @default(cuid())
+  workflowId        String
+  
+  type              WorkflowActionType
+  order             Int                 @default(0)
+  config            Json                @default("{}") // Action-specific config
+  
+  // For email actions
+  emailTemplateId   String?
+  
+  // For delay actions
+  delayMinutes      Int?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  workflow          CrmWorkflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  emailTemplate     EmailTemplate?      @relation(fields: [emailTemplateId], references: [id])
+  
+  @@index([workflowId, order])
+}
+
+model WorkflowExecution {
+  id                String              @id @default(cuid())
+  workflowId        String
+  
+  status            String              @default("pending") // pending, running, completed, failed
+  triggerType       WorkflowTriggerType
+  triggerData       Json?               // Context that triggered the workflow
+  
+  // Execution details
+  startedAt         DateTime            @default(now())
+  completedAt       DateTime?
+  error             String?
+  
+  // What was affected
+  leadId            String?
+  dealId            String?
+  clientId          String?
+  
+  // Action results
+  actionResults     Json[]              @default([])
+  
+  workflow          CrmWorkflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId, startedAt])
+  @@index([status])
+}
+
+model EmailTemplate {
+  id                String              @id @default(cuid())
+  userId            String
+  
+  name              String
+  category          String?             // e.g., "follow-up", "welcome", "re-engagement"
+  subject           String
+  bodyHtml          String
+  bodyText          String?
+  
+  // Template variables (for display/validation)
+  variables         String[]            @default([]) // e.g., ["firstName", "companyName"]
+  
+  isActive          Boolean             @default(true)
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflowActions   WorkflowAction[]
+  
+  @@index([userId, isActive])
 }

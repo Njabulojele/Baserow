@@ -37,6 +37,7 @@ export const clientRouter = router({
           _count: {
             select: { projects: true, communications: true },
           },
+          healthScore: true,
         },
       });
     }),

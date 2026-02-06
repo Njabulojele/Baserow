@@ -36,9 +36,42 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
     },
   });
 
+  const createCrmLead = trpc.crmLead.create.useMutation({
+    onSuccess: () => {
+      toast.success("Lead added to CRM! Scoring & Workflows triggered.");
+    },
+    onError: (err) => {
+      toast.error(`Failed to add lead: ${err.message}`);
+    },
+  });
+
   const handleGenerateLeads = () => {
     setIsGenerating(true);
     generateLeads.mutate({ researchId });
+  };
+
+  const handleAddToCrm = (lead: any) => {
+    if (!lead.email && !lead.suggestedEmail) {
+      toast.error("Cannot add lead without an email address.");
+      return;
+    }
+
+    const nameParts = lead.name.split(" ");
+    const firstName = nameParts[0] || "Unknown";
+    const lastName = nameParts.slice(1).join(" ") || "Lead";
+
+    createCrmLead.mutate({
+      firstName,
+      lastName,
+      email: lead.email || lead.suggestedEmail,
+      companyName: lead.company || "Unknown Company",
+      companyWebsite: lead.website,
+      title: lead.suggestedDM,
+      industry: lead.industry,
+      phone: lead.phone,
+      painPoints: lead.painPoints || [],
+      source: "WEBSITE", // or OTHER
+    });
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -280,8 +313,13 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                   </Button>
                 )}
 
-                <Button className="w-full bg-[#a9927d] hover:bg-[#8f7a68] text-white text-xs h-9">
-                  <UserPlus className="w-3 h-3 mr-2" /> Add to CRM
+                <Button
+                  className="w-full bg-[#a9927d] hover:bg-[#8f7a68] text-white text-xs h-9"
+                  onClick={() => handleAddToCrm(lead)}
+                  disabled={createCrmLead.isLoading}
+                >
+                  <UserPlus className="w-3 h-3 mr-2" />
+                  {createCrmLead.isLoading ? "Adding..." : "Add to CRM"}
                 </Button>
               </div>
             </div>
