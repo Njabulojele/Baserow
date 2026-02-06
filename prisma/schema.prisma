@@ -657,6 +657,7 @@ model Research {
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   insights       ResearchInsight[]
   sources        ResearchSource[]
+  competitorIntel CompetitorIntel[]
 
   @@index([userId, status])
   @@index([goalId])
@@ -673,8 +674,23 @@ model ResearchSource {
   citedInSections String[]
   scrapedAt       DateTime @default(now())
   research        Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  
+  // Enhanced fields
+  sourceType      String?    // 'reddit' | 'hn' | 'academic' | 'news' | 'web'
+  score           Float     @default(0) // Relevance/quality score
+  sentiment       String?   // 'positive' | 'negative' | 'neutral'
+  
+  // Engagement metrics
+  engagement      Json?     // { upvotes, comments, shares, etc. }
+  
+  // For Reddit/HN posts
+  topComments     Json?     // Array of top comments
+  
+  // Metadata
+  metadata        Json?     // Flexible storage for source-specific data
 
   @@index([researchId])
+  @@index([score])
 }
 
 model ResearchInsight {
@@ -689,7 +705,29 @@ model ResearchInsight {
   createdAt  DateTime @default(now())
   research   Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
 
+  // Enhanced fields
+  insightType     String    @default("general") // 'pain_point' | 'opportunity' | 'competitor' | 'trend' | 'risk'
+  confidenceLevel String    @default("medium") // 'high' | 'medium' | 'low'
+  
+  // Structured evidence
+  evidence        Json?      // { quotes: [], sources: [], statistics: [] }
+  
+  // Validation
+  validation      Json?     // { evidenceScore: number, actionabilityScore: number, redFlags: [] }
+  actionability   Float     @default(0) // 0-10 score
+  
+  // For pain points
+  severity        String?   // 'critical' | 'high' | 'medium' | 'low'
+  frequency       Int?      // How many times mentioned
+  
+  // For opportunities
+  targetMarket    Json?     // { demographics, psychographics, size }
+  entryStrategy   Json?     // Array of steps
+  revenueEstimate String?
+
   @@index([researchId])
+  @@index([insightType])
+  @@index([actionability])
 }
 
 model ActionItem {
@@ -704,7 +742,14 @@ model ActionItem {
   convertedToTask   Task?          @relation(fields: [convertedToTaskId], references: [id])
   research          Research       @relation(fields: [researchId], references: [id], onDelete: Cascade)
 
+  title           String    @default("Action Item")
+  category        String?   // 'immediate' | 'short-term' | 'long-term'
+  validated       Boolean   @default(false)
+  validationNotes String?   @db.Text
+
   @@index([researchId])
+  @@index([priority])
+  @@index([validated])
 }
 
 model LeadData {
@@ -736,6 +781,29 @@ model Lead {
   leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
 
   @@index([leadDataId])
+}
+
+model CompetitorIntel {
+  id              String    @id @default(cuid())
+  researchId      String
+  research        Research  @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  
+  name            String
+  mentions        Int       @default(0)
+  sentiment       String    // 'positive' | 'negative' | 'mixed'
+  
+  strengths       Json      // Array of strengths
+  weaknesses      Json      // Array of weaknesses
+  
+  pricing         String?
+  userQuotes      Json      // Array of quotes
+  
+  metadata        Json?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([researchId])
+  @@index([name])
 }
 
 enum ResearchScope {

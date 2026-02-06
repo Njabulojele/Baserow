@@ -46,16 +46,74 @@ export class GeminiClient {
   public model: GenerativeModel;
   private apiKey: string;
 
+  // Context window limits (conservative estimates for different models)
+  private static readonly TOKEN_LIMITS: Record<string, number> = {
+    "gemini-2.0-flash": 1000000,
+    "gemini-2.0-pro": 2000000,
+    "gemini-1.5-flash": 1000000,
+    "gemini-1.5-pro": 2000000,
+    default: 100000,
+  };
+
+  private modelName: string;
+
   constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-pro") {
     const apiKey = decryptApiKey(encryptedApiKey);
     if (!apiKey) {
       throw new Error("Invalid or missing API key after decryption");
     }
     this.apiKey = apiKey;
+    this.modelName = modelName;
     // Initialize with v1 API for better stability across models
     this.genAI = new GoogleGenerativeAI(apiKey);
     // Using user-selected model
     this.model = this.genAI.getGenerativeModel({ model: modelName });
+  }
+
+  /**
+   * Estimates token count for a text string
+   * Uses ~4 chars per token as a conservative estimate
+   */
+  estimateTokens(text: string): number {
+    return Math.ceil(text.length / 4);
+  }
+
+  /**
+   * Truncates text to fit within token limit
+   * Leaves room for response (reserves 25% of limit)
+   */
+  truncateToTokenLimit(text: string, reserveRatio: number = 0.25): string {
+    const limit =
+      GeminiClient.TOKEN_LIMITS[this.modelName] ||
+      GeminiClient.TOKEN_LIMITS["default"];
+    const maxInputTokens = Math.floor(limit * (1 - reserveRatio));
+    const estimatedTokens = this.estimateTokens(text);
+
+    if (estimatedTokens <= maxInputTokens) {
+      return text;
+    }
+
+    // Truncate to fit
+    const maxChars = maxInputTokens * 4;
+    console.log(
+      `⚠️ Truncating prompt from ${text.length} to ${maxChars} chars (token limit)`,
+    );
+    return (
+      text.slice(0, maxChars) + "\n\n[Content truncated to fit context window]"
+    );
+  }
+
+  /**
+   * Generate with automatic context window management
+   */
+  async generate(prompt: string): Promise<string> {
+    const truncatedPrompt = this.truncateToTokenLimit(prompt);
+
+    return this.retryWithBackoff(async () => {
+      const result = await this.model.generateContent(truncatedPrompt);
+      const response = result.response;
+      return response.text();
+    });
   }
 
   /**
@@ -203,7 +261,7 @@ export class GeminiClient {
    */
   public async retryWithBackoff<T>(
     fn: () => Promise<T>,
-    maxRetries: number = 3,
+    maxRetries: number = 5,
     baseDelayMs: number = 2000,
   ): Promise<T> {
     let lastError: any;
@@ -229,8 +287,8 @@ export class GeminiClient {
           : baseDelayMs * Math.pow(2, attempt);
 
         // If API returns 0s delay for a 429, enforce a minimum backoff
-        if (delayMs < 1000) {
-          delayMs = baseDelayMs * Math.pow(2, attempt);
+        if (delayMs < 10000) {
+          delayMs = Math.max(10000, baseDelayMs * Math.pow(2, attempt));
         }
 
         console.log(

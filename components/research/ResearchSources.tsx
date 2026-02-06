@@ -166,7 +166,9 @@ export function ResearchSources({
                           ),
                         }}
                       >
-                        {source.content}
+                        {source.content ||
+                          source.excerpt ||
+                          "No content available. Visit the source URL for full details."}
                       </ReactMarkdown>
                     </article>
                   </div>
