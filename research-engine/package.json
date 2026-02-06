@@ -5,8 +5,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev index.ts",
-    "start": "node dist/index.js",
-    "postinstall": "prisma generate && npx puppeteer browsers install chrome"
+    "start": "PUPPETEER_CACHE_DIR=./.cache/puppeteer node dist/index.js",
+    "postinstall": "prisma generate && PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
