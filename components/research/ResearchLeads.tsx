@@ -93,7 +93,7 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
       </div>
 
       {/* Lead Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-[#1a252f] border-[#2f3e46] p-4 text-center">
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
             Total Found

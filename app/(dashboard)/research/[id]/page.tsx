@@ -198,7 +198,7 @@ export default function ResearchDetailPage({
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Breadcrumbs & Header */}
       <div className="mb-8">
         <Link
@@ -211,7 +211,7 @@ export default function ResearchDetailPage({
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-4xl font-bold text-white">
+              <h1 className="text-2xl md:text-4xl font-bold text-white">
                 {research.title}
               </h1>
               {research.status === "IN_PROGRESS" && (
@@ -340,12 +340,12 @@ export default function ResearchDetailPage({
         <div className="mb-12 py-12 px-6 bg-black/40 border border-[#6b9080]/30 rounded-3xl flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-700 shadow-2xl">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-[#6b9080]/20 blur-3xl rounded-full animate-pulse" />
-            <div className="text-7xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
+            <div className="text-5xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
               {research.progress}%
             </div>
           </div>
 
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-6 tracking-tight uppercase px-4">
+          <h2 className="text-xl md:text-4xl font-bold text-white mb-6 tracking-tight uppercase px-4">
             {getProgressStep(research.progress)}
           </h2>
 
@@ -404,7 +404,7 @@ export default function ResearchDetailPage({
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex flex-wrap lg:inline-flex">
+        <TabsList className="w-full justify-start bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex overflow-x-auto whitespace-nowrap lg:inline-flex custom-scrollbar">
           <TabsTrigger
             value="overview"
             className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"

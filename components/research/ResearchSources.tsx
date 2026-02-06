@@ -104,7 +104,7 @@ export function ResearchSources({
                       {source.url}
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="flex-1 overflow-y-auto p-8 bg-[#111820]">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#111820]">
                     <article className="prose prose-invert prose-lg max-w-none">
                       <ReactMarkdown
                         components={{
