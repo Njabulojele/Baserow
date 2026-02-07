@@ -176,7 +176,7 @@ export function ResearchCreationModal({
         }
       }}
     >
-      <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white max-w-2xl w-[95vw] md:w-full max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-xl">
+      <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white max-w-2xl w-[95vw] md:w-full max-h-[85vh] md:max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-xl">
         {/* Progress bar */}
         <div className="h-1 w-full bg-black/20">
           <div
@@ -194,7 +194,7 @@ export function ResearchCreationModal({
           />
         </div>
 
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar max-h-[calc(85vh-4px)]">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               {step === "create" && "New Research Mission"}

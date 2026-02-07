@@ -83,12 +83,17 @@ export class JinaClient {
   /**
    * Extracts content from multiple URLs with rate limiting
    */
-  async extractMultiple(urls: string[]): Promise<JinaExtractionResult[]> {
+  async extractMultiple(
+    urls: string[],
+    onProgress?: (message: string) => void,
+  ): Promise<JinaExtractionResult[]> {
     const results: JinaExtractionResult[] = [];
 
     for (let i = 0; i < urls.length; i++) {
       const url = urls[i];
-      console.log(`[JinaClient] Extracting (${i + 1}/${urls.length}): ${url}`);
+      const message = `[JinaClient] Extracting (${i + 1}/${urls.length}): ${url}`;
+      console.log(message);
+      if (onProgress) onProgress(message);
 
       const result = await this.extractContent(url);
       results.push(result);

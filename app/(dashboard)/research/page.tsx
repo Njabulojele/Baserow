@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResearchCreationModal } from "@/components/research/ResearchCreationModal";
 import { formatDistanceToNow } from "date-fns";
-import { Search, Plus, Loader2, Trash2 } from "lucide-react";
+import { Search, Plus, Loader2, Trash2, Star } from "lucide-react";
 import { ResearchStatus } from "@prisma/client";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -29,12 +29,52 @@ export default function ResearchPage() {
   const [statusFilter, setStatusFilter] = useState<
     ResearchStatus | undefined
   >();
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const utils = trpc.useUtils();
   const deleteMutation = trpc.research.delete.useMutation();
 
   const { data: researches, isLoading } = trpc.research.list.useQuery({
     status: statusFilter,
+    isFavorited: showFavoritesOnly || undefined,
+  });
+
+  const toggleFavorite = trpc.research.toggleFavorite.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.research.list.cancel();
+      const previousResearches = utils.research.list.getData({
+        status: statusFilter,
+        isFavorited: showFavoritesOnly || undefined,
+      });
+
+      utils.research.list.setData(
+        {
+          status: statusFilter,
+          isFavorited: showFavoritesOnly || undefined,
+        },
+        (old) => {
+          if (!old) return old;
+          return old.map((r) =>
+            r.id === id ? { ...r, isFavorited: !r.isFavorited } : r,
+          );
+        },
+      );
+
+      return { previousResearches };
+    },
+    onError: (err, newTodo, context) => {
+      utils.research.list.setData(
+        {
+          status: statusFilter,
+          isFavorited: showFavoritesOnly || undefined,
+        },
+        context?.previousResearches,
+      );
+      toast.error("Failed to toggle favorite");
+    },
+    onSettled: () => {
+      utils.research.list.invalidate();
+    },
   });
 
   const handleDeleteClick = (id: string) => {
@@ -85,9 +125,9 @@ export default function ResearchPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white">Research Agent</h1>
           <p className="text-muted-foreground mt-1">
@@ -106,16 +146,30 @@ export default function ResearchPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-8">
         <Button
-          variant={statusFilter === undefined ? "default" : "outline"}
-          onClick={() => setStatusFilter(undefined)}
+          variant={
+            statusFilter === undefined && !showFavoritesOnly
+              ? "default"
+              : "outline"
+          }
+          onClick={() => {
+            setStatusFilter(undefined);
+            setShowFavoritesOnly(false);
+          }}
           size="sm"
-          className={statusFilter === undefined ? "bg-[#2f3e46]" : ""}
+          className={
+            statusFilter === undefined && !showFavoritesOnly
+              ? "bg-[#2f3e46]"
+              : ""
+          }
         >
           All
         </Button>
         <Button
           variant={statusFilter === "IN_PROGRESS" ? "default" : "outline"}
-          onClick={() => setStatusFilter("IN_PROGRESS")}
+          onClick={() => {
+            setStatusFilter("IN_PROGRESS");
+            setShowFavoritesOnly(false);
+          }}
           size="sm"
           className={statusFilter === "IN_PROGRESS" ? "bg-[#6b9080]" : ""}
         >
@@ -123,11 +177,32 @@ export default function ResearchPage() {
         </Button>
         <Button
           variant={statusFilter === "COMPLETED" ? "default" : "outline"}
-          onClick={() => setStatusFilter("COMPLETED")}
+          onClick={() => {
+            setStatusFilter("COMPLETED");
+            setShowFavoritesOnly(false);
+          }}
           size="sm"
           className={statusFilter === "COMPLETED" ? "bg-[#a9927d]" : ""}
         >
           Completed
+        </Button>
+        <Button
+          variant={showFavoritesOnly ? "default" : "outline"}
+          onClick={() => {
+            setShowFavoritesOnly(!showFavoritesOnly);
+            setStatusFilter(undefined);
+          }}
+          size="sm"
+          className={
+            showFavoritesOnly
+              ? "bg-amber-500 text-white border-amber-500 hover:bg-amber-600"
+              : ""
+          }
+        >
+          <Star
+            className={`w-4 h-4 mr-2 ${showFavoritesOnly ? "fill-white" : ""}`}
+          />
+          Favorites
         </Button>
       </div>
 
@@ -138,16 +213,35 @@ export default function ResearchPage() {
           <p className="text-muted-foreground">Loading your research labs...</p>
         </div>
       ) : researches && researches.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {researches.map((research) => (
             <Link key={research.id} href={`/research/${research.id}`}>
-              <Card className="bg-[#1a252f] border-[#2f3e46] p-6 hover:border-[#a9927d] transition-all cursor-pointer h-full flex flex-col group">
-                {/* Status & Goal */}
-                <div className="flex items-center justify-between mb-4">
-                  <Badge className={getStatusColor(research.status)}>
-                    {getStatusIcon(research.status)}{" "}
-                    <span className="ml-1">{research.status}</span>
-                  </Badge>
+              <Card className="bg-[#1a252f] border-[#2f3e46] p-5 md:p-6 hover:border-[#a9927d] transition-all cursor-pointer h-full flex flex-col group">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(research.status)}>
+                      {getStatusIcon(research.status)}{" "}
+                      <span className="ml-1">{research.status}</span>
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 rounded-full transition-all ${
+                        research.isFavorited
+                          ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                          : "text-gray-400 hover:text-amber-500 hover:bg-amber-500/10"
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ id: research.id });
+                      }}
+                    >
+                      <Star
+                        className={`w-5 h-5 ${research.isFavorited ? "fill-amber-500" : ""}`}
+                      />
+                    </Button>
+                  </div>
                   {research.goal && (
                     <span className="text-xs text-[#a9927d] font-medium flex items-center">
                       🎯 {research.goal.title.substring(0, 15)}...

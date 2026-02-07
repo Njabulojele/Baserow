@@ -13,16 +13,16 @@ export default function LeadsPage() {
 
   return (
     <div className="flex flex-col h-full min-w-0">
-      <div className="flex items-center justify-between shrink-0 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between shrink-0 mb-6 gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
             Leads
           </h2>
           <p className="text-muted-foreground">Manage and track your leads</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Tabs value={view} onValueChange={setView}>
-            <TabsList className="bg-muted/50 border-none">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <Tabs value={view} onValueChange={setView} className="shrink-0">
+            <TabsList className="bg-muted/50 border-none shrink-0">
               <TabsTrigger
                 value="kanban"
                 title="Kanban View"
@@ -41,7 +41,7 @@ export default function LeadsPage() {
           </Tabs>
           <Button
             onClick={() => setIsLeadFormOpen(true)}
-            className="bg-accent hover:bg-accent/90 text-white font-bold"
+            className="bg-accent hover:bg-accent/90 text-white font-bold whitespace-nowrap"
           >
             <Plus className="mr-2 h-4 w-4 text-white" /> New Lead
           </Button>

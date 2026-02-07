@@ -131,7 +131,10 @@ class GeminiWrapper implements UnifiedLLMClient {
             role: "user",
             parts: [
               {
-                text: `Analyze this research and identify gaps.
+                text: `Analyze this research and identify CRITICAL gaps.
+1. Only report gaps that are blocking the core research goal.
+2. Ignore minor missing details if the main picture is clear.
+3. Suggest queries that are distinctly different from previous ones (look for specific data points).
 
 Research Query: ${query}
 
@@ -301,7 +304,12 @@ export function getLLMClient(
     case "GROQ":
       // Verify if the model is a valid Groq model, otherwise use default
       const isGroqModel =
-        model?.includes("llama") || model?.includes("mixtral");
+        model?.includes("llama") ||
+        model?.includes("mixtral") ||
+        model?.includes("gemma") ||
+        model?.includes("gpt-oss") ||
+        model?.includes("qwen") ||
+        model?.includes("deepseek");
       const groqModel = isGroqModel ? model : "llama-3.3-70b-versatile";
       return new GroqWrapper(encryptedApiKey, groqModel);
     case "GEMINI":

@@ -151,7 +151,7 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
                 </div>
               </div>
 
-              <div className="space-y-3 min-h-[400px] bg-muted/30 rounded-lg p-3">
+              <div className="space-y-3 min-h-[400px] max-h-[600px] overflow-y-auto bg-muted/30 rounded-lg p-3 scrollbar-hide!important ">
                 {leads.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 text-center">
                     <p className="text-sm text-muted-foreground">
@@ -173,7 +173,7 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
                   leads.map((lead: any) => (
                     <Card
                       key={lead.id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="cursor-pointer hover:shadow-md transition-shadow "
                     >
                       <CardHeader className="p-3 pb-2">
                         <div className="flex items-start justify-between">

@@ -114,7 +114,7 @@ Output only the refined prompt, nothing else.`,
       },
     ];
 
-    return this.chat(messages, 0.7);
+    return this.retryWithBackoff(() => this.chat(messages, 0.7));
   }
 
   /**
@@ -145,18 +145,18 @@ Output only the refined prompt, nothing else.`,
     const messages: GroqMessage[] = [
       {
         role: "system",
-        content: `You are a Senior Research Analyst. Analyze the provided content and extract:
-1. Key insights with titles, detailed content, categories, and confidence scores (0-1)
-2. A comprehensive summary
-3. Identified trends
+        content: `You are a Senior Research Analyst. Analyze the provided content and extract specific, high-value insights.
+1. Key insights must be supported by specific facts, numbers, or direct evidence from the text.
+2. Avoid generic statements. Focus on "Strategic Intelligence" (Market Dynamics, Competitor Moves, Technical Specs).
+3. confidence score should reflect the reliability of the source and specific evidence found (0.8+ requires multiple sources or hard data).
 
 Respond in valid JSON format:
 {
   "insights": [
-    {"title": "string", "content": "string", "category": "string", "confidence": number}
+    {"title": "Specific finding title", "content": "Detailed finding with facts/numbers", "category": "Market|Competitor|Tech|Risk|Opportunity", "confidence": number}
   ],
-  "summary": "string",
-  "trends": ["string"]
+  "summary": "Executive summary emphasizing critical actions and strategic implications",
+  "trends": ["Trend 1 with context", "Trend 2 with context"]
 }`,
       },
       {
@@ -165,9 +165,11 @@ Respond in valid JSON format:
       },
     ];
 
-    const response = await this.chat(messages, 0.3);
-
     try {
+      const response = await this.retryWithBackoff(() =>
+        this.chat(messages, 0.3),
+      );
+
       // Extract JSON from response (handle markdown code blocks)
       const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/) || [
         null,
@@ -176,17 +178,18 @@ Respond in valid JSON format:
       const jsonStr = jsonMatch[1] || response;
       return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error("[GroqClient] Failed to parse analysis response:", error);
+      console.error("[GroqClient] Analysis failed:", error);
+      // Return a safe fallback instead of throwing
       return {
         insights: [
           {
-            title: "Analysis Result",
-            content: response,
-            category: "General",
-            confidence: 0.7,
+            title: "Analysis Failed",
+            content: "Could not analyze content due to an error.",
+            category: "Error",
+            confidence: 0,
           },
         ],
-        summary: response.substring(0, 500),
+        summary: "Analysis failed.",
         trends: [],
       };
     }
@@ -204,19 +207,16 @@ Respond in valid JSON format:
     const messages: GroqMessage[] = [
       {
         role: "system",
-        content: `You are a Research Gap Analyst. Analyze the provided research content and identify:
-1. Whether there are significant gaps in the information
-2. What specific information is missing
-3. Suggested search queries to fill those gaps
-
-Be concise. Only suggest gaps if they are significant and would meaningfully improve the research.
-Limit to maximum 3 gaps and 3 follow-up queries.
+        content: `You are a Research Gap Analyst. Analyze the provided research content and identify CRITICAL gaps.
+1. Only report gaps that are blocking the core research goal.
+2. Ignore minor missing details if the main picture is clear.
+3. Suggest queries that are distinctly different from previous ones (look for specific data points).
 
 Respond in valid JSON format:
 {
   "hasGaps": boolean,
-  "gaps": ["string"],
-  "suggestedQueries": ["string"]
+  "gaps": ["string (specific missing data)"],
+  "suggestedQueries": ["string (targeted search query)"]
 }
 `,
       },
@@ -226,9 +226,11 @@ Respond in valid JSON format:
       },
     ];
 
-    const response = await this.chat(messages, 0.3);
-
     try {
+      const response = await this.retryWithBackoff(() =>
+        this.chat(messages, 0.3),
+      );
+
       const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/) || [
         null,
         response,
@@ -236,7 +238,7 @@ Respond in valid JSON format:
       const jsonStr = jsonMatch[1] || response;
       return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error("[GroqClient] Failed to parse gap analysis:", error);
+      console.error("[GroqClient] Gap analysis failed:", error);
       return {
         hasGaps: false,
         gaps: [],
@@ -275,7 +277,7 @@ Requirements:
       },
     ];
 
-    return this.chat(messages, 0.5);
+    return this.retryWithBackoff(() => this.chat(messages, 0.5));
   }
 
   /**

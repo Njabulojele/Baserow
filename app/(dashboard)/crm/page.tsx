@@ -40,7 +40,7 @@ export default function CRMPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
             Dashboard
@@ -49,12 +49,14 @@ export default function CRMPage() {
             Overview of your business performance
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/crm/leads">
-            <Button>View Leads</Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Link href="/crm/leads" className="flex-1 sm:flex-none">
+            <Button className="w-full sm:w-auto">View Leads</Button>
           </Link>
-          <Link href="/crm/activities">
-            <Button variant="outline">Log Activity</Button>
+          <Link href="/crm/activities" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Log Activity
+            </Button>
           </Link>
         </div>
       </div>
@@ -168,7 +170,7 @@ export default function CRMPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Main Content Area (Left) */}
         <div className="md:col-span-8 flex flex-col space-y-6">
-          <Card className="bg-card border-none">
+          <Card className="bg-card border-none max-h-[500px] overflow-y-auto">
             <CardHeader>
               <CardTitle className="text-white-smoke">
                 Recent Activities
