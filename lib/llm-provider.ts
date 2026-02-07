@@ -304,7 +304,12 @@ export function getLLMClient(
     case "GROQ":
       // Verify if the model is a valid Groq model, otherwise use default
       const isGroqModel =
-        model?.includes("llama") || model?.includes("mixtral");
+        model?.includes("llama") ||
+        model?.includes("mixtral") ||
+        model?.includes("gemma") ||
+        model?.includes("gpt-oss") ||
+        model?.includes("qwen") ||
+        model?.includes("deepseek");
       const groqModel = isGroqModel ? model : "llama-3.3-70b-versatile";
       return new GroqWrapper(encryptedApiKey, groqModel);
     case "GEMINI":
@@ -338,7 +343,10 @@ export async function getLLMClientWithFallback(
       error.message?.includes("quota") ||
       error.message?.includes("limit") ||
       error.message?.includes("404") ||
-      error.message?.includes("not found");
+      error.message?.includes("not found") ||
+      error.message?.includes("401") ||
+      error.message?.includes("Invalid API Key") ||
+      error.message?.includes("invalid_api_key");
 
     if (isFallbackError && fallbackKey) {
       console.log(

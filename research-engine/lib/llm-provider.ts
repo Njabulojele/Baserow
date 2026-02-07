@@ -304,7 +304,12 @@ export function getLLMClient(
     case "GROQ":
       // Verify if the model is a valid Groq model, otherwise use default
       const isGroqModel =
-        model?.includes("llama") || model?.includes("mixtral");
+        model?.includes("llama") ||
+        model?.includes("mixtral") ||
+        model?.includes("gemma") ||
+        model?.includes("gpt-oss") ||
+        model?.includes("qwen") ||
+        model?.includes("deepseek");
       const groqModel = isGroqModel ? model : "llama-3.3-70b-versatile";
       return new GroqWrapper(encryptedApiKey, groqModel);
     case "GEMINI":

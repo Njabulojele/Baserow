@@ -19,6 +19,7 @@ export const settingsRouter = router({
         serperApiKey: true,
         timezone: true,
         researchLimit: true,
+        scrapingMode: true,
       },
     });
 
@@ -36,6 +37,7 @@ export const settingsRouter = router({
       llmProvider: user.llmProvider,
       hasSerperKey: !!user.serperApiKey,
       serperApiKey: user.serperApiKey ? "********" : null,
+      scrapingMode: user.scrapingMode || "AGENTIC",
     };
   }),
 
@@ -57,6 +59,16 @@ export const settingsRouter = router({
         id: "gemini-2.5-flash",
         name: "Gemini 2.5 Flash (Best Reasoning)",
       },
+      // Groq Models
+      {
+        id: "llama-3.3-70b-versatile",
+        name: "Groq: Llama 3.3 70B (Recommended)",
+      },
+      { id: "llama-3.1-8b-instant", name: "Groq: Llama 3.1 8B (Fast)" },
+      { id: "mixtral-8x7b-32768", name: "Groq: Mixtral 8x7B" },
+      { id: "gemma2-9b-it", name: "Groq: Gemma 2 9B" },
+      { id: "openai/gpt-oss-120b", name: "Groq: GPT-OSS 120B" },
+      { id: "qwen/qwen3-32b", name: "Groq: Qwen 3 32B" },
     ];
   }),
 
@@ -71,6 +83,7 @@ export const settingsRouter = router({
         serperApiKey: z.string().optional(),
         groqApiKey: z.string().optional(),
         llmProvider: z.string().optional(),
+        scrapingMode: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -80,6 +93,7 @@ export const settingsRouter = router({
       if (input.timezone) data.timezone = input.timezone;
       if (input.geminiModel) data.geminiModel = input.geminiModel;
       if (input.llmProvider) data.llmProvider = input.llmProvider;
+      if (input.scrapingMode) data.scrapingMode = input.scrapingMode;
 
       // Only update API key if provided and not empty
       if (input.geminiApiKey && input.geminiApiKey.trim() !== "") {

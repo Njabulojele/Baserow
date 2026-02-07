@@ -6,6 +6,7 @@ import { GeminiClient } from "@/lib/gemini-client";
 import { JinaClient } from "@/lib/jina-client";
 import { getLLMClientWithFallback } from "@/lib/llm-provider";
 import { ResearchStatus, ActionPriority, SearchMethod } from "@prisma/client";
+import { emitResearchLog } from "@/lib/log-emitter";
 
 export const researchAgent = inngest.createFunction(
   {
@@ -16,6 +17,12 @@ export const researchAgent = inngest.createFunction(
   { event: "research/initiated" },
   async ({ event, step }) => {
     const { researchId, userId } = event.data;
+
+    // Emit initial log
+    await emitResearchLog(
+      researchId,
+      "Research agent initialized. Fetching details...",
+    );
 
     // Step 1: Fetch research details
     const research = await step.run("fetch-research", async () => {
@@ -203,12 +210,14 @@ export const researchAgent = inngest.createFunction(
       sources = await step.run("scrape-sources", async () => {
         const scraper = new WebScraper();
         await scraper.initialize();
+        await emitResearchLog(researchId, "Web Scraper initialized...");
 
         try {
-          let scrapedData;
+          let scrapedData: any[] = [];
 
           if (research.searchMethod === (SearchMethod as any).JINA_SERPER) {
             // 🚀 JINA + SERPER AGENTIC LOOP
+            // 🚀 JINA + SERPER LOGIC (Configurable Mode)
             const freshUser = await getFreshUser();
             if (!freshUser?.serperApiKey) {
               throw new Error(
@@ -218,36 +227,37 @@ export const researchAgent = inngest.createFunction(
 
             const serper = new SerperClient(freshUser.serperApiKey);
             const jina = new JinaClient();
-            const { client: llm } = await getLLMClientWithFallback(
-              (freshUser.llmProvider as any) || "GEMINI",
-              freshUser.geminiApiKey || "",
-              "GROQ",
-              freshUser.groqApiKey || "",
-            );
+            const scrapingMode = (freshUser as any).scrapingMode || "AGENTIC"; // Default to AGENTIC
 
-            console.log(
-              `[ResearchAgent] Starting Agentic Loop for: ${research.refinedPrompt}`,
-            );
-
-            let currentQuery = research.refinedPrompt;
             let allScrapedData: any[] = [];
-            let accumulatedContent = "";
-            let iteration = 0;
-            const maxIterations = 2;
 
-            while (iteration < maxIterations) {
-              iteration++;
+            if (scrapingMode === "SCRAPER") {
+              // ⚡️ FAST SCRAPER MODE (Single Pass, No LLM)
+              await emitResearchLog(
+                researchId,
+                `Running in Fast Scraper Mode...`,
+              );
               console.log(
-                `[ResearchAgent] Iteration ${iteration}/${maxIterations} with query: ${currentQuery}`,
+                `[ResearchAgent] Fast Scraper Mode: ${research.refinedPrompt}`,
               );
 
               // 1. Search
-              const searchResults = await serper.search(currentQuery, 5);
+              const searchResults = await serper.search(
+                research.refinedPrompt,
+                10,
+              ); // get more results
               const urls = jina.filterUrls(searchResults.map((r) => r.url));
 
+              await emitResearchLog(
+                researchId,
+                `Found ${urls.length} sources. Extracting content...`,
+              );
+
               // 2. Extract
-              const extractions = await jina.extractMultiple(urls);
-              const newScraped = extractions
+              const extractions = await jina.extractMultiple(urls, (msg) =>
+                emitResearchLog(researchId, msg),
+              );
+              allScrapedData = extractions
                 .filter((e) => e.success)
                 .map((e) => ({
                   url: e.url,
@@ -255,47 +265,130 @@ export const researchAgent = inngest.createFunction(
                   content: e.content,
                   excerpt: e.excerpt,
                 }));
+            } else {
+              // 🤖 AGENTIC MODE (Iterative + LLM)
+              await emitResearchLog(
+                researchId,
+                `Running in Agentic Search Mode...`,
+              );
 
-              allScrapedData = [...allScrapedData, ...newScraped];
-              accumulatedContent += newScraped
-                .map((s) => s.content)
-                .join("\n\n---\n\n");
-
-              // 3. Gap Analysis (only if not last iteration)
-              if (iteration < maxIterations) {
-                const gapAnalysis = await llm.identifyGaps!(
-                  currentQuery,
-                  accumulatedContent,
-                );
-                if (
-                  !gapAnalysis.hasGaps ||
-                  gapAnalysis.suggestedQueries.length === 0
-                ) {
-                  console.log(
-                    "[ResearchAgent] No significant gaps found. Ending loop.",
-                  );
-                  break;
-                }
-                currentQuery = gapAnalysis.suggestedQueries[0];
+              // Smart Default: If no DB setting, use GROQ only if key exists, else GEMINI
+              let defaultProvider = "GEMINI";
+              if (freshUser.groqApiKey) {
+                defaultProvider = "GROQ";
               }
+
+              let primaryProvider =
+                (freshUser.llmProvider as any) || defaultProvider;
+              let primaryKey = freshUser.geminiApiKey || "";
+
+              if (primaryProvider === "GROQ") {
+                primaryKey = freshUser.groqApiKey || "";
+              }
+
+              const { client: llm } = await getLLMClientWithFallback(
+                primaryProvider,
+                primaryKey,
+                primaryProvider === "GEMINI" ? "GROQ" : "GEMINI",
+                primaryProvider === "GROQ"
+                  ? freshUser.geminiApiKey || ""
+                  : freshUser.groqApiKey || "",
+              );
+
+              console.log(
+                `[ResearchAgent] Starting Agentic Loop for: ${research.refinedPrompt}`,
+              );
+
+              let currentQuery = research.refinedPrompt;
+              let accumulatedContent = "";
+              let iteration = 0;
+              const maxIterations = 2;
+
+              while (iteration < maxIterations) {
+                iteration++;
+                await emitResearchLog(
+                  researchId,
+                  `Iteration ${iteration}/${maxIterations}: Searching for "${currentQuery}"...`,
+                );
+                console.log(
+                  `[ResearchAgent] Iteration ${iteration}/${maxIterations} with query: ${currentQuery}`,
+                );
+
+                // 1. Search
+                const searchResults = await serper.search(currentQuery, 5);
+                const urls = jina.filterUrls(searchResults.map((r) => r.url));
+
+                await emitResearchLog(
+                  researchId,
+                  `Found ${urls.length} sources. Extracting content...`,
+                );
+
+                // 2. Extract
+                const extractions = await jina.extractMultiple(urls, (msg) =>
+                  emitResearchLog(researchId, msg),
+                );
+                const newScraped = extractions
+                  .filter((e) => e.success)
+                  .map((e) => ({
+                    url: e.url,
+                    title: e.title,
+                    content: e.content,
+                    excerpt: e.excerpt,
+                  }));
+
+                allScrapedData = [...allScrapedData, ...newScraped];
+                accumulatedContent += newScraped
+                  .map((s) => s.content)
+                  .join("\n\n---\n\n");
+
+                if (iteration < maxIterations) {
+                  try {
+                    const gapAnalysis = await llm.identifyGaps!(
+                      currentQuery,
+                      accumulatedContent,
+                    );
+                    if (
+                      !gapAnalysis.hasGaps ||
+                      !gapAnalysis.suggestedQueries ||
+                      gapAnalysis.suggestedQueries.length === 0
+                    ) {
+                      await emitResearchLog(
+                        researchId,
+                        "Sufficient data collected. Finishing search...",
+                      );
+                      break;
+                    }
+                    currentQuery = gapAnalysis.suggestedQueries[0];
+                  } catch (error: any) {
+                    console.error("Agentic Loop LLM Error:", error);
+                    await emitResearchLog(
+                      researchId,
+                      `Agentic planning failed: ${error?.message || "Unknown error"}. Stopping early.`,
+                    );
+                    break;
+                  }
+                }
+              }
+
+              scrapedData = allScrapedData;
+
+              // 4. Final Synthesis
+              const finalReport = await llm.synthesizeFinalReport!(
+                research.refinedPrompt,
+                accumulatedContent,
+                iteration,
+              );
+
+              scrapedData = [
+                ...allScrapedData,
+                {
+                  url: "final-synthesis",
+                  title: "Synthesized Research Report",
+                  content: finalReport,
+                  excerpt: finalReport.substring(0, 500),
+                },
+              ];
             }
-
-            // 4. Final Synthesis
-            const finalReport = await llm.synthesizeFinalReport!(
-              research.refinedPrompt,
-              accumulatedContent,
-              iteration,
-            );
-
-            scrapedData = [
-              ...allScrapedData,
-              {
-                url: "final-synthesis",
-                title: "Synthesized Research Report",
-                content: finalReport,
-                excerpt: finalReport.substring(0, 500),
-              },
-            ];
           } else if (research.searchMethod === SearchMethod.SERPER_API) {
             // Use Serper API + Jina extraction for better format support
             const freshUser = await getFreshUser();
@@ -319,7 +412,9 @@ export const researchAgent = inngest.createFunction(
             console.log(
               `[ResearchAgent] Extracting ${urls.length} URLs via Jina...`,
             );
-            const extractions = await jinaClient.extractMultiple(urls);
+            const extractions = await jinaClient.extractMultiple(urls, (msg) =>
+              emitResearchLog(researchId, msg),
+            );
 
             scrapedData = extractions
               .filter((e) => e.success)
@@ -440,8 +535,16 @@ export const researchAgent = inngest.createFunction(
       }
 
       // Determine primary provider based on overrides or user settings
+      // Default to GROQ if no preference is set in DB to avoid Gemini quotas
       const overrides = event.data.retryOptions;
-      let primaryProvider = (freshUser.llmProvider as any) || "GEMINI";
+
+      // Smart Default: If no DB setting, use GROQ only if key exists, else GEMINI
+      let defaultProvider = "GEMINI";
+      if (freshUser.groqApiKey) {
+        defaultProvider = "GROQ";
+      }
+
+      let primaryProvider = (freshUser.llmProvider as any) || defaultProvider;
       let primaryKey = freshUser.geminiApiKey || "";
       let primaryModel = freshUser.geminiModel;
 
@@ -453,16 +556,23 @@ export const researchAgent = inngest.createFunction(
         primaryProvider = "GEMINI";
         primaryKey = freshUser.geminiApiKey || "";
         primaryModel = overrides.model || freshUser.geminiModel;
+      } else if (primaryProvider === "GROQ") {
+        primaryKey = freshUser.groqApiKey || "";
       }
 
       const { client: llmClient } = await getLLMClientWithFallback(
         primaryProvider,
         primaryKey,
         primaryProvider === "GEMINI" ? "GROQ" : "GEMINI", // Flip fallback
-        primaryProvider === "GEMINI"
-          ? freshUser.groqApiKey || ""
-          : freshUser.geminiApiKey || "",
+        primaryProvider === "GROQ"
+          ? freshUser.geminiApiKey || ""
+          : freshUser.groqApiKey || "",
         primaryModel,
+      );
+
+      await emitResearchLog(
+        researchId,
+        "Analyzing gathered content and generating insights...",
       );
 
       const result = await llmClient.analyzeContent(
@@ -503,16 +613,42 @@ export const researchAgent = inngest.createFunction(
         throw new Error("No LLM API keys found. Please check your settings.");
       }
 
+      const overrides = event.data.retryOptions;
+
+      // Smart Default: If no DB setting, use GROQ only if key exists, else GEMINI
+      let defaultProvider = "GEMINI";
+      if (freshUser.groqApiKey) {
+        defaultProvider = "GROQ";
+      }
+
+      let primaryProvider = (freshUser.llmProvider as any) || defaultProvider;
+      let primaryKey = freshUser.geminiApiKey || "";
+      let primaryModel = freshUser.geminiModel;
+
+      if (overrides?.provider === "GROQ") {
+        primaryProvider = "GROQ";
+        primaryKey = freshUser.groqApiKey || "";
+        primaryModel = overrides.model;
+      } else if (overrides?.provider === "GEMINI") {
+        primaryProvider = "GEMINI";
+        primaryKey = freshUser.geminiApiKey || "";
+        primaryModel = overrides.model || freshUser.geminiModel;
+      } else if (primaryProvider === "GROQ") {
+        primaryKey = freshUser.groqApiKey || "";
+      }
+
       const { client: llmClient } = await getLLMClientWithFallback(
-        (freshUser.llmProvider as any) || "GEMINI",
-        freshUser.geminiApiKey || "",
-        "GROQ",
-        freshUser.groqApiKey || "",
-        freshUser.geminiModel,
+        primaryProvider,
+        primaryKey,
+        primaryProvider === "GEMINI" ? "GROQ" : "GEMINI",
+        primaryProvider === "GROQ"
+          ? freshUser.geminiApiKey || ""
+          : freshUser.groqApiKey || "",
+        primaryModel,
       );
 
       const prompt = `
-        Based on these research findings, generate 5 specific, high-impact actionable items.
+        Based on these research findings, generate 10 specific, high-impact actionable items.
         Goal: ${research.refinedPrompt}
         Summary: ${analysis.summary}
         
@@ -557,12 +693,38 @@ export const researchAgent = inngest.createFunction(
           throw new Error("No LLM API keys found. Please check your settings.");
         }
 
+        const overrides = event.data.retryOptions;
+
+        // Smart Default: If no DB setting, use GROQ only if key exists, else GEMINI
+        let defaultProvider = "GEMINI";
+        if (freshUser.groqApiKey) {
+          defaultProvider = "GROQ";
+        }
+
+        let primaryProvider = (freshUser.llmProvider as any) || defaultProvider;
+        let primaryKey = freshUser.geminiApiKey || "";
+        let primaryModel = freshUser.geminiModel;
+
+        if (overrides?.provider === "GROQ") {
+          primaryProvider = "GROQ";
+          primaryKey = freshUser.groqApiKey || "";
+          primaryModel = overrides.model;
+        } else if (overrides?.provider === "GEMINI") {
+          primaryProvider = "GEMINI";
+          primaryKey = freshUser.geminiApiKey || "";
+          primaryModel = overrides.model || freshUser.geminiModel;
+        } else if (primaryProvider === "GROQ") {
+          primaryKey = freshUser.groqApiKey || "";
+        }
+
         const { client: llmClient } = await getLLMClientWithFallback(
-          (freshUser.llmProvider as any) || "GEMINI",
-          freshUser.geminiApiKey || "",
-          "GROQ",
-          freshUser.groqApiKey || "",
-          freshUser.geminiModel,
+          primaryProvider,
+          primaryKey,
+          primaryProvider === "GEMINI" ? "GROQ" : "GEMINI",
+          primaryProvider === "GROQ"
+            ? freshUser.geminiApiKey || ""
+            : freshUser.groqApiKey || "",
+          primaryModel,
         );
 
         const prompt = `

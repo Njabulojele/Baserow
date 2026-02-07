@@ -336,7 +336,9 @@ VALIDATION CHECKLIST:
 Begin your analysis now:`;
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await this.retryWithBackoff(() =>
+        this.model.generateContent(prompt),
+      );
       const response = await result.response;
       const text = response.text();
 
@@ -398,7 +400,9 @@ Begin your analysis now:`;
     `;
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await this.retryWithBackoff(() =>
+        this.model.generateContent(prompt),
+      );
       const response = await result.response;
       const text = response.text();
 

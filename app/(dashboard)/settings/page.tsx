@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
@@ -338,6 +345,49 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+          </Card>
+
+          <Card className="bg-[#1a252f] border-[#2f3e46] text-white">
+            <CardHeader>
+              <CardTitle>Research Scraping Mode</CardTitle>
+              <CardDescription className="text-gray-400">
+                Choose how the research agent gathers information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RadioGroup
+                value={settings.scrapingMode || "AGENTIC"}
+                onValueChange={(val) =>
+                  updateMutation.mutate({ scrapingMode: val })
+                }
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="AGENTIC" id="agentic" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="agentic" className="font-bold">
+                      Agentic Search (Deep & Smart)
+                    </Label>
+                    <p className="text-sm text-gray-400">
+                      Iteratively searches, analyzes gaps, and searches again.
+                      Best for complex topics. (Uses LLM)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 mt-4">
+                  <RadioGroupItem value="SCRAPER" id="scraper" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="scraper" className="font-bold">
+                      Fast Scraper (Single Pass)
+                    </Label>
+                    <p className="text-sm text-gray-400">
+                      fast, single-pass search & scrape. No AI "thinking" during
+                      collection. Best for speed & avoiding rate limits.
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </CardContent>
           </Card>
 
           {/* Serper Integration Card */}

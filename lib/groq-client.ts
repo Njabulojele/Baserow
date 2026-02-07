@@ -114,7 +114,7 @@ Output only the refined prompt, nothing else.`,
       },
     ];
 
-    return this.chat(messages, 0.7);
+    return this.retryWithBackoff(() => this.chat(messages, 0.7));
   }
 
   /**
@@ -165,9 +165,11 @@ Respond in valid JSON format:
       },
     ];
 
-    const response = await this.chat(messages, 0.3);
-
     try {
+      const response = await this.retryWithBackoff(() =>
+        this.chat(messages, 0.3),
+      );
+
       // Extract JSON from response (handle markdown code blocks)
       const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/) || [
         null,
@@ -176,17 +178,18 @@ Respond in valid JSON format:
       const jsonStr = jsonMatch[1] || response;
       return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error("[GroqClient] Failed to parse analysis response:", error);
+      console.error("[GroqClient] Analysis failed:", error);
+      // Return a safe fallback instead of throwing
       return {
         insights: [
           {
-            title: "Analysis Result",
-            content: response,
-            category: "General",
-            confidence: 0.7,
+            title: "Analysis Failed",
+            content: "Could not analyze content due to an error.",
+            category: "Error",
+            confidence: 0,
           },
         ],
-        summary: response.substring(0, 500),
+        summary: "Analysis failed.",
         trends: [],
       };
     }
@@ -223,9 +226,11 @@ Respond in valid JSON format:
       },
     ];
 
-    const response = await this.chat(messages, 0.3);
-
     try {
+      const response = await this.retryWithBackoff(() =>
+        this.chat(messages, 0.3),
+      );
+
       const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/) || [
         null,
         response,
@@ -233,7 +238,7 @@ Respond in valid JSON format:
       const jsonStr = jsonMatch[1] || response;
       return JSON.parse(jsonStr.trim());
     } catch (error) {
-      console.error("[GroqClient] Failed to parse gap analysis:", error);
+      console.error("[GroqClient] Gap analysis failed:", error);
       return {
         hasGaps: false,
         gaps: [],
@@ -272,7 +277,7 @@ Requirements:
       },
     ];
 
-    return this.chat(messages, 0.5);
+    return this.retryWithBackoff(() => this.chat(messages, 0.5));
   }
 
   /**

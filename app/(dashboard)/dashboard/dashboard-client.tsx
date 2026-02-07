@@ -213,7 +213,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   if (energyStats?.trend === "declining") energySubtitle = "Trending Down";
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden">
+    <div className="w-full max-w-full overflow-x-hidden p-6">
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
           Dashboard

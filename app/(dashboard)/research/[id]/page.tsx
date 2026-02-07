@@ -19,6 +19,7 @@ import {
   Maximize2,
   Key,
   XCircle,
+  Star,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { RetryAnalysisDialog } from "@/components/research/RetryAnalysisDialog";
 import ReactMarkdown from "react-markdown";
+import { ResearchLogs } from "@/components/research/ResearchLogs";
 
 export default function ResearchDetailPage({
   params,
@@ -66,6 +68,30 @@ export default function ResearchDetailPage({
   const cancelMutation = trpc.research.cancelResearch.useMutation();
   const updateSettingsMutation = trpc.settings.updateSettings.useMutation();
   const utils = trpc.useUtils();
+
+  const toggleFavorite = trpc.research.toggleFavorite.useMutation({
+    onMutate: async ({ id: researchId }) => {
+      await utils.research.getById.cancel({ id: researchId });
+      const previousResearch = utils.research.getById.getData({
+        id: researchId,
+      });
+
+      utils.research.getById.setData({ id: researchId }, (old) => {
+        if (!old) return old;
+        return { ...old, isFavorited: !old.isFavorited };
+      });
+
+      return { previousResearch };
+    },
+    onError: (err, newTodo, context) => {
+      utils.research.getById.setData({ id }, context?.previousResearch);
+      toast.error("Failed to toggle favorite");
+    },
+    onSettled: () => {
+      utils.research.getById.invalidate({ id });
+      utils.research.list.invalidate();
+    },
+  });
 
   // Map progress percentage to human-readable steps
   const getProgressStep = (progress: number) => {
@@ -208,12 +234,26 @@ export default function ResearchDetailPage({
           <ArrowLeft className="w-4 h-4" /> Back to Research Lab
         </Link>
 
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+        <div className="flex flex-col xl:flex-row md:items-start justify-between gap-6">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl md:text-4xl font-bold text-white">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
                 {research.title}
               </h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-10 w-10 rounded-full transition-all ${
+                  research.isFavorited
+                    ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
+                    : "text-gray-400 hover:text-amber-500 hover:bg-amber-500/10"
+                }`}
+                onClick={() => toggleFavorite.mutate({ id: research.id })}
+              >
+                <Star
+                  className={`w-6 h-6 ${research.isFavorited ? "fill-amber-500" : ""}`}
+                />
+              </Button>
               {research.status === "IN_PROGRESS" && (
                 <Badge className="bg-[#6b9080] animate-pulse">
                   IN PROGRESS
@@ -262,7 +302,7 @@ export default function ResearchDetailPage({
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {research.status === "PENDING" && (
               <Button
                 onClick={handleRetry}
@@ -335,33 +375,43 @@ export default function ResearchDetailPage({
           </div>
         </div>
       </div>
-      {/* Huge & Visible Progress Section */}
+      {/* Huge & Visible Progress Section with Side-by-Side Logs */}
       {research.status === "IN_PROGRESS" && (
-        <div className="mb-12 py-12 px-6 bg-black/40 border border-[#6b9080]/30 rounded-3xl flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-700 shadow-2xl">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-[#6b9080]/20 blur-3xl rounded-full animate-pulse" />
-            <div className="text-5xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
-              {research.progress}%
+        <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in zoom-in duration-700">
+          {/* Left: Progress Visualization */}
+          <div className="py-12 px-6 bg-black/40 border border-[#6b9080]/30 rounded-3xl flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-[#6b9080]/5" />
+
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-[#6b9080]/20 blur-3xl rounded-full animate-pulse" />
+              <div className="text-5xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
+                {research.progress}%
+              </div>
             </div>
+
+            <h2 className="text-xl md:text-3xl font-bold text-white mb-6 tracking-tight uppercase px-4 z-10">
+              {getProgressStep(research.progress)}
+            </h2>
+
+            <div className="w-full max-w-md bg-[#1a252f] rounded-full h-4 overflow-hidden border border-[#2f3e46] mb-4 z-10">
+              <div
+                className="bg-gradient-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
+                style={{ width: `${research.progress}%` }}
+              >
+                <div className="absolute inset-0 bg-white/10 animate-pulse" />
+              </div>
+            </div>
+
+            <p className="text-[#6b9080] text-sm font-medium flex items-center gap-2 animate-pulse z-10">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Research Agent Active
+            </p>
           </div>
 
-          <h2 className="text-xl md:text-4xl font-bold text-white mb-6 tracking-tight uppercase px-4">
-            {getProgressStep(research.progress)}
-          </h2>
-
-          <div className="w-full max-w-2xl bg-[#1a252f] rounded-full h-4 overflow-hidden border border-[#2f3e46] mb-4">
-            <div
-              className="bg-gradient-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
-              style={{ width: `${research.progress}%` }}
-            >
-              <div className="absolute inset-0 bg-white/10 animate-pulse" />
-            </div>
+          {/* Right: Live Terminal Logs */}
+          <div className="h-full">
+            <ResearchLogs researchId={research.id} status={research.status} />
           </div>
-
-          <p className="text-[#6b9080] text-sm font-medium flex items-center gap-2 animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Live Research Node Active
-          </p>
         </div>
       )}
       <RetryAnalysisDialog
@@ -404,35 +454,35 @@ export default function ResearchDetailPage({
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="w-full justify-start bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex overflow-x-auto whitespace-nowrap lg:inline-flex custom-scrollbar">
+        <TabsList className="w-full justify-start bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex overflow-x-auto whitespace-nowrap lg:inline-flex custom-scrollbar touch-pan-x">
           <TabsTrigger
             value="overview"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"
+            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="sources"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"
+            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
           >
             Sources ({research.sources.length})
           </TabsTrigger>
           <TabsTrigger
             value="insights"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"
+            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
           >
             Insights ({research.insights.length})
           </TabsTrigger>
           <TabsTrigger
             value="actions"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"
+            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
           >
             Action Items ({research.actionItems.length})
           </TabsTrigger>
           {research.scope === "LEAD_GENERATION" && (
             <TabsTrigger
               value="leads"
-              className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-3 px-6"
+              className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
             >
               Leads
             </TabsTrigger>

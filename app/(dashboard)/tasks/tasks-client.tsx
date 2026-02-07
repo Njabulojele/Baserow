@@ -245,14 +245,16 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
   return (
     <div className="w-full max-w-5xl mx-auto py-8 px-4 space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Manage and track your work
           </p>
         </div>
-        <TaskForm />
+        <div className="w-full sm:w-auto">
+          <TaskForm />
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -340,24 +342,40 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
       </Card>
 
       {/* Filter Tabs */}
-      <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <div className="overflow-x-auto pb-1 w-full scrollbar-none">
-          <TabsList className="bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex flex-wrap sm:grid sm:grid-cols-4 w-full">
-            <TabsTrigger value="all" className="flex-1 gap-2">
+      <Tabs
+        value={status}
+        onValueChange={setStatus}
+        className="w-full space-y-6"
+      >
+        <div className="w-full overflow-x-auto pb-1 custom-scrollbar">
+          <TabsList className="bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex min-w-max sm:grid sm:grid-cols-4 sm:w-full">
+            <TabsTrigger
+              value="all"
+              className="flex-1 min-w-[80px] gap-1.5 py-2"
+            >
               <ListTodo className="h-4 w-4 shrink-0" />
-              <span className="truncate">All</span>
+              <span>All</span>
             </TabsTrigger>
-            <TabsTrigger value="not_started" className="flex-1 gap-2">
+            <TabsTrigger
+              value="not_started"
+              className="flex-1 min-w-[80px] gap-1.5 py-2"
+            >
               <Circle className="h-4 w-4 shrink-0" />
-              <span className="truncate">To Do</span>
+              <span>To Do</span>
             </TabsTrigger>
-            <TabsTrigger value="in_progress" className="flex-1 gap-2">
+            <TabsTrigger
+              value="in_progress"
+              className="flex-1 min-w-[80px] gap-1.5 py-2"
+            >
               <Play className="h-4 w-4 shrink-0" />
-              <span className="truncate">Active</span>
+              <span>Active</span>
             </TabsTrigger>
-            <TabsTrigger value="done" className="flex-1 gap-2">
+            <TabsTrigger
+              value="done"
+              className="flex-1 min-w-[80px] gap-1.5 py-2"
+            >
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">Done</span>
+              <span>Done</span>
             </TabsTrigger>
           </TabsList>
         </div>

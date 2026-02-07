@@ -212,15 +212,18 @@ export const researchRouter = router({
     .input(
       z.object({
         status: z.nativeEnum(ResearchStatus).optional(),
+        isFavorited: z.boolean().optional(),
         goalId: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const { status, isFavorited, goalId } = input;
       return await ctx.prisma.research.findMany({
         where: {
           userId: ctx.userId,
-          ...(input.status && { status: input.status }),
-          ...(input.goalId && { goalId: input.goalId }),
+          ...(status && { status }),
+          ...(isFavorited !== undefined && { isFavorited }),
+          ...(goalId && { goalId }),
         },
         include: {
           goal: { select: { title: true } },
@@ -389,5 +392,33 @@ export const researchRouter = router({
       });
 
       return { success: true };
+    }),
+
+  // Toggle favorite status
+  toggleFavorite: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const research = await ctx.prisma.research.findUnique({
+        where: { id: input.id },
+        select: { id: true, userId: true, isFavorited: true },
+      });
+
+      if (!research) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Research not found",
+        });
+      }
+
+      if (research.userId !== ctx.userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const updated = await ctx.prisma.research.update({
+        where: { id: input.id },
+        data: { isFavorited: !research.isFavorited },
+      });
+
+      return updated;
     }),
 });
