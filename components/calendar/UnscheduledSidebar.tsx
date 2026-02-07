@@ -82,7 +82,7 @@ export function UnscheduledSidebar() {
         </p>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-3">
           {tasks?.map(
             (
