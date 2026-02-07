@@ -492,13 +492,18 @@ export const researchAgent = inngest.createFunction(
       );
 
       const prompt = `
-        Based on these research findings, generate 5 specific actionable items.
+        Based on these research findings, generate 10 specific, high-impact actionable items.
         Goal: ${research.refinedPrompt}
         Summary: ${analysis.summary}
         
+        CRITICAL INSTRUCTIONS:
+        - make actions CONCRETE (e.g., "Contact X" -> "Email Head of Sales at Company X asking for Y").
+        - include "WHY" this action is needed in the description.
+        - mix Strategic (long-term) and Tactical (immediate) actions.
+        
         Return as JSON array only:
         [
-          { "description": "Action text", "priority": "HIGH" | "MEDIUM" | "LOW", "effort": 1-5 }
+          { "description": "Specific Action + Rationale", "priority": "HIGH" | "MEDIUM" | "LOW", "effort": 1-5 }
         ]
       `;
 
@@ -675,7 +680,7 @@ export const generateLeadsAgent = inngest.createFunction(
       );
 
       const prompt = `
-        Based on these research findings, identify potential business leads.
+        Based on these research findings, identify specific business leads.
         
         Goal: ${research.refinedPrompt}
         Summary: ${analysis.summary}
@@ -685,19 +690,24 @@ export const generateLeadsAgent = inngest.createFunction(
           .map((i: any) => `- ${i.title}: ${i.content}`)
           .join("\n")}
         
+        INSTRUCTIONS:
+        - Prioritize finding SPECIFIC people (CTO, VP Marketing, Founder) over generic info.
+        - Infer 'painPoints' directly from the research (e.g. if company has bad reviews -> "Customer Satisfaction" is a pain point).
+        - 'suggestedEmail' should be a best-guess pattern if not found (e.g. first.last@domain.com).
+        
         Extract details for up to 10 high-quality leads.
         Return as a JSON array:
         [
           {
-            "name": "Contact Name or 'General Inquiry'",
+            "name": "Contact Name or 'Specific Role' (not just 'Manager')",
             "company": "Company Name",
             "email": "Email if found or null",
             "phone": "Phone if found or null",
             "website": "Website URL",
             "industry": "Industry segment",
             "location": "City/Country",
-            "painPoints": ["pain point 1", "pain point 2"],
-            "suggestedDM": "Suggested Decision Maker Role",
+            "painPoints": ["Specific Pain Point 1", "Specific Pain Point 2"],
+            "suggestedDM": "Target Decision Maker Role",
             "suggestedEmail": "Predicted email pattern or specific email"
           }
         ]

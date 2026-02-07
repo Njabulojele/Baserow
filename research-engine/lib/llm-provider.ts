@@ -131,7 +131,10 @@ class GeminiWrapper implements UnifiedLLMClient {
             role: "user",
             parts: [
               {
-                text: `Analyze this research and identify gaps.
+                text: `Analyze this research and identify CRITICAL gaps.
+1. Only report gaps that are blocking the core research goal.
+2. Ignore minor missing details if the main picture is clear.
+3. Suggest queries that are distinctly different from previous ones (look for specific data points).
 
 Research Query: ${query}
 

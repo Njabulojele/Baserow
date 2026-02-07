@@ -258,28 +258,59 @@ export class GeminiClient {
       )
       .join("\n\n---\n\n");
 
-    const prompt = `
-      You are a Deep Research Analyst. Based on the following sources, provide a comprehensive analysis for the goal: "${researchGoal}"
-      
-      SOURCES:
-      ${sourceText}
-      
-      Return the analysis in VALID JSON format with this exact structure:
-      {
-        "insights": [
-          {
-            "title": "Specific finding title",
-            "content": "Detailed explanation of the finding",
-            "category": "Market/Competitor/Technology/etc",
-            "confidence": 0.0 to 1.0
-          }
-        ],
-        "summary": "High-level executive summary of all findings",
-        "trends": ["Trend 1", "Trend 2"]
-      }
-      
-      Ensure the JSON is properly escaped and valid. Wrap the JSON in triple backticks: \`\`\`json ... \`\`\`
-    `;
+    const prompt = `You are a Deep Research Analyst tasked with analyzing sources and extracting actionable insights.
+
+RESEARCH GOAL:
+${researchGoal}
+
+SOURCES TO ANALYZE:
+${sourceText}
+
+INSTRUCTIONS:
+1. Analyze all provided sources thoroughly
+2. Extract key insights, patterns, and trends
+3. Categorize findings appropriately (e.g., Market, Competitor, Technology, Customer, Risk, Opportunity)
+4. Assign confidence scores based on source quality and corroboration
+5. Provide an executive summary that synthesizes all findings
+
+CRITICAL REQUIREMENTS:
+- Return ONLY valid JSON - no additional text before or after
+- Use proper JSON escaping for quotes, newlines, and special characters
+- Ensure all strings are properly quoted
+- Do not use trailing commas
+- Confidence must be a number between 0.0 and 1.0
+- All arrays must contain at least one element (use empty string if needed)
+
+REQUIRED OUTPUT FORMAT:
+\`\`\`json
+{
+  "insights": [
+    {
+      "title": "Brief, specific title of the finding",
+      "content": "Detailed explanation with supporting evidence from sources",
+      "category": "Market|Competitor|Technology|Customer|Risk|Opportunity|Other",
+      "confidence": 0.85
+    }
+  ],
+  "summary": "2-3 paragraph executive summary synthesizing all key findings and their implications",
+  "trends": [
+    "Specific trend observation 1",
+    "Specific trend observation 2"
+  ]
+}
+\`\`\`
+
+VALIDATION CHECKLIST:
+- [ ] JSON is properly formatted and parseable
+- [ ] All required fields are present
+- [ ] insights array has at least 1 item
+- [ ] Each insight has title, content, category, and confidence
+- [ ] confidence values are numbers between 0 and 1
+- [ ] trends array has at least 1 item
+- [ ] summary is substantive (not just "No findings")
+- [ ] Content is wrapped in triple backticks with json language identifier
+
+Begin your analysis now:`;
 
     try {
       const result = await this.model.generateContent(prompt);
