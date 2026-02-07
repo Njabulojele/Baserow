@@ -50,7 +50,7 @@ export default async function DashboardLayout({
       <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-md">
-          <SidebarTrigger className="-ml-1 h-9 w-9" />
+          {/* <SidebarTrigger className="-ml-1 h-9 w-9" /> */}
           <div className="w-px h-4 bg-border mx-2" />
           <div className="flex items-center gap-2 lg:hidden">
             <Image

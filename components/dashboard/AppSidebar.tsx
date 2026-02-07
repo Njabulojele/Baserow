@@ -32,6 +32,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   useSidebar,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -134,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="flex justify-between flex-row">
         <div className="flex items-center p-2">
           <Image
             src="/logo.png"
@@ -148,6 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <span className="text-xs">v1.0</span>
           </div>
         </div>
+        <SidebarTrigger className="-ml-1 h-9 w-9" />
       </SidebarHeader>
       <SidebarContent>
         {/* Main Routes */}
