@@ -57,7 +57,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
 
       <Tabs value={status} onValueChange={setStatus} className="space-y-6">
         <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-          <TabsList className="flex w-full min-w-[400px] sm:min-w-0 sm:grid sm:grid-cols-5">
+          <TabsList className="flex w-full min-w-max sm:min-w-0 sm:grid sm:grid-cols-5">
             <TabsTrigger value="active" className="flex-1">
               Active
             </TabsTrigger>

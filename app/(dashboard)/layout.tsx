@@ -9,6 +9,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Heart } from "lucide-react";
 
 export default async function DashboardLayout({
   children,
@@ -50,6 +51,7 @@ export default async function DashboardLayout({
       <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-md">
+          <SidebarTrigger className="-ml-1 h-9 w-9 lg:hidden" />
           <div className="w-px h-4 bg-border mx-2" />
           <div className="flex items-center gap-2 lg:hidden">
             <Image
@@ -66,8 +68,21 @@ export default async function DashboardLayout({
           {/* Add breadcrumbs here if needed later */}
         </header>
         <DashboardShell>
-          <div className="flex-1 overflow-x-hidden overflow-y-auto w-6xl min-w-0">
-            {children}
+          <div className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-[1600px] mx-auto min-w-0 flex flex-col">
+            <main className="flex-1 w-full min-h-0">{children}</main>
+            <footer className="py-6 text-center text-sm text-muted-foreground shrink-0">
+              Made with{" "}
+              <Heart className="w-4 h-4 text-red-500 fill-red-500 inline mx-0.5" />{" "}
+              by{" "}
+              <a
+                href="https://pinltdco.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium hover:underline text-foreground"
+              >
+                OpenInfinity Pty Ltd
+              </a>
+            </footer>
           </div>
         </DashboardShell>
       </SidebarInset>

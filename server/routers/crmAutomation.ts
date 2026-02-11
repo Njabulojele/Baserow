@@ -127,13 +127,76 @@ export const crmAutomationRouter = router({
         name: z.string().optional(),
         description: z.string().optional(),
         status: z.nativeEnum(WorkflowStatus).optional(),
+        triggers: z
+          .array(
+            z.object({
+              type: z.nativeEnum(WorkflowTriggerType),
+              conditions: jsonValue.optional(),
+              cronExpression: z.string().optional(),
+            }),
+          )
+          .optional(),
+        actions: z
+          .array(
+            z.object({
+              type: z.nativeEnum(WorkflowActionType),
+              order: z.number(),
+              config: jsonValue.optional(),
+              emailTemplateId: z.string().optional(),
+              delayMinutes: z.number().optional(),
+            }),
+          )
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      return ctx.prisma.crmWorkflow.update({
+      const { id, triggers, actions, ...data } = input;
+
+      // Update basic workflow fields
+      await ctx.prisma.crmWorkflow.update({
         where: { id, userId: ctx.userId },
         data,
+      });
+
+      // Replace triggers if provided
+      if (triggers) {
+        await ctx.prisma.workflowTrigger.deleteMany({
+          where: { workflowId: id },
+        });
+        if (triggers.length > 0) {
+          await ctx.prisma.workflowTrigger.createMany({
+            data: triggers.map((t) => ({
+              workflowId: id,
+              type: t.type,
+              conditions: (t.conditions || {}) as Prisma.InputJsonValue,
+              cronExpression: t.cronExpression,
+            })),
+          });
+        }
+      }
+
+      // Replace actions if provided
+      if (actions) {
+        await ctx.prisma.workflowAction.deleteMany({
+          where: { workflowId: id },
+        });
+        if (actions.length > 0) {
+          await ctx.prisma.workflowAction.createMany({
+            data: actions.map((a) => ({
+              workflowId: id,
+              type: a.type,
+              order: a.order,
+              config: (a.config || {}) as Prisma.InputJsonValue,
+              emailTemplateId: a.emailTemplateId,
+              delayMinutes: a.delayMinutes,
+            })),
+          });
+        }
+      }
+
+      return ctx.prisma.crmWorkflow.findUnique({
+        where: { id },
+        include: { triggers: true, actions: { orderBy: { order: "asc" } } },
       });
     }),
 

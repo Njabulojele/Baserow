@@ -615,4 +615,201 @@ export const analyticsRouter = router({
       trend: "+12% from last week", // Placeholder for now - would need historical comparison
     };
   }),
+
+  // Revenue overview: split won deals (client revenue) vs open pipeline (lead/pending)
+  getRevenueOverview: protectedProcedure.query(async ({ ctx }) => {
+    const [wonDeals, openDeals, leadEstimates] = await Promise.all([
+      // Client revenue (won deals)
+      ctx.prisma.deal.aggregate({
+        where: { userId: ctx.userId, status: "WON" },
+        _sum: { value: true },
+        _count: true,
+      }),
+      // Pipeline value (open deals)
+      ctx.prisma.deal.aggregate({
+        where: { userId: ctx.userId, status: "OPEN" },
+        _sum: { value: true, weightedValue: true },
+        _count: true,
+      }),
+      // Estimated value from leads
+      ctx.prisma.crmLead.aggregate({
+        where: {
+          userId: ctx.userId,
+          status: {
+            in: [
+              "NEW",
+              "CONTACTED",
+              "QUALIFIED",
+              "PROPOSAL_SENT",
+              "NEGOTIATION",
+            ],
+          },
+          estimatedValue: { not: null },
+        },
+        _sum: { estimatedValue: true },
+        _count: true,
+      }),
+    ]);
+
+    return {
+      clientRevenue: wonDeals._sum.value ?? 0,
+      clientCount: wonDeals._count,
+      pipelineValue: openDeals._sum.value ?? 0,
+      pipelineForecast: openDeals._sum.weightedValue ?? 0,
+      pipelineCount: openDeals._count,
+      leadEstimatedValue: leadEstimates._sum.estimatedValue ?? 0,
+      leadCount: leadEstimates._count,
+    };
+  }),
+
+  // Time breakdown by category for the current week
+  getTimeBreakdown: protectedProcedure.query(async ({ ctx }) => {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - today.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+
+    const timeEntries = await ctx.prisma.timeEntry.findMany({
+      where: {
+        userId: ctx.userId,
+        startTime: { gte: weekStart },
+      },
+      select: {
+        duration: true,
+        type: true,
+        billable: true,
+        client: { select: { name: true } },
+        project: { select: { name: true, type: true } },
+      },
+    });
+
+    // Group by category
+    const categories: Record<string, { minutes: number; label: string }> = {};
+    timeEntries.forEach((entry) => {
+      let key = entry.type || "other";
+      let label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ");
+
+      if (entry.client) {
+        key = "client_work";
+        label = "Client Work";
+      } else if (entry.project?.type === "personal") {
+        key = "personal";
+        label = "Personal";
+      }
+
+      if (!categories[key]) categories[key] = { minutes: 0, label };
+      categories[key].minutes += entry.duration;
+    });
+
+    const totalMinutes = timeEntries.reduce((sum, e) => sum + e.duration, 0);
+    const billableMinutes = timeEntries
+      .filter((e) => e.billable)
+      .reduce((sum, e) => sum + e.duration, 0);
+
+    return {
+      categories: Object.entries(categories).map(([key, val]) => ({
+        key,
+        label: val.label,
+        hours: Math.round((val.minutes / 60) * 10) / 10,
+      })),
+      totalHours: Math.round((totalMinutes / 60) * 10) / 10,
+      billableHours: Math.round((billableMinutes / 60) * 10) / 10,
+    };
+  }),
+
+  // Inactivity alerts: clients/leads not contacted in 2+ days
+  getInactivityAlerts: protectedProcedure.query(async ({ ctx }) => {
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    // Find clients with no recent activity
+    const staleClients = await ctx.prisma.client.findMany({
+      where: {
+        userId: ctx.userId,
+        status: "active",
+        OR: [
+          { lastContactedAt: { lt: twoDaysAgo } },
+          { lastContactedAt: null },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        companyName: true,
+        lastContactedAt: true,
+        lastInteractionAt: true,
+      },
+      orderBy: { lastContactedAt: "asc" },
+      take: 10,
+    });
+
+    // Find leads not engaged in 2+ days
+    const staleLeads = await ctx.prisma.crmLead.findMany({
+      where: {
+        userId: ctx.userId,
+        status: {
+          in: ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "NEGOTIATION"],
+        },
+        lastEngagement: { lt: twoDaysAgo },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        companyName: true,
+        lastEngagement: true,
+        status: true,
+        estimatedValue: true,
+      },
+      orderBy: { lastEngagement: "asc" },
+      take: 10,
+    });
+
+    // Find projects with no progress in 2+ days
+    const staleProjects = await ctx.prisma.project.findMany({
+      where: {
+        userId: ctx.userId,
+        status: "active",
+        archivedAt: null,
+        updatedAt: { lt: twoDaysAgo },
+      },
+      select: {
+        id: true,
+        name: true,
+        completionPercentage: true,
+        updatedAt: true,
+        client: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "asc" },
+      take: 5,
+    });
+
+    return {
+      staleClients: staleClients.map((c) => ({
+        ...c,
+        daysSince: c.lastContactedAt
+          ? Math.floor(
+              (Date.now() - new Date(c.lastContactedAt).getTime()) / 86400000,
+            )
+          : null,
+        type: "client" as const,
+      })),
+      staleLeads: staleLeads.map((l) => ({
+        ...l,
+        daysSince: Math.floor(
+          (Date.now() - new Date(l.lastEngagement).getTime()) / 86400000,
+        ),
+        type: "lead" as const,
+      })),
+      staleProjects: staleProjects.map((p) => ({
+        ...p,
+        daysSince: Math.floor(
+          (Date.now() - new Date(p.updatedAt).getTime()) / 86400000,
+        ),
+        type: "project" as const,
+      })),
+      totalAlerts:
+        staleClients.length + staleLeads.length + staleProjects.length,
+    };
+  }),
 });

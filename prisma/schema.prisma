@@ -21,6 +21,9 @@ model User {
   groqApiKey       String?
   llmProvider      String           @default("GEMINI")
   scrapingMode     String           @default("AGENTIC")
+  subscriptionStatus String         @default("inactive") // active, inactive
+  subscriptionPlan   String         @default("free")     // free, pro
+  subscriptionExpiry DateTime?
   analyticsEvents  AnalyticsEvent[]
   calendarEvents   CalendarEvent[]
   captures         Capture[]

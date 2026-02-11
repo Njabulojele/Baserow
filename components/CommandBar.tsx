@@ -215,7 +215,7 @@ export function CommandBar() {
       />
 
       {/* Command Dialog */}
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+      <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] sm:pt-[20vh] px-4">
         <Command
           className="w-full max-w-lg rounded-xl border bg-popover shadow-2xl overflow-hidden"
           shouldFilter={true}

@@ -994,60 +994,62 @@ export function YearPlan() {
                         </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="border-t bg-muted/20">
-                          <ScrollArea className="h-[400px] w-full rounded-b-lg">
-                            <div className="p-4 space-y-4">
-                              {goal.description && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-1">
-                                    Description
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {goal.description}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Progress Slider */}
-                              <div>
-                                <h4 className="text-sm font-medium mb-2">
-                                  Progress
-                                </h4>
-                                <div className="flex items-center gap-4">
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={goal.progress || 0}
-                                    onChange={(e) =>
-                                      handleProgressChange(
-                                        goal.id,
-                                        parseInt(e.target.value),
-                                      )
-                                    }
-                                    className="flex-1 accent-primary"
-                                  />
-                                  <span className="text-sm font-medium w-12">
-                                    {goal.progress || 0}%
-                                  </span>
-                                </div>
+                        <div className="border-t bg-linear-to-b from-muted/30 to-transparent">
+                          <div className="p-4 sm:p-6 space-y-4">
+                            {/* Description */}
+                            {goal.description && (
+                              <div className="rounded-lg bg-card/50 border border-border/50 p-3">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                  {goal.description}
+                                </p>
                               </div>
+                            )}
 
+                            {/* Progress Slider */}
+                            <div className="rounded-lg bg-card/50 border border-border/50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                                Goal Progress
+                              </h4>
+                              <div className="flex items-center gap-4">
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={goal.progress || 0}
+                                  onChange={(e) =>
+                                    handleProgressChange(
+                                      goal.id,
+                                      parseInt(e.target.value),
+                                    )
+                                  }
+                                  className="flex-1 accent-primary"
+                                />
+                                <span className="text-sm font-bold w-12 text-right">
+                                  {goal.progress || 0}%
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Info Grid: Strategies + KPIs side by side on desktop */}
+                            <div className="grid gap-3 sm:grid-cols-2">
                               {/* Strategies */}
                               {goal.strategies?.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                                <div className="rounded-lg bg-card/50 border border-border/50 p-3 border-l-4 border-l-blue-500/50">
+                                  <h4 className="text-xs font-semibold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1.5">
+                                    <TrendingUp className="h-3.5 w-3.5" />
                                     Strategies
                                   </h4>
-                                  <ul className="space-y-1">
+                                  <ul className="space-y-1.5">
                                     {goal.strategies.map(
                                       (s: string, i: number) => (
                                         <li
                                           key={i}
-                                          className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-500/30"
+                                          className="text-xs text-muted-foreground flex items-start gap-2"
                                         >
-                                          {s}
+                                          <span className="text-blue-400 mt-0.5 shrink-0">
+                                            •
+                                          </span>
+                                          <span>{s}</span>
                                         </li>
                                       ),
                                     )}
@@ -1057,357 +1059,361 @@ export function YearPlan() {
 
                               {/* KPIs */}
                               {goal.kpis?.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                    <Target className="h-4 w-4 text-green-500" />
-                                    Key Performance Indicators
+                                <div className="rounded-lg bg-card/50 border border-border/50 p-3 border-l-4 border-l-emerald-500/50">
+                                  <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-2 flex items-center gap-1.5">
+                                    <Target className="h-3.5 w-3.5" />
+                                    KPIs
                                   </h4>
-                                  <ul className="space-y-1">
+                                  <ul className="space-y-1.5">
                                     {goal.kpis.map((k: string, i: number) => (
                                       <li
                                         key={i}
-                                        className="text-sm text-muted-foreground pl-4 border-l-2 border-green-500/30"
+                                        className="text-xs text-muted-foreground flex items-start gap-2"
                                       >
-                                        {k}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {/* Risks */}
-                              {goal.risks?.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                    Risks
-                                  </h4>
-                                  <ul className="space-y-1">
-                                    {goal.risks.map((r: string, i: number) => (
-                                      <li
-                                        key={i}
-                                        className="text-sm text-muted-foreground pl-4 border-l-2 border-amber-500/30"
-                                      >
-                                        {r}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {/* Key Steps (New System) */}
-                              <div className="mb-6">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="text-sm font-medium flex items-center gap-2">
-                                    <MilestoneIcon className="h-4 w-4 text-purple-500" />
-                                    Key Steps & Progress
-                                  </h4>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 text-xs"
-                                    onClick={() =>
-                                      setAddingKeyStepToGoalId(
-                                        goal.id === addingKeyStepToGoalId
-                                          ? null
-                                          : goal.id,
-                                      )
-                                    }
-                                  >
-                                    {addingKeyStepToGoalId === goal.id ? (
-                                      <X className="h-3 w-3 mr-1" />
-                                    ) : (
-                                      <Plus className="h-3 w-3 mr-1" />
-                                    )}
-                                    {addingKeyStepToGoalId === goal.id
-                                      ? "Cancel"
-                                      : "Add Step"}
-                                  </Button>
-                                </div>
-
-                                {addingKeyStepToGoalId === goal.id && (
-                                  <div className="mb-4">
-                                    <InlineCreator
-                                      placeholder="What is the next key step?"
-                                      buttonText="Add Key Step"
-                                      onSave={(title) =>
-                                        createKeyStep.mutate({
-                                          goalId: goal.id,
-                                          title,
-                                        })
-                                      }
-                                      onCancel={() =>
-                                        setAddingKeyStepToGoalId(null)
-                                      }
-                                    />
-                                  </div>
-                                )}
-
-                                {goal.keySteps?.length === 0 && (
-                                  <div className="text-sm text-muted-foreground italic pl-6">
-                                    No key steps defined. Add steps to track
-                                    progress.
-                                  </div>
-                                )}
-
-                                <div className="space-y-3">
-                                  {goal.keySteps?.map((step: any) => (
-                                    <div
-                                      key={step.id}
-                                      className="bg-card border rounded-md p-3"
-                                    >
-                                      <div className="flex items-start justify-between mb-2">
-                                        <div className="space-y-1 flex-1">
-                                          <div className="flex items-center gap-2">
-                                            {editingKeyStepId === step.id ? (
-                                              <form
-                                                className="flex items-center gap-2 flex-1"
-                                                onSubmit={(e) => {
-                                                  e.preventDefault();
-                                                  const formData = new FormData(
-                                                    e.currentTarget,
-                                                  );
-                                                  const title = formData.get(
-                                                    "title",
-                                                  ) as string;
-                                                  if (title.trim()) {
-                                                    updateKeyStep.mutate({
-                                                      id: step.id,
-                                                      title: title.trim(),
-                                                    });
-                                                  }
-                                                }}
-                                              >
-                                                <Input
-                                                  name="title"
-                                                  defaultValue={step.title}
-                                                  className="h-7 text-sm py-1"
-                                                  autoFocus
-                                                  onBlur={() =>
-                                                    setEditingKeyStepId(null)
-                                                  }
-                                                />
-                                                <Button
-                                                  size="icon"
-                                                  variant="ghost"
-                                                  className="h-7 w-7"
-                                                  type="submit"
-                                                >
-                                                  <Save className="h-3 w-3" />
-                                                </Button>
-                                              </form>
-                                            ) : (
-                                              <span className="font-medium text-sm">
-                                                {step.title}
-                                              </span>
-                                            )}
-                                            {step.completed && (
-                                              <Badge
-                                                variant="secondary"
-                                                className="text-[10px] bg-green-100 text-green-700"
-                                              >
-                                                Done
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          {step.description && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {step.description}
-                                            </p>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className={cn(
-                                              "h-6 w-6 text-muted-foreground hover:text-foreground",
-                                              addingTaskToKeyStepId ===
-                                                step.id && "bg-muted",
-                                            )}
-                                            title="Add Task"
-                                            onClick={() =>
-                                              setAddingTaskToKeyStepId(
-                                                addingTaskToKeyStepId ===
-                                                  step.id
-                                                  ? null
-                                                  : step.id,
-                                              )
-                                            }
-                                          >
-                                            {addingTaskToKeyStepId ===
-                                            step.id ? (
-                                              <X className="h-3 w-3" />
-                                            ) : (
-                                              <Plus className="h-3 w-3" />
-                                            )}
-                                          </Button>
-                                          <NoteEditor
-                                            keyStepId={step.id}
-                                            title={step.title}
-                                            trigger={
-                                              <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                              >
-                                                <FileText className="h-3 w-3" />
-                                              </Button>
-                                            }
-                                          />
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                            onClick={() =>
-                                              setEditingKeyStepId(step.id)
-                                            }
-                                          >
-                                            <Pencil className="h-3 w-3" />
-                                          </Button>
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                            onClick={() => {
-                                              if (confirm("Delete this step?"))
-                                                deleteKeyStep.mutate({
-                                                  id: step.id,
-                                                });
-                                            }}
-                                          >
-                                            <Trash2 className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      {/* Progress Bar for Step */}
-                                      <div className="space-y-1">
-                                        <div className="flex justify-between text-xs text-muted-foreground">
-                                          <span>
-                                            {step.tasks?.length || 0} tasks
-                                            linked
-                                          </span>
-                                          <span>{step.progress}%</span>
-                                        </div>
-                                        <Progress
-                                          value={step.progress}
-                                          className="h-1.5"
-                                        />
-                                      </div>
-
-                                      {/* Tasks Preview */}
-                                      {step.tasks?.length > 0 && (
-                                        <div className="mt-2 space-y-1 pl-2 border-l-2 border-muted">
-                                          {step.tasks.map((task: any) => (
-                                            <div
-                                              key={task.id}
-                                              className="text-xs flex items-center gap-2 text-muted-foreground cursor-pointer group hover:text-foreground transition-colors"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                const newStatus =
-                                                  task.status === "done"
-                                                    ? "not_started"
-                                                    : "done";
-                                                updateTask.mutate({
-                                                  id: task.id,
-                                                  status: newStatus,
-                                                });
-                                              }}
-                                            >
-                                              <div className="relative">
-                                                {task.status === "done" ? (
-                                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                                ) : (
-                                                  <Circle className="h-3 w-3 group-hover:text-primary transition-colors" />
-                                                )}
-                                              </div>
-                                              <span
-                                                className={cn(
-                                                  "transition-all duration-200",
-                                                  task.status === "done"
-                                                    ? "line-through text-muted-foreground/60"
-                                                    : "",
-                                                )}
-                                              >
-                                                {task.title}
-                                              </span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-
-                                      {addingTaskToKeyStepId === step.id && (
-                                        <div className="mt-2 mb-2 pl-2 border-l-2 border-muted">
-                                          <InlineCreator
-                                            placeholder="Add a task to this step..."
-                                            buttonText="Add Task"
-                                            onSave={(title) =>
-                                              createTask.mutate({
-                                                title,
-                                                keyStepId: step.id,
-                                                goalId: goal.id,
-                                                priority: "medium",
-                                                type: "shallow_work",
-                                              })
-                                            }
-                                            onCancel={() =>
-                                              setAddingTaskToKeyStepId(null)
-                                            }
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Legacy Milestones */}
-                              {goal.milestones?.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                    <MilestoneIcon className="h-4 w-4 text-purple-500" />
-                                    Milestones
-                                  </h4>
-                                  <ul className="space-y-2">
-                                    {goal.milestones.map((m: any) => (
-                                      <li
-                                        key={m.id}
-                                        className="flex items-center gap-2 text-sm cursor-pointer"
-                                        onClick={() =>
-                                          updateMilestone.mutate({
-                                            id: m.id,
-                                            completed: !m.completed,
-                                          })
-                                        }
-                                      >
-                                        {m.completed ? (
-                                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <Circle className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                        <span
-                                          className={cn(
-                                            m.completed &&
-                                              "line-through text-muted-foreground",
-                                          )}
-                                        >
-                                          {m.title}
+                                        <span className="text-emerald-400 mt-0.5 shrink-0">
+                                          •
                                         </span>
-                                        {m.targetDate && (
-                                          <span className="text-xs text-muted-foreground ml-auto">
-                                            {new Date(
-                                              m.targetDate,
-                                            ).toLocaleDateString()}
-                                          </span>
-                                        )}
+                                        <span>{k}</span>
                                       </li>
                                     ))}
                                   </ul>
                                 </div>
                               )}
                             </div>
-                          </ScrollArea>
+
+                            {/* Risks */}
+                            {goal.risks?.length > 0 && (
+                              <div className="rounded-lg bg-card/50 border border-border/50 p-3 border-l-4 border-l-amber-500/50">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                  Risks
+                                </h4>
+                                <ul className="space-y-1.5">
+                                  {goal.risks.map((r: string, i: number) => (
+                                    <li
+                                      key={i}
+                                      className="text-xs text-muted-foreground flex items-start gap-2"
+                                    >
+                                      <span className="text-amber-400 mt-0.5 shrink-0">
+                                        ⚠
+                                      </span>
+                                      <span>{r}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Key Steps (New System) */}
+                            <div className="rounded-lg bg-card/50 border border-border/50 p-3 border-l-4 border-l-purple-500/50">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                                  <MilestoneIcon className="h-3.5 w-3.5" />
+                                  Key Steps & Progress
+                                </h4>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-xs"
+                                  onClick={() =>
+                                    setAddingKeyStepToGoalId(
+                                      goal.id === addingKeyStepToGoalId
+                                        ? null
+                                        : goal.id,
+                                    )
+                                  }
+                                >
+                                  {addingKeyStepToGoalId === goal.id ? (
+                                    <X className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <Plus className="h-3 w-3 mr-1" />
+                                  )}
+                                  {addingKeyStepToGoalId === goal.id
+                                    ? "Cancel"
+                                    : "Add Step"}
+                                </Button>
+                              </div>
+
+                              {addingKeyStepToGoalId === goal.id && (
+                                <div className="mb-3">
+                                  <InlineCreator
+                                    placeholder="What is the next key step?"
+                                    buttonText="Add Key Step"
+                                    onSave={(title) =>
+                                      createKeyStep.mutate({
+                                        goalId: goal.id,
+                                        title,
+                                      })
+                                    }
+                                    onCancel={() =>
+                                      setAddingKeyStepToGoalId(null)
+                                    }
+                                  />
+                                </div>
+                              )}
+
+                              {goal.keySteps?.length === 0 && (
+                                <div className="text-xs text-muted-foreground italic py-2">
+                                  No key steps defined. Add steps to track
+                                  progress.
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                {goal.keySteps?.map((step: any) => (
+                                  <div
+                                    key={step.id}
+                                    className="bg-muted/30 border border-border/30 rounded-md p-2.5"
+                                  >
+                                    <div className="flex items-start justify-between mb-1.5">
+                                      <div className="space-y-0.5 flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          {editingKeyStepId === step.id ? (
+                                            <form
+                                              className="flex items-center gap-2 flex-1"
+                                              onSubmit={(e) => {
+                                                e.preventDefault();
+                                                const formData = new FormData(
+                                                  e.currentTarget,
+                                                );
+                                                const title = formData.get(
+                                                  "title",
+                                                ) as string;
+                                                if (title.trim()) {
+                                                  updateKeyStep.mutate({
+                                                    id: step.id,
+                                                    title: title.trim(),
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              <Input
+                                                name="title"
+                                                defaultValue={step.title}
+                                                className="h-7 text-sm py-1"
+                                                autoFocus
+                                                onBlur={() =>
+                                                  setEditingKeyStepId(null)
+                                                }
+                                              />
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-7 w-7"
+                                                type="submit"
+                                              >
+                                                <Save className="h-3 w-3" />
+                                              </Button>
+                                            </form>
+                                          ) : (
+                                            <span className="font-medium text-sm truncate">
+                                              {step.title}
+                                            </span>
+                                          )}
+                                          {step.completed && (
+                                            <Badge
+                                              variant="secondary"
+                                              className="text-[10px] bg-green-500/10 text-green-400 shrink-0"
+                                            >
+                                              Done
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {step.description && (
+                                          <p className="text-[10px] text-muted-foreground truncate">
+                                            {step.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-0.5 shrink-0 ml-2">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className={cn(
+                                            "h-6 w-6 text-muted-foreground hover:text-foreground",
+                                            addingTaskToKeyStepId === step.id &&
+                                              "bg-muted",
+                                          )}
+                                          title="Add Task"
+                                          onClick={() =>
+                                            setAddingTaskToKeyStepId(
+                                              addingTaskToKeyStepId === step.id
+                                                ? null
+                                                : step.id,
+                                            )
+                                          }
+                                        >
+                                          {addingTaskToKeyStepId === step.id ? (
+                                            <X className="h-3 w-3" />
+                                          ) : (
+                                            <Plus className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                        <NoteEditor
+                                          keyStepId={step.id}
+                                          title={step.title}
+                                          trigger={
+                                            <Button
+                                              size="icon"
+                                              variant="ghost"
+                                              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                            >
+                                              <FileText className="h-3 w-3" />
+                                            </Button>
+                                          }
+                                        />
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                          onClick={() =>
+                                            setEditingKeyStepId(step.id)
+                                          }
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                          onClick={() => {
+                                            if (confirm("Delete this step?"))
+                                              deleteKeyStep.mutate({
+                                                id: step.id,
+                                              });
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    {/* Progress Bar for Step */}
+                                    <div className="space-y-1 mb-1">
+                                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                                        <span>
+                                          {step.tasks?.length || 0} tasks
+                                        </span>
+                                        <span>{step.progress}%</span>
+                                      </div>
+                                      <Progress
+                                        value={step.progress}
+                                        className="h-1"
+                                      />
+                                    </div>
+
+                                    {/* Tasks Preview */}
+                                    {step.tasks?.length > 0 && (
+                                      <div className="mt-1.5 space-y-0.5 pl-2 border-l-2 border-muted">
+                                        {step.tasks.map((task: any) => (
+                                          <div
+                                            key={task.id}
+                                            className="text-xs flex items-center gap-2 text-muted-foreground cursor-pointer group/task hover:text-foreground transition-colors py-0.5"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const newStatus =
+                                                task.status === "done"
+                                                  ? "not_started"
+                                                  : "done";
+                                              updateTask.mutate({
+                                                id: task.id,
+                                                status: newStatus,
+                                              });
+                                            }}
+                                          >
+                                            <div className="relative shrink-0">
+                                              {task.status === "done" ? (
+                                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                              ) : (
+                                                <Circle className="h-3 w-3 group-hover/task:text-primary transition-colors" />
+                                              )}
+                                            </div>
+                                            <span
+                                              className={cn(
+                                                "transition-all duration-200 truncate",
+                                                task.status === "done"
+                                                  ? "line-through text-muted-foreground/60"
+                                                  : "",
+                                              )}
+                                            >
+                                              {task.title}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {addingTaskToKeyStepId === step.id && (
+                                      <div className="mt-2 pl-2 border-l-2 border-muted">
+                                        <InlineCreator
+                                          placeholder="Add a task to this step..."
+                                          buttonText="Add Task"
+                                          onSave={(title) =>
+                                            createTask.mutate({
+                                              title,
+                                              keyStepId: step.id,
+                                              goalId: goal.id,
+                                              priority: "medium",
+                                              type: "shallow_work",
+                                            })
+                                          }
+                                          onCancel={() =>
+                                            setAddingTaskToKeyStepId(null)
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Legacy Milestones */}
+                            {goal.milestones?.length > 0 && (
+                              <div className="rounded-lg bg-card/50 border border-border/50 p-3">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                                  <MilestoneIcon className="h-3.5 w-3.5 text-purple-400" />
+                                  Milestones
+                                </h4>
+                                <ul className="space-y-1.5">
+                                  {goal.milestones.map((m: any) => (
+                                    <li
+                                      key={m.id}
+                                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/30 rounded px-1 py-0.5 transition-colors"
+                                      onClick={() =>
+                                        updateMilestone.mutate({
+                                          id: m.id,
+                                          completed: !m.completed,
+                                        })
+                                      }
+                                    >
+                                      {m.completed ? (
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                      ) : (
+                                        <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                      )}
+                                      <span
+                                        className={cn(
+                                          "text-xs flex-1",
+                                          m.completed &&
+                                            "line-through text-muted-foreground",
+                                        )}
+                                      >
+                                        {m.title}
+                                      </span>
+                                      {m.targetDate && (
+                                        <span className="text-[10px] text-muted-foreground shrink-0">
+                                          {new Date(
+                                            m.targetDate,
+                                          ).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </CollapsibleContent>
                     </div>

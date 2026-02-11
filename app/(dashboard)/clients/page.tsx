@@ -90,13 +90,14 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-8 pt-6 overflow-hidden">
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col md:flex-row items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Clients</h2>
           <p className="text-muted-foreground">
             Manage your client relationships and health
           </p>
         </div>
+
         <div className="flex items-center space-x-2">
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>

@@ -369,6 +369,7 @@ export const dealRouter = router({
         lostDeals,
         pipelineValue,
         forecastValue,
+        wonValue,
       ] = await Promise.all([
         ctx.prisma.deal.count({ where }),
         ctx.prisma.deal.count({ where: { ...where, status: DealStatus.OPEN } }),
@@ -381,6 +382,10 @@ export const dealRouter = router({
         ctx.prisma.deal.aggregate({
           where: { ...where, status: DealStatus.OPEN },
           _sum: { weightedValue: true },
+        }),
+        ctx.prisma.deal.aggregate({
+          where: { ...where, status: DealStatus.WON },
+          _sum: { value: true },
         }),
       ]);
 
@@ -395,6 +400,7 @@ export const dealRouter = router({
         winRate,
         pipelineValue: pipelineValue._sum.value ?? 0,
         forecastValue: forecastValue._sum.weightedValue ?? 0,
+        wonValue: wonValue._sum.value ?? 0,
       };
     }),
 });
