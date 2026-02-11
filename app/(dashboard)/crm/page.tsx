@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Activity,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +19,14 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { CRMContextSidebar } from "@/components/crm/CRMContextSidebar";
+
+const MAX_VISIBLE_ACTIVITIES = 4;
 
 export default function CRMPage() {
   // Fetch stats for dashboard cards
@@ -34,18 +38,22 @@ export default function CRMPage() {
     trpc.clientHealth.getSummary.useQuery();
   const { data: recentActivities, isLoading: activitiesLoading } =
     trpc.crmActivity.list.useQuery({ limit: 10 });
+  const { data: timeData } = trpc.analytics.getTimeBreakdown.useQuery();
 
   const isLoading = leadsLoading || dealsLoading || healthLoading;
 
+  const formatZAR = (amount: number) =>
+    `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
             Dashboard
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Overview of your business performance
           </p>
         </div>
@@ -62,27 +70,29 @@ export default function CRMPage() {
       </div>
 
       {/* KPI Metric Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5 min-w-0">
         {/* Active Leads */}
         <Link href="/crm/leads">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Active Leads
               </CardTitle>
-              <Users className="h-4 w-4 text-accent" />
+              <Users className="h-4 w-4 text-accent shrink-0" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {isLoading ? (
                 <Skeleton className="h-7 w-16" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold text-white-smoke">
+                  <div className="text-xl sm:text-2xl font-bold text-white-smoke">
                     {leadStats?.total ?? 0}
                   </div>
-                  <div className="flex items-center gap-1 text-sm mt-1">
+                  <div className="flex items-center gap-1 text-xs mt-1">
                     <TrendingUp className="h-3 w-3 text-secondary" />
-                    <span className="text-secondary">Growth focus</span>
+                    <span className="text-secondary text-[10px] sm:text-xs">
+                      Growth focus
+                    </span>
                   </div>
                 </>
               )}
@@ -90,24 +100,48 @@ export default function CRMPage() {
           </Card>
         </Link>
 
-        {/* Pipeline Value */}
+        {/* Client Revenue (Won) */}
+        <Card className="bg-card border-none border-l-4 border-l-emerald-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Client Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-emerald-500 shrink-0" />
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            {isLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              <>
+                <div className="text-xl sm:text-2xl font-bold text-emerald-400">
+                  {formatZAR(dealStats?.wonValue ?? 0)}
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                  {dealStats?.wonDeals ?? 0} deals won
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pipeline Value (Pending) */}
         <Link href="/crm/pipeline">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Pipeline Value
+          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none border-l-4 border-l-amber-500/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Pipeline
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-accent" />
+              <TrendingUp className="h-4 w-4 text-amber-500 shrink-0" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {isLoading ? (
                 <Skeleton className="h-7 w-24" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold text-white-smoke">
-                    ${(dealStats?.pipelineValue ?? 0).toLocaleString()}
+                  <div className="text-xl sm:text-2xl font-bold text-amber-400">
+                    {formatZAR(dealStats?.pipelineValue ?? 0)}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                     {dealStats?.openDeals ?? 0} open deals
                   </p>
                 </>
@@ -118,23 +152,23 @@ export default function CRMPage() {
 
         {/* Churn Risk Indicator */}
         <Link href="/clients">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none border-l-4 border-l-danger/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer bg-card border-none border-l-4 border-l-danger/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Churn Risk
               </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-danger" />
+              <AlertTriangle className="h-4 w-4 text-danger shrink-0" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {isLoading ? (
                 <Skeleton className="h-7 w-16" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold text-danger">
+                  <div className="text-xl sm:text-2xl font-bold text-danger">
                     {healthSummary?.atRiskCount ?? 0}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 lowercase">
-                    Needs immediate attention
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 lowercase">
+                    Needs attention
                   </p>
                 </>
               )}
@@ -142,101 +176,92 @@ export default function CRMPage() {
           </Card>
         </Link>
 
-        {/* Win Rate */}
-        <Card className="bg-card border-none">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Win Rate
+        {/* Time Spent This Week */}
+        <Card className="bg-card border-none border-l-4 border-l-indigo-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Hours Logged
             </CardTitle>
-            <Target className="h-4 w-4 text-accent" />
+            <Clock className="h-4 w-4 text-indigo-400 shrink-0" />
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-7 w-16" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-white-smoke">
-                  {Math.round((dealStats?.winRate ?? 0) * 100)}%
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {dealStats?.wonDeals} deals won
-                </p>
-              </>
-            )}
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-xl sm:text-2xl font-bold text-indigo-400">
+              {timeData?.totalHours ?? 0}h
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+              {timeData?.billableHours ?? 0}h billable
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start min-w-0">
         {/* Main Content Area (Left) */}
-        <div className="md:col-span-8 flex flex-col space-y-6">
-          <Card className="bg-card border-none max-h-[500px] overflow-y-auto">
+        <div className="md:col-span-8 flex flex-col space-y-6 min-w-0">
+          <Card className="bg-card border-none max-h-[420px] overflow-y-auto">
             <CardHeader>
               <CardTitle className="text-white-smoke">
                 Recent Activities
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Latest interactions with leads and clients recorded in the
-                system
+                Latest interactions with leads and clients
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {recentActivities?.map((activity) => (
-                  <div key={activity.id} className="flex gap-4">
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent ring-2 ring-accent/20">
-                        <Activity className="h-5 w-5" />
-                      </div>
-                      <div className="w-px h-full bg-border mt-2" />
-                    </div>
-                    <div className="flex-1 pb-4 border-b border-border/50 last:border-0">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-white-smoke">
-                            {activity.subject}
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDistanceToNow(
-                              new Date(activity.completedAt),
-                              {
-                                addSuffix: true,
-                              },
-                            )}
-                          </p>
+              <div className="space-y-4">
+                {recentActivities
+                  ?.slice(0, MAX_VISIBLE_ACTIVITIES)
+                  .map((activity) => (
+                    <div key={activity.id} className="flex gap-3">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-accent ring-2 ring-accent/20">
+                          <Activity className="h-4 w-4" />
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary uppercase tracking-widest border border-secondary/20">
-                          {activity.type}
-                        </span>
+                        <div className="w-px h-full bg-border mt-1.5" />
                       </div>
-
-                      {activity.description && (
-                        <p className="text-sm text-muted-foreground mt-3 leading-relaxed bg-black/20 p-3 rounded-lg border border-border/30">
-                          {activity.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground font-medium">
-                        {activity.lead && (
-                          <span className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-foreground/80">
-                            <Users className="h-3 w-3 text-accent" />
-                            {activity.lead.firstName} {activity.lead.lastName}{" "}
-                            <span className="text-[10px] opacity-60 uppercase">
-                              Lead
-                            </span>
+                      <div className="flex-1 pb-3 border-b border-border/50 last:border-0 min-w-0">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-sm text-white-smoke truncate">
+                              {activity.subject}
+                            </h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {formatDistanceToNow(
+                                new Date(activity.completedAt),
+                                { addSuffix: true },
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary uppercase tracking-widest border border-secondary/20 shrink-0">
+                            {activity.type}
                           </span>
+                        </div>
+
+                        {activity.description && (
+                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed bg-black/20 p-2 rounded-lg border border-border/30 line-clamp-3">
+                            {activity.description}
+                          </p>
                         )}
+
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground font-medium">
+                          {activity.lead && (
+                            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-muted rounded-md text-foreground/80 text-[10px]">
+                              <Users className="h-3 w-3 text-accent" />
+                              {activity.lead.firstName} {activity.lead.lastName}
+                              <span className="opacity-60 uppercase">Lead</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 {recentActivities?.length === 0 && (
                   <div className="text-center text-muted-foreground py-12 flex flex-col items-center">
                     <Activity className="h-12 w-12 opacity-20 mb-4" />
                     <p>No activity recorded yet for this period.</p>
                   </div>
                 )}
-                <div className="mt-4 pt-4 text-center">
+                <div className="mt-3 pt-3 text-center">
                   <Link
                     href="/crm/activities"
                     className="text-sm font-bold text-accent hover:text-accent/80 transition-colors inline-flex items-center"
@@ -251,7 +276,7 @@ export default function CRMPage() {
         </div>
 
         {/* Local Page Sidebar (Right) */}
-        <div className="md:col-span-4 h-fit sticky top-6">
+        <div className="md:col-span-4 h-fit sticky top-6 min-w-0">
           <CRMContextSidebar />
         </div>
       </div>

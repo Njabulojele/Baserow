@@ -134,7 +134,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar
+      collapsible="icon"
+      {...props}
+      className="border-r border-border/50"
+    >
       <SidebarHeader className="flex justify-between flex-row">
         <div className="flex items-center p-2">
           <Image
