@@ -18,6 +18,32 @@ export function CRMContextSidebar() {
   const { data: overdueTasks } = trpc.task.getOverdueTasks.useQuery();
   const { data: todaysTasks } = trpc.task.getTodaysTasks.useQuery();
   const { data: atRiskClients } = trpc.clientHealth.listAtRisk.useQuery();
+  const utils = trpc.useUtils();
+
+  const completeTaskMutation = trpc.task.completeTask.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.task.getTodaysTasks.cancel();
+      const previousTasks = utils.task.getTodaysTasks.getData();
+
+      utils.task.getTodaysTasks.setData(undefined, (old) =>
+        old?.filter((t) => t.id !== id),
+      );
+
+      return { previousTasks };
+    },
+    onError: (err, variables, context) => {
+      utils.task.getTodaysTasks.setData(undefined, context?.previousTasks);
+    },
+    onSettled: () => {
+      utils.task.getTodaysTasks.invalidate();
+      utils.crmLead.getStats.invalidate();
+      utils.planning.getDayPlan.invalidate();
+    },
+  });
+
+  const handleCompleteTask = (taskId: string) => {
+    completeTaskMutation.mutate({ id: taskId });
+  };
 
   return (
     <div className="space-y-4">
@@ -76,7 +102,14 @@ export function CRMContextSidebar() {
                   className={`h-2 w-2 rounded-full shrink-0 ${task.priority === "critical" ? "bg-red-500" : task.priority === "high" ? "bg-orange-500" : "bg-blue-500"}`}
                 />
                 <span className="line-clamp-1 flex-1">{task.title}</span>
-                <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-pointer" />
+                <CheckCircle2
+                  onClick={() => handleCompleteTask(task.id)}
+                  className={`h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-pointer ${
+                    completeTaskMutation.isPending
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                />
               </div>
             ))}
             {(!todaysTasks || todaysTasks.length === 0) && (

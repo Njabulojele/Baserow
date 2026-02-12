@@ -127,6 +127,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
       utils.task.getTasks.invalidate();
       utils.task.getTodaysTasks.invalidate();
       utils.analytics.getDashboardStats.invalidate();
+      utils.planning.getDayPlan.invalidate();
       onComplete?.();
     },
   });
