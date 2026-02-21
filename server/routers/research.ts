@@ -1,4 +1,5 @@
 import { z } from "zod";
+import crypto from "crypto";
 import { router, protectedProcedure } from "../trpc";
 import { ResearchScope, ResearchStatus, SearchMethod } from "@prisma/client";
 import { GeminiClient } from "@/lib/gemini-client";
@@ -6,6 +7,20 @@ import { getLLMClientWithFallback } from "@/lib/llm-provider";
 import { encryptApiKey, validateGeminiApiKey } from "@/lib/encryption";
 import { inngest } from "@/inngest/client";
 import { TRPCError } from "@trpc/server";
+
+const L1_TTL_HOURS = 24;
+
+function generatePromptHash(userId: string, prompt: string): string {
+  const normalized = prompt
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, "");
+  return crypto
+    .createHash("sha256")
+    .update(`${userId}:${normalized}`)
+    .digest("hex");
+}
 
 export const researchRouter = router({
   // Create new research
@@ -58,17 +73,36 @@ export const researchRouter = router({
         });
       }
 
-      // Create research record
+      // L1 Cache: Check for identical research within 24h
+      const promptHash = generatePromptHash(userId, input.originalPrompt);
+      const cutoff = new Date(Date.now() - L1_TTL_HOURS * 60 * 60 * 1000);
+
+      const cachedResearch = await ctx.prisma.research.findFirst({
+        where: {
+          promptHash,
+          status: ResearchStatus.COMPLETED,
+          completedAt: { gte: cutoff },
+        },
+        orderBy: { completedAt: "desc" },
+      });
+
+      if (cachedResearch) {
+        // Return the cached research — zero tokens used
+        return { ...cachedResearch, cached: true };
+      }
+
+      // Create research record with prompt hash for future L1 lookups
       const research = await ctx.prisma.research.create({
         data: {
           userId,
           title: input.title,
           originalPrompt: input.originalPrompt,
-          refinedPrompt: input.originalPrompt, // Initial state
+          refinedPrompt: input.originalPrompt,
           scope: input.scope,
           searchMethod: input.searchMethod,
           status: ResearchStatus.PENDING,
           goalId: input.goalId,
+          promptHash,
         },
       });
 

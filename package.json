@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"NEXT,ENGINE\" -c \"magenta,blue\" \"npm run dev:next\" \"npm run dev:engine\"",
+    "dev": "concurrently -n \"NEXT,ENGINE,INNG\" -c \"magenta,blue,green\" \"npm run dev:next\" \"npm run dev:engine\" \"npx --ignore-scripts=false inngest-cli@latest dev\"",
     "dev:next": "next dev",
     "dev:engine": "cd research-engine && npm run dev",
     "build": "next build",

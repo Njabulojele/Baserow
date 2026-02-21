@@ -22,6 +22,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 // Helper to determine if goal is on-track based on time elapsed vs progress
 function getGoalStatus(progress: number): {
@@ -100,9 +101,10 @@ export function StrategyAnalytics() {
           const status = getGoalStatus(goal.progress);
           const StatusIcon = status.icon;
           return (
-            <div
-              key={idx}
-              className="space-y-2 p-3 rounded-lg border bg-card/50"
+            <Link
+              key={goal.id || idx}
+              href={`/strategy/goal/${goal.id}`}
+              className="block space-y-2 p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -127,7 +129,7 @@ export function StrategyAnalytics() {
                 </div>
               </div>
               <Progress value={goal.progress} className="h-2" />
-            </div>
+            </Link>
           );
         })
       )}

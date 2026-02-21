@@ -82,6 +82,10 @@ export const crmActivityRouter = router({
         where,
         orderBy: { completedAt: "desc" },
         take: input.limit,
+        include: {
+          lead: true,
+          client: true,
+        },
       });
     }),
 });

@@ -19,19 +19,22 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ResearchLeadsProps {
-  leadData: any;
   researchId: string;
 }
 
-export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
+export function ResearchLeads({ researchId }: ResearchLeadsProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  // const [isGenerating, setIsGenerating] = useState(false);
-  const [addedLeads, setAddedLeads] = useState<Record<string, boolean>>({});
   const utils = trpc.useContext();
+
+  const { data: crmLeads, isLoading } = trpc.crmLead.getByResearchId.useQuery({
+    researchId,
+  });
+
   const generateLeads = trpc.research.generateLeads.useMutation({
     onSuccess: () => {
       toast.success("Leads generated successfully!");
       utils.research.getById.invalidate({ id: researchId });
+      utils.crmLead.getByResearchId.invalidate({ researchId });
       setIsGenerating(false);
     },
     onError: (error) => {
@@ -40,44 +43,9 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
     },
   });
 
-  const createCrmLead = trpc.crmLead.create.useMutation({
-    onSuccess: (_, variables) => {
-      toast.success("Lead added to CRM! Scoring & Workflows triggered.");
-      const emailKey = variables.email.toLowerCase().trim();
-      setAddedLeads((prev) => ({ ...prev, [emailKey]: true }));
-    },
-    onError: (err) => {
-      toast.error(`Failed to add lead: ${err.message}`);
-    },
-  });
-
   const handleGenerateLeads = () => {
     setIsGenerating(true);
     generateLeads.mutate({ researchId });
-  };
-
-  const handleAddToCrm = (lead: any) => {
-    if (!lead.email && !lead.suggestedEmail) {
-      toast.error("Cannot add lead without an email address.");
-      return;
-    }
-
-    const nameParts = lead.name.split(" ");
-    const firstName = nameParts[0] || "Unknown";
-    const lastName = nameParts.slice(1).join(" ") || "Lead";
-
-    createCrmLead.mutate({
-      firstName,
-      lastName,
-      email: lead.email || lead.suggestedEmail,
-      companyName: lead.company || "Unknown Company",
-      companyWebsite: lead.website,
-      title: lead.suggestedDM,
-      industry: lead.industry,
-      phone: lead.phone,
-      painPoints: lead.painPoints || [],
-      source: "WEBSITE", // or OTHER
-    });
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -85,7 +53,16 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
     toast.success(`${label} copied!`);
   };
 
-  if (!leadData || !leadData.leads || leadData.leads.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="py-20 text-center bg-[#1a252f] rounded-xl border border-[#2f3e46]">
+        <Loader2 className="w-8 h-8 mx-auto text-gray-500 animate-spin mb-4" />
+        <p className="text-gray-400">Loading leads...</p>
+      </div>
+    );
+  }
+
+  if (!crmLeads || crmLeads.length === 0) {
     return (
       <div className="py-20 text-center bg-[#1a252f] rounded-xl border border-[#2f3e46]">
         <Users className="w-16 h-16 mx-auto text-gray-700 mb-4" />
@@ -132,27 +109,18 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
       </div>
 
       {/* Lead Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-[#1a252f] border-[#2f3e46] p-4 text-center">
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-            Total Found
+            Total Extracted
           </p>
-          <p className="text-2xl font-bold text-white">{leadData.totalFound}</p>
+          <p className="text-2xl font-bold text-white">{crmLeads.length}</p>
         </Card>
-        <Card className="bg-[#1a252f] border-[#2f3e46] p-4 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-            Decision Makers
-          </p>
-          <p className="text-2xl font-bold text-[#6b9080]">
-            {Math.floor(leadData.totalFound * 0.4)}
-          </p>
-        </Card>
-        {/* ... more stats */}
       </div>
 
       {/* Leads List */}
       <div className="space-y-4">
-        {leadData.leads.map((lead: any) => (
+        {crmLeads.map((lead) => (
           <Card
             key={lead.id}
             className="bg-[#1a252f] border-[#2f3e46] overflow-hidden group"
@@ -162,21 +130,21 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
               <div className="p-6 flex-1 border-b lg:border-b-0 lg:border-r border-[#2f3e46]">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-full bg-[#a9927d] flex items-center justify-center text-white font-bold text-xl uppercase shrink-0">
-                    {lead.name.charAt(0)}
+                    {lead.firstName?.charAt(0) || "U"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="text-lg font-bold text-white truncate">
-                        {lead.name}
+                        {lead.firstName} {lead.lastName}
                       </h4>
-                      {lead.contacted && (
+                      {lead.status !== "NEW" && (
                         <Badge className="bg-[#6b9080] text-[10px]">
-                          CONTACTED
+                          {lead.status}
                         </Badge>
                       )}
                     </div>
                     <p className="text-sm text-[#6b9080] font-medium truncate mb-1">
-                      {lead.suggestedDM || "Decision Maker"} @ {lead.company}
+                      {lead.title || "Decision Maker"} @ {lead.companyName}
                     </p>
                     {lead.industry && (
                       <p className="text-xs text-gray-500 mb-2">
@@ -195,39 +163,23 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                           <span className="truncate">{lead.email}</span>
                         </div>
                       )}
-                      {lead.suggestedEmail &&
-                        lead.suggestedEmail !== lead.email && (
-                          <div
-                            className="flex items-center gap-1.5 text-gray-500 hover:text-white cursor-pointer"
-                            onClick={() =>
-                              copyToClipboard(
-                                lead.suggestedEmail,
-                                "Suggested email",
-                              )
-                            }
-                            title="AI-suggested email"
-                          >
-                            <Mail className="w-3 h-3 text-amber-400" />
-                            <span className="truncate italic">
-                              {lead.suggestedEmail}
-                            </span>
-                          </div>
-                        )}
                       {lead.phone && (
                         <div
                           className="flex items-center gap-1.5 text-gray-400 hover:text-white cursor-pointer"
-                          onClick={() => copyToClipboard(lead.phone, "Phone")}
+                          onClick={() =>
+                            copyToClipboard(lead.phone || "", "Phone")
+                          }
                         >
                           <span>📞</span>
                           <span>{lead.phone}</span>
                         </div>
                       )}
-                      {lead.website && (
+                      {lead.companyWebsite && (
                         <a
                           href={
-                            lead.website.startsWith("http")
-                              ? lead.website
-                              : `https://${lead.website}`
+                            lead.companyWebsite.startsWith("http")
+                              ? lead.companyWebsite
+                              : `https://${lead.companyWebsite}`
                           }
                           target="_blank"
                           rel="noopener noreferrer"
@@ -235,14 +187,14 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                         >
                           <span>🌐</span>
                           <span className="truncate">
-                            {lead.website.replace(/^https?:\/\//, "")}
+                            {lead.companyWebsite.replace(/^https?:\/\//, "")}
                           </span>
                         </a>
                       )}
-                      {lead.location && (
+                      {lead.customFields && (
                         <div className="flex items-center gap-1.5 text-gray-400">
                           <span>📍</span>
-                          <span>{lead.location}</span>
+                          <span>{(lead.customFields as any)?.location}</span>
                         </div>
                       )}
                     </div>
@@ -281,12 +233,7 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                     variant="outline"
                     size="sm"
                     className="bg-[#1a252f] border-[#2f3e46] text-xs h-9 justify-start"
-                    onClick={() =>
-                      copyToClipboard(
-                        lead.email || lead.suggestedEmail || "",
-                        "Email",
-                      )
-                    }
+                    onClick={() => copyToClipboard(lead.email || "", "Email")}
                   >
                     <Mail className="w-3 h-3 mr-2 text-blue-400" /> Copy Email
                   </Button>
@@ -301,16 +248,16 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                   </Button>
                 </div>
 
-                {lead.website && (
+                {lead.companyWebsite && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="bg-[#1a252f] border-[#2f3e46] text-xs h-9 justify-start w-full"
                     onClick={() =>
                       window.open(
-                        lead.website.startsWith("http")
-                          ? lead.website
-                          : `https://${lead.website}`,
+                        (lead.companyWebsite || "").startsWith("http")
+                          ? lead.companyWebsite || ""
+                          : `https://${lead.companyWebsite}`,
                         "_blank",
                       )
                     }
@@ -318,43 +265,6 @@ export function ResearchLeads({ leadData, researchId }: ResearchLeadsProps) {
                     <span className="mr-2">🌐</span> Visit Website
                   </Button>
                 )}
-
-                <Button
-                  className={cn(
-                    "w-full text-xs h-9",
-                    addedLeads[
-                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
-                    ]
-                      ? "bg-green-600 hover:bg-green-600 text-white cursor-default"
-                      : "bg-[#a9927d] hover:bg-[#8f7a68] text-white",
-                  )}
-                  onClick={() => handleAddToCrm(lead)}
-                  disabled={
-                    createCrmLead.isPending ||
-                    addedLeads[
-                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
-                    ]
-                  }
-                >
-                  {createCrmLead.isPending ? (
-                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  ) : addedLeads[
-                      (lead.email || lead.suggestedEmail)?.toLowerCase().trim()
-                    ] ? (
-                    <Check className="w-3 h-3 mr-2" />
-                  ) : (
-                    <UserPlus className="w-3 h-3 mr-2" />
-                  )}
-                  {createCrmLead.isPending
-                    ? "Adding..."
-                    : addedLeads[
-                          (lead.email || lead.suggestedEmail)
-                            ?.toLowerCase()
-                            .trim()
-                        ]
-                      ? "Added to CRM"
-                      : "Add to CRM"}
-                </Button>
               </div>
             </div>
           </Card>

@@ -150,6 +150,21 @@ export const crmLeadRouter = router({
       return lead;
     }),
 
+  // Get leads by research run ID
+  getByResearchId: protectedProcedure
+    .input(z.object({ researchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const leads = await ctx.prisma.crmLead.findMany({
+        where: {
+          researchId: input.researchId,
+          userId: ctx.userId,
+        },
+        orderBy: { score: "desc" },
+      });
+
+      return leads;
+    }),
+
   // Create new lead
   create: protectedProcedure
     .input(createLeadSchema)

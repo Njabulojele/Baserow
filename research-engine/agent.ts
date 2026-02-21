@@ -6,6 +6,9 @@ import { GeminiClient } from "./lib/gemini-client";
 import { JinaClient } from "./lib/jina-client";
 import { getLLMClientWithFallback } from "./lib/llm-provider";
 import { ResearchStatus, ActionPriority, SearchMethod } from "@prisma/client";
+import { LeadScoringService } from "./lib/lead-scoring";
+import { LeadPromotionService } from "./lib/lead-promotion";
+import { checkL2Cache } from "./lib/cache";
 
 // Initialize Inngest with the same ID to maintain event compatibility
 const inngest = new Inngest({
@@ -395,18 +398,41 @@ export const researchAgent = inngest.createFunction(
             );
             const urls = jinaClient.filterUrls(searchResults.map((r) => r.url));
 
-            const extractions = await jinaClient.extractMultiple(urls, (msg) =>
-              SocketService.getInstance().emitLog(researchId, msg),
-            );
+            // L2 Cache: Skip URLs scraped within 7 days
+            const urlCache = await checkL2Cache(prisma, urls);
+            const uncachedUrls = urls.filter((u) => !urlCache.has(u));
+            const cachedData = [...urlCache.entries()].map(([url, data]) => ({
+              url,
+              title: data.title,
+              content: data.content,
+              excerpt: data.excerpt,
+            }));
 
-            scrapedData = extractions
-              .filter((e) => e.success)
-              .map((e) => ({
-                url: e.url,
-                title: e.title,
-                content: e.content,
-                excerpt: e.excerpt,
-              }));
+            if (uncachedUrls.length < urls.length) {
+              socket.emitLog(
+                researchId,
+                `L2 cache: reusing ${urls.length - uncachedUrls.length} cached sources, scraping ${uncachedUrls.length} new URLs`,
+              );
+            }
+
+            const extractions =
+              uncachedUrls.length > 0
+                ? await jinaClient.extractMultiple(uncachedUrls, (msg) =>
+                    SocketService.getInstance().emitLog(researchId, msg),
+                  )
+                : [];
+
+            scrapedData = [
+              ...cachedData,
+              ...extractions
+                .filter((e) => e.success)
+                .map((e) => ({
+                  url: e.url,
+                  title: e.title,
+                  content: e.content,
+                  excerpt: e.excerpt,
+                })),
+            ];
 
             if (scrapedData.length === 0) {
               scrapedData = searchResults.map((r) => ({
@@ -734,45 +760,56 @@ export const researchAgent = inngest.createFunction(
               "website": "Website URL",
               "industry": "Industry segment",
               "location": "City/Country",
+              "companySize": "Estimated employee count range e.g. '10-50' or '200+'",
               "painPoints": ["pain point 1", "pain point 2"],
               "suggestedDM": "Suggested Decision Maker Role (e.g. CTO, Marketing Director)",
-              "suggestedEmail": "Predicted email pattern (e.g. first.last@company.com) or specific email"
+              "suggestedEmail": "Predicted email pattern (e.g. first.last@company.com) or specific email",
+              "personalization": { "recentNews": "Any recent company news", "techStack": ["tools they use"], "hiringSignals": "Any hiring/growth signals" }
             }
           ]
         `;
 
         const leads = await llmClient.generateJSON<any[]>(prompt);
 
-        const leadData = await prisma.leadData.upsert({
-          where: { researchId },
-          create: {
-            researchId,
-            totalFound: leads.length,
-          },
-          update: {
-            totalFound: { increment: leads.length },
-          },
-        });
+        // Save leads directly to CRM
+        socket.emitLog(researchId, "Saving leads directly to CRM pipeline...");
 
         if (leads.length > 0) {
-          await prisma.lead.createMany({
+          await prisma.crmLead.createMany({
             data: leads.map((lead: any) => ({
-              leadDataId: leadData.id,
-              name: lead.name || "Unknown Contact",
-              company: lead.company || "Unknown Company",
-              email: lead.email,
+              userId: userId,
+              researchId: researchId,
+              firstName: lead.name
+                ? lead.name.split(" ")[0] || "Unknown"
+                : "Unknown",
+              lastName: lead.name
+                ? lead.name.split(" ").slice(1).join(" ") || "Contact"
+                : "Contact",
+              companyName: lead.company || "Unknown Company",
+              email:
+                lead.email ||
+                lead.suggestedEmail ||
+                `unknown@${lead.website || "unknown.com"}`,
               phone: lead.phone,
               website: lead.website,
               industry: lead.industry,
               location: lead.location,
+              companySize: lead.companySize || null,
               painPoints: lead.painPoints || [],
-              suggestedDM: lead.suggestedDM || "Relevant Decision Maker",
-              suggestedEmail: lead.suggestedEmail || "Not available",
+              title: lead.suggestedDM || "Relevant Decision Maker",
+              personalization: lead.personalization || null,
+              source: "OUTBOUND",
+              status: "NEW",
             })),
           });
+
+          socket.emitLog(
+            researchId,
+            `Successfully added ${leads.length} leads to CRM.`,
+          );
         }
 
-        return { leadDataId: leadData.id, count: leads.length };
+        return { count: leads.length };
       });
     }
 
@@ -872,9 +909,11 @@ export const generateLeadsAgent = inngest.createFunction(
             "website": "Website URL",
             "industry": "Industry segment",
             "location": "City/Country",
+            "companySize": "Estimated employee count range e.g. '10-50' or '200+'",
             "painPoints": ["Specific Pain Point 1", "Specific Pain Point 2"],
             "suggestedDM": "Target Decision Maker Role",
-            "suggestedEmail": "Predicted email pattern or specific email"
+            "suggestedEmail": "Predicted email pattern or specific email",
+            "personalization": { "recentNews": "Any relevant company news", "techStack": ["tools they use"], "hiringSignals": "Any hiring/growth signals" }
           }
         ]
       `;
@@ -883,42 +922,38 @@ export const generateLeadsAgent = inngest.createFunction(
     });
 
     if (leads.length > 0) {
-      await step.run("save-leads", async () => {
-        let leadDataId = research.leadData?.id;
-
-        if (!leadDataId) {
-          const leadData = await prisma.leadData.create({
-            data: {
-              researchId,
-              totalFound: 0,
-            },
-          });
-          leadDataId = leadData.id;
-        }
-
-        await prisma.lead.createMany({
+      await step.run("save-leads-to-crm", async () => {
+        await prisma.crmLead.createMany({
           data: leads.map((lead: any) => ({
-            leadDataId: leadDataId!,
-            name: lead.name || "Unknown Contact",
-            company: lead.company || "Unknown Company",
-            email: lead.email,
+            userId: userId,
+            researchId: researchId,
+            firstName: lead.name
+              ? lead.name.split(" ")[0] || "Unknown"
+              : "Unknown",
+            lastName: lead.name
+              ? lead.name.split(" ").slice(1).join(" ") || "Contact"
+              : "Contact",
+            companyName: lead.company || "Unknown Company",
+            email:
+              lead.email ||
+              lead.suggestedEmail ||
+              `unknown@${lead.website || "unknown.com"}`,
             phone: lead.phone,
             website: lead.website,
             industry: lead.industry,
             location: lead.location,
+            companySize: lead.companySize || null,
             painPoints: lead.painPoints || [],
-            suggestedDM: lead.suggestedDM || "Relevant Decision Maker",
-            suggestedEmail: lead.suggestedEmail || "Not available",
+            title: lead.suggestedDM || "Relevant Decision Maker",
+            personalization: lead.personalization || null,
+            source: "OUTBOUND",
+            status: "NEW",
           })),
         });
 
-        const total = await prisma.lead.count({
-          where: { leadDataId: leadDataId! },
-        });
-        await prisma.leadData.update({
-          where: { id: leadDataId },
-          data: { totalFound: total },
-        });
+        console.log(
+          `[LeadGen] Saved ${leads.length} leads directly to CRM pipeline.`,
+        );
       });
     }
 

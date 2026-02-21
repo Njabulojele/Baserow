@@ -281,7 +281,7 @@ export class GeminiClient {
     //   Ensure the JSON is properly escaped and valid. Wrap the JSON in triple backticks: \`\`\`json ... \`\`\`
     // `;
 
-    const prompt = `You are a Deep Research Analyst tasked with analyzing sources and extracting actionable insights.
+    const prompt = `You are a Senior Strategic intelligence Analyst generating actionable B2B intelligence for a Lead Generation Agency.
 
 RESEARCH GOAL:
 ${researchGoal}
@@ -290,11 +290,14 @@ SOURCES TO ANALYZE:
 ${sourceText}
 
 INSTRUCTIONS:
-1. Analyze all provided sources thoroughly
-2. Extract key insights, patterns, and trends
-3. Categorize findings appropriately (e.g., Market, Competitor, Technology, Customer, Risk, Opportunity)
-4. Assign confidence scores based on source quality and corroboration
-5. Provide an executive summary that synthesizes all findings
+1. Analyze all provided sources to extract strict, highly actionable business intelligence.
+2. Focus intensely on extracting B2B Lead Generation Signals:
+   - Identify precise decision-maker roles (e.g., Marketing Director, CTO, Founder).
+   - Highlight explicit organizational pain points, recent software transitions, or expansion efforts.
+   - Extract hard data signals: Funding rounds, hiring surges, and recent tech stack additions.
+3. Categorize findings into Strategic Intelligence (e.g., MarketDynamics, CompetitorMoves, PainPoints, TechStack, HiringSignals, IntentTriggers).
+4. Assign strong confidence scores; facts and numbers get 0.8+, vague marketing copy gets <0.5.
+5. Provide a sharp, hard-hitting executive summary emphasizing specific actions and strategic implications—do NOT write a generic summary. Be concise.
 
 CRITICAL REQUIREMENTS:
 - Return ONLY valid JSON - no additional text before or after
@@ -309,16 +312,16 @@ REQUIRED OUTPUT FORMAT:
 {
   "insights": [
     {
-      "title": "Brief, specific title of the finding",
-      "content": "Detailed explanation with supporting evidence from sources",
-      "category": "Market|Competitor|Technology|Customer|Risk|Opportunity|Other",
+      "title": "Specific Signal: (e.g., Hiring 5 New Sales Reps)",
+      "content": "Detailed explanation with facts from sources indicating clear intent or pain points.",
+      "category": "PainPoints|TechStack|HiringSignals|IntentTriggers|MarketDynamics",
       "confidence": 0.85
     }
   ],
-  "summary": "2-3 paragraph executive summary synthesizing all key findings and their implications",
+  "summary": "2-3 paragraph sharp executive summary synthesizing actionable facts and immediate outreach angles.",
   "trends": [
-    "Specific trend observation 1",
-    "Specific trend observation 2"
+    "Specific industry shift or signal",
+    "Specific tooling or hiring trend"
   ]
 }
 \`\`\`

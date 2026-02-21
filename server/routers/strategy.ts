@@ -5,6 +5,8 @@ import {
   recalculateGoalProgress,
   recalculateKeyStepProgress,
 } from "../progress-utils";
+import { inngest } from "@/inngest/client";
+import { ResearchScope, ResearchStatus, SearchMethod } from "@prisma/client";
 
 export const strategyRouter = router({
   // --- Year Plans ---
@@ -133,6 +135,39 @@ export const strategyRouter = router({
         where: { id: goal.id },
         include: { milestones: true },
       });
+    }),
+
+  getGoal: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const goal = await ctx.prisma.goal.findUnique({
+        where: { id: input.id },
+        include: {
+          keySteps: {
+            orderBy: { order: "asc" },
+            include: {
+              tasks: {
+                orderBy: { createdAt: "asc" },
+              },
+            },
+          },
+          milestones: true,
+          quarterFocuses: {
+            include: {
+              quarterPlan: true,
+            },
+          },
+        },
+      });
+
+      if (!goal) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Goal not found",
+        });
+      }
+
+      return goal;
     }),
 
   updateGoal: protectedProcedure
@@ -805,5 +840,119 @@ export const strategyRouter = router({
       // For now, return success. We'll add a 'DailyJournal' model later if needed.
 
       return { success: true };
+    }),
+
+  // --- Milestone-Triggered Research ---
+
+  researchMilestone: protectedProcedure
+    .input(
+      z.object({
+        milestoneId: z.string(),
+        searchMethod: z
+          .nativeEnum(SearchMethod)
+          .optional()
+          .default(SearchMethod.GEMINI_GROUNDING),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const milestone = await ctx.prisma.milestone.findUnique({
+        where: { id: input.milestoneId },
+        include: {
+          goal: {
+            include: { yearPlan: true },
+          },
+        },
+      });
+
+      if (!milestone) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Milestone not found",
+        });
+      }
+
+      // Generate a research prompt from the milestone context
+      const goalTitle = milestone.goal.title;
+      const milestoneTitle = milestone.title;
+      const yearTheme = milestone.goal.yearPlan.theme;
+      const category = milestone.goal.category;
+
+      const researchPrompt = `I am working on the goal "${goalTitle}" (category: ${category}, year theme: "${yearTheme}"). I need to research and understand how to achieve this specific milestone: "${milestoneTitle}". What are the most critical things I need to learn, the best resources, tools, and step-by-step approaches to accomplish this milestone efficiently? Give me actionable insights and a prioritized learning path.`;
+
+      // Create research record
+      const research = await ctx.prisma.research.create({
+        data: {
+          userId: ctx.userId,
+          title: `Research: ${milestoneTitle}`,
+          originalPrompt: researchPrompt,
+          refinedPrompt: researchPrompt,
+          scope: ResearchScope.BUSINESS_STRATEGY,
+          searchMethod: input.searchMethod,
+          status: ResearchStatus.PENDING,
+          goalId: milestone.goal.id,
+        },
+      });
+
+      // Fire Inngest event
+      await inngest.send({
+        name: "research/initiated",
+        data: {
+          researchId: research.id,
+          userId: ctx.userId,
+        },
+      });
+
+      return { researchId: research.id, research };
+    }),
+
+  // --- Goals By Quarter ---
+
+  getGoalsByQuarter: protectedProcedure
+    .input(z.object({ year: z.number(), quarter: z.number().min(1).max(4) }))
+    .query(async ({ ctx, input }) => {
+      const yearPlan = await ctx.prisma.yearPlan.findUnique({
+        where: {
+          userId_year: {
+            userId: ctx.userId,
+            year: input.year,
+          },
+        },
+      });
+
+      if (!yearPlan) return [];
+
+      const quarterPlan = await ctx.prisma.quarterPlan.findUnique({
+        where: {
+          yearPlanId_quarter: {
+            yearPlanId: yearPlan.id,
+            quarter: input.quarter,
+          },
+        },
+      });
+
+      if (!quarterPlan) return [];
+
+      const focuses = await ctx.prisma.quarterFocus.findMany({
+        where: { quarterPlanId: quarterPlan.id },
+        include: {
+          goal: {
+            include: {
+              milestones: true,
+              keySteps: {
+                include: { tasks: true },
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
+        orderBy: { priority: "asc" },
+      });
+
+      return focuses.map((f) => ({
+        ...f.goal,
+        quarterPriority: f.priority,
+        quarterProgress: f.progress,
+        quarterNotes: f.notes,
+      }));
     }),
 });

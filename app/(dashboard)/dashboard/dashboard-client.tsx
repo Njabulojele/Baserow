@@ -553,6 +553,15 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 <span className="truncate">CRM Overview</span>
               </Button>
             </Link>
+            <Link href="/strategy" className="w-full col-span-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
+              >
+                <Target className="h-4 w-4 mr-2 text-indigo-500 shrink-0" />
+                <span className="truncate">Strategy Hub</span>
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

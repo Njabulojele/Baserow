@@ -37,7 +37,7 @@ import { Separator } from "@/components/ui/separator";
 const meetingSchema = z.object({
   title: z.string().min(1, "Title required"),
   date: z.date(),
-  duration: z.coerce.number().min(5),
+  duration: z.number().min(5),
   notes: z.string().optional(),
 });
 
@@ -198,7 +198,10 @@ export function MeetingEditor({
               </div>
               <div className="space-y-2">
                 <Label>Duration (min)</Label>
-                <Input type="number" {...form.register("duration")} />
+                <Input
+                  type="number"
+                  {...form.register("duration", { valueAsNumber: true })}
+                />
               </div>
             </div>
 
