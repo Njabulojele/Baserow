@@ -522,7 +522,7 @@ export const analyticsRouter = router({
         yearPlan: { userId: ctx.userId, year: currentYear },
         status: { not: "cancelled" },
       },
-      select: { title: true, progress: true, category: true },
+      select: { id: true, title: true, progress: true, category: true },
       take: 5,
       orderBy: { progress: "desc" },
     });
@@ -546,6 +546,7 @@ export const analyticsRouter = router({
       annualGoals,
       quarterFocuses:
         quarterPlan?.quarterFocuses.map((qf) => ({
+          id: qf.goal.id,
           title: qf.goal.title,
           progress: qf.progress,
           category: qf.goal.category,

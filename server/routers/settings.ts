@@ -20,6 +20,9 @@ export const settingsRouter = router({
         timezone: true,
         researchLimit: true,
         scrapingMode: true,
+        targetIndustries: true,
+        targetCompanySize: true,
+        targetPainPoints: true,
       },
     });
 
@@ -84,6 +87,9 @@ export const settingsRouter = router({
         groqApiKey: z.string().optional(),
         llmProvider: z.string().optional(),
         scrapingMode: z.string().optional(),
+        targetIndustries: z.array(z.string()).optional(),
+        targetCompanySize: z.string().optional().nullable(),
+        targetPainPoints: z.array(z.string()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -94,6 +100,12 @@ export const settingsRouter = router({
       if (input.geminiModel) data.geminiModel = input.geminiModel;
       if (input.llmProvider) data.llmProvider = input.llmProvider;
       if (input.scrapingMode) data.scrapingMode = input.scrapingMode;
+      if (input.targetIndustries !== undefined)
+        data.targetIndustries = input.targetIndustries;
+      if (input.targetCompanySize !== undefined)
+        data.targetCompanySize = input.targetCompanySize;
+      if (input.targetPainPoints !== undefined)
+        data.targetPainPoints = input.targetPainPoints;
 
       // Only update API key if provided and not empty
       if (input.geminiApiKey && input.geminiApiKey.trim() !== "") {

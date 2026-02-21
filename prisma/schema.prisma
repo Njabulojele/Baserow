@@ -7,46 +7,49 @@ datasource db {
 }
 
 model User {
-  id               String           @id @default(cuid())
-  email            String           @unique
-  name             String?
-  avatar           String?
-  timezone         String           @default("Africa/Johannesburg")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  geminiApiKey     String?
-  researchLimit    Int              @default(10)
-  geminiModel      String           @default("gemini-2.0-flash")
-  serperApiKey     String?
-  groqApiKey       String?
-  llmProvider      String           @default("GEMINI")
-  scrapingMode     String           @default("AGENTIC")
-  subscriptionStatus String         @default("inactive") // active, inactive
-  subscriptionPlan   String         @default("free")     // free, pro
+  id                 String           @id @default(cuid())
+  email              String           @unique
+  name               String?
+  avatar             String?
+  timezone           String           @default("Africa/Johannesburg")
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  geminiApiKey       String?
+  researchLimit      Int              @default(10)
+  geminiModel        String           @default("gemini-2.0-flash")
+  serperApiKey       String?
+  groqApiKey         String?
+  llmProvider        String           @default("GEMINI")
+  scrapingMode       String           @default("AGENTIC")
+  targetIndustries   String[]         @default([])
+  targetCompanySize  String?
+  targetPainPoints   String[]         @default([])
+  subscriptionStatus String           @default("inactive") // active, inactive
+  subscriptionPlan   String           @default("free") // free, pro
   subscriptionExpiry DateTime?
-  analyticsEvents  AnalyticsEvent[]
-  calendarEvents   CalendarEvent[]
-  captures         Capture[]
-  clients          Client[]
-  crmActivities    CrmActivity[]
-  crmLeads         CrmLead[]
-  crmLeadNotes     CrmLeadNote[]
-  crmWorkflows     CrmWorkflow[]
-  dayPlans         DayPlan[]
-  deals            Deal[]
-  dealNotes        DealNote[]
-  emailTemplates   EmailTemplate[]
-  meetings         Meeting[]
-  notes            Note[]
-  pipelines        Pipeline[]
-  projects         Project[]
-  researches       Research[]
-  tasks            Task[]
-  timeEntries      TimeEntry[]
-  voiceSessions    VoiceSession[]
-  weekPlans        WeekPlan[]
-  wellBeingEntries WellBeingEntry[]
-  yearPlans        YearPlan[]
+  analyticsEvents    AnalyticsEvent[]
+  calendarEvents     CalendarEvent[]
+  captures           Capture[]
+  clients            Client[]
+  crmActivities      CrmActivity[]
+  crmLeads           CrmLead[]
+  crmLeadNotes       CrmLeadNote[]
+  crmWorkflows       CrmWorkflow[]
+  dayPlans           DayPlan[]
+  deals              Deal[]
+  dealNotes          DealNote[]
+  emailTemplates     EmailTemplate[]
+  meetings           Meeting[]
+  notes              Note[]
+  pipelines          Pipeline[]
+  projects           Project[]
+  researches         Research[]
+  tasks              Task[]
+  timeEntries        TimeEntry[]
+  voiceSessions      VoiceSession[]
+  weekPlans          WeekPlan[]
+  wellBeingEntries   WellBeingEntry[]
+  yearPlans          YearPlan[]
 }
 
 model YearPlan {
@@ -660,6 +663,7 @@ model AnalyticsEvent {
 model Research {
   id             String            @id @default(cuid())
   userId         String
+  promptHash     String?
   title          String
   scope          ResearchScope
   status         ResearchStatus    @default(PENDING)
@@ -680,6 +684,7 @@ model Research {
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   insights       ResearchInsight[]
   sources        ResearchSource[]
+  crmLeads       CrmLead[]
 
   @@index([userId, status])
   @@index([goalId])
@@ -749,16 +754,22 @@ model Lead {
   website         String?
   industry        String?
   location        String?
+  companySize     String?
   painPoints      String[]
   suggestedDM     String
   suggestedEmail  String
   personalization Json?
   contacted       Boolean   @default(false)
   contactedAt     DateTime?
+  score           Float     @default(0)
+  tier            String    @default("UNSCORED")
+  promotedToCrmId String?   @unique
   createdAt       DateTime  @default(now())
   leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
 
   @@index([leadDataId])
+  @@index([score])
+  @@index([tier])
 }
 
 model CrmLead {
@@ -803,6 +814,7 @@ model CrmLead {
   convertedToClientId  String?                @unique
   tags                 String[]
   customFields         Json?
+  researchId           String?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   activities           CrmActivity[]
@@ -810,6 +822,7 @@ model CrmLead {
   pipeline             Pipeline?              @relation(fields: [pipelineId], references: [id])
   pipelineStage        PipelineStage?         @relation(fields: [pipelineStageId], references: [id])
   user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  research             Research?              @relation(fields: [researchId], references: [id], onDelete: SetNull)
   communications       CrmLeadCommunication[]
   notes                CrmLeadNote[]
   deals                Deal[]
@@ -818,6 +831,7 @@ model CrmLead {
   @@index([userId, score])
   @@index([pipelineId, pipelineStageId])
   @@index([email])
+  @@index([researchId])
 }
 
 model Pipeline {

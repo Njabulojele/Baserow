@@ -63,7 +63,7 @@ async function migrate() {
       try {
         await dest.query(`DELETE FROM "${table}"`);
         console.log(`  - Cleared ${table}`);
-      } catch (e) {
+      } catch (e: any) {
         console.warn(
           `  ⚠️ Could not clear ${table} (maybe doesn't exist yet?):`,
           e.message,
@@ -80,7 +80,7 @@ async function migrate() {
       try {
         const dataRes = await source.query(`SELECT * FROM "${table}"`);
         rows = dataRes.rows;
-      } catch (e) {
+      } catch (e: any) {
         console.warn(`  ⚠️ Could not read ${table} from source:`, e.message);
         continue;
       }

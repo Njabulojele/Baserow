@@ -356,7 +356,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup
-                value={settings.scrapingMode || "AGENTIC"}
+                value={settings?.scrapingMode || "AGENTIC"}
                 onValueChange={(val) =>
                   updateMutation.mutate({ scrapingMode: val })
                 }

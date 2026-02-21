@@ -59,8 +59,8 @@ export default function ResearchDetailPage({
   } = trpc.research.getById.useQuery(
     { id },
     {
-      refetchInterval: (data) =>
-        data?.status === "IN_PROGRESS" ? 2000 : false,
+      refetchInterval: (query) =>
+        query.state.data?.status === "IN_PROGRESS" ? 2000 : false,
     },
   );
 
@@ -200,7 +200,7 @@ export default function ResearchDetailPage({
       setIsExporting(true);
       const blob = await PDFGenerator.generateResearchReport(research);
       const url = window.URL.createObjectURL(
-        new Blob([blob], { type: "application/pdf" }),
+        new Blob([blob as unknown as BlobPart], { type: "application/pdf" }),
       );
       const link = document.createElement("a");
       link.href = url;
@@ -395,7 +395,7 @@ export default function ResearchDetailPage({
 
             <div className="w-full max-w-md bg-[#1a252f] rounded-full h-4 overflow-hidden border border-[#2f3e46] mb-4 z-10">
               <div
-                className="bg-gradient-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
+                className="bg-linear-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
                 style={{ width: `${research.progress}%` }}
               >
                 <div className="absolute inset-0 bg-white/10 animate-pulse" />
@@ -509,7 +509,7 @@ export default function ResearchDetailPage({
         </TabsContent>
         {research.scope === "LEAD_GENERATION" && (
           <TabsContent value="leads">
-            <ResearchLeads leadData={research.leadData} researchId={id} />
+            <ResearchLeads researchId={id} />
           </TabsContent>
         )}
       </Tabs>

@@ -76,8 +76,8 @@ export function ProjectDistributionPie() {
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
+                  innerRadius={120}
+                  outerRadius={150}
                   paddingAngle={2}
                   dataKey="hours"
                   strokeWidth={0}
@@ -90,9 +90,11 @@ export function ProjectDistributionPie() {
                   formatter={(value: number) => [`${value}h`, "Tracked"]}
                   contentStyle={{
                     borderRadius: "8px",
-                    backgroundColor: "hsl(var(--background))",
+                    backgroundColor: "hsl(var(--primary-background))",
                     borderColor: "hsl(var(--border))",
                     fontSize: "12px",
+                    fontWeight: "500",
+                    color: "hsl(var(--primary-foreground))",
                   }}
                 />
                 <Legend
@@ -102,14 +104,14 @@ export function ProjectDistributionPie() {
                   iconType="circle"
                   iconSize={8}
                   wrapperStyle={{
-                    fontSize: "11px",
+                    fontSize: "13px",
                     paddingTop: "30px",
                     width: "100%",
                     display: "flex",
                     justifyContent: "center",
                   }}
                   formatter={(value) => (
-                    <span className="text-muted-foreground truncate max-w-[80px] sm:max-w-[120px]">
+                    <span className="text-muted-foreground truncate max-w-[140px] sm:max-w-[200px]">
                       {value}
                     </span>
                   )}

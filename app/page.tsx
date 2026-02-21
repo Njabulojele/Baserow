@@ -17,6 +17,11 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/50 supports-[backdrop-filter]:bg-background/60">
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4363461712198221"
+          crossOrigin="anonymous"
+        ></script>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tighter">
             <Image

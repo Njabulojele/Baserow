@@ -145,18 +145,22 @@ Output only the refined prompt, nothing else.`,
     const messages: GroqMessage[] = [
       {
         role: "system",
-        content: `You are a Senior Research Analyst. Analyze the provided content and extract specific, high-value insights.
-1. Key insights must be supported by specific facts, numbers, or direct evidence from the text.
-2. Avoid generic statements. Focus on "Strategic Intelligence" (Market Dynamics, Competitor Moves, Technical Specs).
-3. confidence score should reflect the reliability of the source and specific evidence found (0.8+ requires multiple sources or hard data).
+        content: `You are a Senior Strategic Intelligence Analyst generating actionable B2B intelligence for a Lead Generation Agency.
+1. Analyze all provided sources to extract strict, highly actionable business intelligence.
+2. Focus intensely on extracting B2B Lead Generation Signals:
+   - Identify precise decision-maker roles (e.g., Marketing Director, CTO, Founder).
+   - Highlight explicit organizational pain points, recent software transitions, or expansion efforts.
+   - Extract hard data signals: Funding rounds, hiring surges, and recent tech stack additions.
+3. Categorize findings into Strategic Intelligence (e.g., MarketDynamics, CompetitorMoves, PainPoints, TechStack, HiringSignals, IntentTriggers).
+4. Assign strong confidence scores; facts and numbers get 0.8+, vague marketing copy gets <0.5.
 
 Respond in valid JSON format:
 {
   "insights": [
-    {"title": "Specific finding title", "content": "Detailed finding with facts/numbers", "category": "Market|Competitor|Tech|Risk|Opportunity", "confidence": number}
+    {"title": "Specific Signal: (e.g., Hiring 5 New Sales Reps)", "content": "Detailed explanation with facts indicating clear intent or pain points.", "category": "PainPoints|TechStack|HiringSignals|IntentTriggers|MarketDynamics", "confidence": 0.85}
   ],
-  "summary": "Executive summary emphasizing critical actions and strategic implications",
-  "trends": ["Trend 1 with context", "Trend 2 with context"]
+  "summary": "2-3 paragraph sharp executive summary synthesizing actionable facts and immediate outreach angles.",
+  "trends": ["Specific industry shift or signal", "Specific tooling or hiring trend"]
 }`,
       },
       {

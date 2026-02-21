@@ -239,7 +239,7 @@ export function ResearchCreationModal({
                     onValueChange={(value) =>
                       setFormData({
                         ...formData,
-                        scope: value as ResearchScope,
+                        scope: value as any,
                       })
                     }
                   >
@@ -308,79 +308,6 @@ export function ResearchCreationModal({
                     <p className="font-medium text-white text-sm">Grounding</p>
                     <p className="text-[10px] text-gray-400 mt-1">
                       Fast Google Search via Gemini
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        searchMethod: SearchMethod.SERPER_API,
-                      })
-                    }
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      formData.searchMethod === SearchMethod.SERPER_API
-                        ? "border-[#6b9080] bg-[#6b9080]/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-[#6b9080]/50"
-                    }`}
-                  >
-                    <p className="font-medium text-white text-sm">Serper</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Deep custom web scraping
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        searchMethod: (SearchMethod as any).JINA_SERPER,
-                      })
-                    }
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      formData.searchMethod ===
-                      (SearchMethod as any).JINA_SERPER
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-blue-500/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      <p className="font-medium text-white text-sm">
-                        Deep Search
-                      </p>
-                      <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1 rounded">
-                        NEW
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Iterative Loop (Clean Extraction)
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        searchMethod: SearchMethod.GEMINI_DEEP_RESEARCH,
-                      })
-                    }
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      formData.searchMethod ===
-                      SearchMethod.GEMINI_DEEP_RESEARCH
-                        ? "border-amber-500 bg-amber-500/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-amber-500/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      <p className="font-medium text-white text-sm">
-                        Deep Research
-                      </p>
-                      <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1 rounded">
-                        PRO
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Autonomous agent (Gemini Native)
                     </p>
                   </button>
                 </div>

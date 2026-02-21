@@ -7,34 +7,38 @@ datasource db {
 }
 
 model User {
-  id               String           @id @default(cuid())
-  email            String           @unique
-  name             String?
-  avatar           String?
-  timezone         String           @default("Africa/Johannesburg")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  geminiApiKey     String?
-  geminiModel      String           @default("gemini-2.0-flash")
-  groqApiKey       String?
-  llmProvider      String           @default("GEMINI")
-  serperApiKey     String?
-  researchLimit    Int              @default(10)
-  analyticsEvents  AnalyticsEvent[]
-  calendarEvents   CalendarEvent[]
-  captures         Capture[]
-  clients          Client[]
-  dayPlans         DayPlan[]
-  meetings         Meeting[]
-  notes            Note[]
-  projects         Project[]
-  researches       Research[]
-  tasks            Task[]
-  timeEntries      TimeEntry[]
-  voiceSessions    VoiceSession[]
-  weekPlans        WeekPlan[]
-  wellBeingEntries WellBeingEntry[]
-  yearPlans        YearPlan[]
+  id                String           @id @default(cuid())
+  email             String           @unique
+  name              String?
+  avatar            String?
+  timezone          String           @default("Africa/Johannesburg")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  geminiApiKey      String?
+  geminiModel       String           @default("gemini-2.0-flash")
+  groqApiKey        String?
+  llmProvider       String           @default("GEMINI")
+  serperApiKey      String?
+  researchLimit     Int              @default(10)
+  scrapingMode      String           @default("AGENTIC")
+  targetIndustries  String[]         @default([])
+  targetCompanySize String?
+  targetPainPoints  String[]         @default([])
+  analyticsEvents   AnalyticsEvent[]
+  calendarEvents    CalendarEvent[]
+  captures          Capture[]
+  clients           Client[]
+  dayPlans          DayPlan[]
+  meetings          Meeting[]
+  notes             Note[]
+  projects          Project[]
+  researches        Research[]
+  tasks             Task[]
+  timeEntries       TimeEntry[]
+  voiceSessions     VoiceSession[]
+  weekPlans         WeekPlan[]
+  wellBeingEntries  WellBeingEntry[]
+  yearPlans         YearPlan[]
 }
 
 model YearPlan {
@@ -638,6 +642,7 @@ model AnalyticsEvent {
 model Research {
   id             String            @id @default(cuid())
   userId         String
+  promptHash     String?
   title          String
   scope          ResearchScope
   searchMethod   SearchMethod      @default(GEMINI_GROUNDING)
@@ -658,6 +663,7 @@ model Research {
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   insights       ResearchInsight[]
   sources        ResearchSource[]
+  crmLeads       CrmLead[]
 
   @@index([userId, status])
   @@index([goalId])
@@ -727,16 +733,89 @@ model Lead {
   website         String?
   industry        String?
   location        String?
+  companySize     String?
   painPoints      String[]
   suggestedDM     String
   suggestedEmail  String
   personalization Json?
   contacted       Boolean   @default(false)
   contactedAt     DateTime?
+  score           Float     @default(0)
+  tier            String    @default("UNSCORED")
+  promotedToCrmId String?   @unique
   createdAt       DateTime  @default(now())
   leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
 
   @@index([leadDataId])
+  @@index([score])
+  @@index([tier])
+}
+
+// CRM models needed by LeadPromotionService
+
+model CrmLead {
+  id              String         @id @default(cuid())
+  userId          String
+  source          CrmLeadSource  @default(OUTBOUND)
+  status          CrmLeadStatus  @default(NEW)
+  score           Float          @default(0)
+  firstName       String
+  lastName        String
+  email           String
+  phone           String?
+  title           String?
+  companyName     String?
+  companyWebsite  String?
+  companySize     String?
+  industry        String?
+  estimatedValue  Float          @default(0)
+  pipelineId      String?
+  pipelineStageId String?
+  painPoints      String[]       @default([])
+  identifiedNeeds String[]       @default([])
+  tags            String[]       @default([])
+  researchId      String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  pipeline        Pipeline?      @relation(fields: [pipelineId], references: [id])
+  pipelineStage   PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  research        Research?      @relation(fields: [researchId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, score])
+  @@index([pipelineId, pipelineStageId])
+  @@index([email])
+  @@index([researchId])
+}
+
+model Pipeline {
+  id        String          @id @default(cuid())
+  userId    String
+  name      String
+  type      PipelineType    @default(SALES)
+  isDefault Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  leads     CrmLead[]
+  stages    PipelineStage[]
+
+  @@index([userId])
+}
+
+model PipelineStage {
+  id          String    @id @default(cuid())
+  pipelineId  String
+  name        String
+  order       Int
+  probability Float     @default(0)
+  isClosed    Boolean   @default(false)
+  isWon       Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  leads       CrmLead[]
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId, order])
 }
 
 enum ResearchScope {
@@ -768,4 +847,34 @@ enum SearchMethod {
   SERPER_API
   GEMINI_DEEP_RESEARCH
   JINA_SERPER
+}
+
+enum CrmLeadSource {
+  INBOUND
+  REFERRAL
+  OUTBOUND
+  PARTNERSHIP
+  EVENT
+  WEBSITE
+  SOCIAL
+  ADVERTISEMENT
+  OTHER
+}
+
+enum CrmLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+  UNQUALIFIED
+}
+
+enum PipelineType {
+  SALES
+  PARTNERSHIP
+  RECRUITING
+  CUSTOM
 }

@@ -1,6 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +59,7 @@ const STATUS_COLUMNS: {
 
 export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
   const [search, setSearch] = useState("");
+  const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
 
   const {
     data: leadsByStatus,
@@ -70,6 +81,8 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
     onSuccess: () => {
       toast.success("Lead converted to client!");
       utils.crmLead.getByStatus.invalidate();
+      utils.crmLead.getStats.invalidate();
+      utils.analytics.getRevenueOverview.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -79,8 +92,13 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
   };
 
   const handleConvert = (leadId: string) => {
-    if (confirm("Convert this lead to a client?")) {
-      convertToClientMutation.mutate({ id: leadId });
+    setConvertLeadId(leadId);
+  };
+
+  const confirmConvert = () => {
+    if (convertLeadId) {
+      convertToClientMutation.mutate({ id: convertLeadId });
+      setConvertLeadId(null);
     }
   };
 
@@ -302,6 +320,42 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
           );
         })}
       </div>
+
+      {/* Convert to Client Confirmation Dialog */}
+      <AlertDialog
+        open={!!convertLeadId}
+        onOpenChange={(open) => {
+          if (!open) setConvertLeadId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert Lead to Client</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to convert this lead to a client? This will
+              mark the lead as won and create a new client record.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmConvert}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {convertToClientMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />{" "}
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" /> Convert to Client
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

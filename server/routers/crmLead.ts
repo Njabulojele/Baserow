@@ -150,6 +150,21 @@ export const crmLeadRouter = router({
       return lead;
     }),
 
+  // Get leads by research run ID
+  getByResearchId: protectedProcedure
+    .input(z.object({ researchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const leads = await ctx.prisma.crmLead.findMany({
+        where: {
+          researchId: input.researchId,
+          userId: ctx.userId,
+        },
+        orderBy: { score: "desc" },
+      });
+
+      return leads;
+    }),
+
   // Create new lead
   create: protectedProcedure
     .input(createLeadSchema)
@@ -297,7 +312,7 @@ export const crmLeadRouter = router({
         });
       }
 
-      // Create client and update lead in transaction
+      // Create client, deal, and update lead in transaction
       const result = await ctx.prisma.$transaction(async (tx) => {
         const client = await tx.client.create({
           data: {
@@ -311,6 +326,63 @@ export const crmLeadRouter = router({
             status: "active",
           },
         });
+
+        // Find a pipeline and stage for the won deal
+        let pipelineId = lead.pipelineId;
+        let pipelineStageId = lead.pipelineStageId;
+
+        if (!pipelineId) {
+          // Find the user's default sales pipeline, or any pipeline
+          const defaultPipeline = await tx.pipeline.findFirst({
+            where: { userId: ctx.userId },
+            orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+            include: {
+              stages: { orderBy: { order: "asc" } },
+            },
+          });
+
+          if (defaultPipeline && defaultPipeline.stages.length > 0) {
+            pipelineId = defaultPipeline.id;
+            // Prefer the "won" stage, otherwise use the last stage
+            const wonStage = defaultPipeline.stages.find((s) => s.isWon);
+            pipelineStageId = wonStage
+              ? wonStage.id
+              : defaultPipeline.stages[defaultPipeline.stages.length - 1].id;
+          }
+        } else if (!pipelineStageId) {
+          // Pipeline exists but no stage set — find the won stage
+          const stages = await tx.pipelineStage.findMany({
+            where: { pipelineId },
+            orderBy: { order: "asc" },
+          });
+          if (stages.length > 0) {
+            const wonStage = stages.find((s) => s.isWon);
+            pipelineStageId = wonStage
+              ? wonStage.id
+              : stages[stages.length - 1].id;
+          }
+        }
+
+        // Create a WON deal so dashboard revenue metrics update
+        if (pipelineId && pipelineStageId) {
+          const dealValue = lead.estimatedValue ?? 0;
+          await tx.deal.create({
+            data: {
+              userId: ctx.userId,
+              leadId: lead.id,
+              clientId: client.id,
+              name: `${lead.firstName} ${lead.lastName} — ${lead.companyName}`,
+              value: dealValue,
+              probability: 1,
+              weightedValue: dealValue,
+              pipelineId,
+              pipelineStageId,
+              expectedCloseDate: new Date(),
+              actualCloseDate: new Date(),
+              status: "WON",
+            },
+          });
+        }
 
         await tx.crmLead.update({
           where: { id: input.id },
