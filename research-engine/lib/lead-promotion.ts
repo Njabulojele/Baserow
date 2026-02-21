@@ -7,7 +7,6 @@ import {
   CrmLeadSource,
   CrmLeadStatus,
   PipelineType,
-  WorkflowTriggerType,
 } from "@prisma/client";
 
 export class LeadPromotionService {
