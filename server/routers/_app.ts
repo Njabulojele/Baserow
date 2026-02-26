@@ -21,6 +21,9 @@ import { clientHealthRouter } from "./clientHealth";
 import { crmAutomationRouter } from "./crmAutomation";
 import { crmActivityRouter } from "./crmActivity";
 
+// Canvas
+import { canvasRouter } from "./canvas";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -43,6 +46,9 @@ export const appRouter = router({
   clientHealth: clientHealthRouter,
   crmAutomation: crmAutomationRouter,
   crmActivity: crmActivityRouter,
+
+  // Canvas
+  canvas: canvasRouter,
 });
 
 export type AppRouter = typeof appRouter;
