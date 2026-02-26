@@ -56,6 +56,7 @@ model User {
   sentInvitations    Invitation[]
   activityLogs       ActivityLog[]
   auditLogs          AuditLog[]
+  notifications      Notification[]
   activeOrgId        String?
   deletedAt          DateTime?
   version            Int              @default(1)
@@ -1389,4 +1390,21 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([userId, createdAt])
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  title          String
+  message        String
+  link           String?  // Optional URL to navigate to when clicked
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([organizationId])
+  @@index([createdAt])
 }
