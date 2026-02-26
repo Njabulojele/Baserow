@@ -69,6 +69,32 @@ declare global {
 
 const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
 
+/**
+ * Executes a Prisma query within an RLS-enforced transaction.
+ * The inner callback receives a transaction-bound Prisma client `tx`.
+ * This ensures that cross-tenant data leaks are impossible at the DB level.
+ */
+export async function withTenant<T>(
+  organizationId: string | null | undefined,
+  callback: (tx: typeof prisma) => Promise<T>,
+): Promise<T> {
+  if (!organizationId) {
+    // If no organization is specified, simply execute without setting the tenant context
+    // The policy defaults to allowing access if organizationId IS NULL for the record
+    return callback(prisma);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Set the Postgres local transaction variable
+    await tx.$executeRawUnsafe(
+      `SELECT set_config('app.current_tenant', $1, true)`,
+      organizationId,
+    );
+    // Execute the user's callback with the transaction object `tx`
+    return callback(tx as unknown as typeof prisma);
+  });
+}
+
 if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma;
 
 export { prisma };

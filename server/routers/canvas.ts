@@ -1,5 +1,6 @@
 import { router, protectedProcedure } from "../trpc";
 import { z } from "zod";
+import { withTenant } from "@/lib/prisma";
 
 export const canvasRouter = router({
   // List all boards for the user
@@ -26,28 +27,30 @@ export const canvasRouter = router({
         where.name = { contains: input.search, mode: "insensitive" };
       }
 
-      return ctx.prisma.canvasBoard.findMany({
-        where,
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          emoji: true,
-          type: true,
-          color: true,
-          projectId: true,
-          clientId: true,
-          goalId: true,
-          taskId: true,
-          thumbnail: true,
-          isFavorited: true,
-          createdAt: true,
-          updatedAt: true,
-          project: {
-            select: { id: true, name: true, color: true, icon: true },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.canvasBoard.findMany({
+          where,
+          orderBy: { updatedAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            emoji: true,
+            type: true,
+            color: true,
+            projectId: true,
+            clientId: true,
+            goalId: true,
+            taskId: true,
+            thumbnail: true,
+            isFavorited: true,
+            createdAt: true,
+            updatedAt: true,
+            project: {
+              select: { id: true, name: true, color: true, icon: true },
+            },
+            client: { select: { id: true, name: true, companyName: true } },
           },
-          client: { select: { id: true, name: true, companyName: true } },
-        },
+        });
       });
     }),
 
@@ -55,17 +58,19 @@ export const canvasRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const board = await ctx.prisma.canvasBoard.findFirst({
-        where: { id: input.id, userId: ctx.userId },
-        include: {
-          project: {
-            select: { id: true, name: true, color: true, icon: true },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const board = await prisma.canvasBoard.findFirst({
+          where: { id: input.id, userId: ctx.userId },
+          include: {
+            project: {
+              select: { id: true, name: true, color: true, icon: true },
+            },
+            client: { select: { id: true, name: true, companyName: true } },
           },
-          client: { select: { id: true, name: true, companyName: true } },
-        },
+        });
+        if (!board) throw new Error("Board not found");
+        return board;
       });
-      if (!board) throw new Error("Board not found");
-      return board;
     }),
 
   // Create a new board
@@ -83,17 +88,20 @@ export const canvasRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.canvasBoard.create({
-        data: {
-          ...input,
-          userId: ctx.userId,
-          boardData: {
-            nodes: [],
-            connections: [],
-            drawings: [],
-            viewport: { x: 0, y: 0, zoom: 1 },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.canvasBoard.create({
+          data: {
+            ...input,
+            userId: ctx.userId,
+            organizationId: ctx.organizationId,
+            boardData: {
+              nodes: [],
+              connections: [],
+              drawings: [],
+              viewport: { x: 0, y: 0, zoom: 1 },
+            },
           },
-        },
+        });
       });
     }),
 
@@ -116,9 +124,11 @@ export const canvasRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      return ctx.prisma.canvasBoard.update({
-        where: { id, userId: ctx.userId },
-        data,
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.canvasBoard.update({
+          where: { id, userId: ctx.userId },
+          data,
+        });
       });
     }),
 
@@ -126,8 +136,10 @@ export const canvasRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.canvasBoard.delete({
-        where: { id: input.id, userId: ctx.userId },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.canvasBoard.delete({
+          where: { id: input.id, userId: ctx.userId },
+        });
       });
     }),
 
@@ -135,24 +147,27 @@ export const canvasRouter = router({
   duplicate: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const original = await ctx.prisma.canvasBoard.findFirst({
-        where: { id: input.id, userId: ctx.userId },
-      });
-      if (!original) throw new Error("Board not found");
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const original = await prisma.canvasBoard.findFirst({
+          where: { id: input.id, userId: ctx.userId },
+        });
+        if (!original) throw new Error("Board not found");
 
-      return ctx.prisma.canvasBoard.create({
-        data: {
-          userId: ctx.userId,
-          name: `${original.name} (Copy)`,
-          emoji: original.emoji,
-          type: original.type,
-          color: original.color,
-          boardData: original.boardData as object,
-          projectId: original.projectId,
-          clientId: original.clientId,
-          goalId: original.goalId,
-          taskId: original.taskId,
-        },
+        return prisma.canvasBoard.create({
+          data: {
+            userId: ctx.userId,
+            organizationId: ctx.organizationId,
+            name: `${original.name} (Copy)`,
+            emoji: original.emoji,
+            type: original.type,
+            color: original.color,
+            boardData: original.boardData as object,
+            projectId: original.projectId,
+            clientId: original.clientId,
+            goalId: original.goalId,
+            taskId: original.taskId,
+          },
+        });
       });
     }),
 
@@ -160,23 +175,34 @@ export const canvasRouter = router({
   toggleFavorite: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const board = await ctx.prisma.canvasBoard.findFirst({
-        where: { id: input.id, userId: ctx.userId },
-        select: { isFavorited: true },
-      });
-      if (!board) throw new Error("Board not found");
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const board = await prisma.canvasBoard.findFirst({
+          where: { id: input.id, userId: ctx.userId },
+          select: { isFavorited: true },
+        });
+        if (!board) throw new Error("Board not found");
 
-      return ctx.prisma.canvasBoard.update({
-        where: { id: input.id },
-        data: { isFavorited: !board.isFavorited },
+        return prisma.canvasBoard.update({
+          where: { id: input.id },
+          data: { isFavorited: !board.isFavorited },
+        });
       });
     }),
 
   // Get all linkable entities for the "Attach Entity" modal
   getLinkedEntities: protectedProcedure.query(async ({ ctx }) => {
-    const [projects, tasks, clients, goals, deals, leads, research, meetings] =
-      await Promise.all([
-        ctx.prisma.project.findMany({
+    return withTenant(ctx.organizationId, async (prisma) => {
+      const [
+        projects,
+        tasks,
+        clients,
+        goals,
+        deals,
+        leads,
+        research,
+        meetings,
+      ] = await Promise.all([
+        prisma.project.findMany({
           where: { userId: ctx.userId, archivedAt: null },
           select: {
             id: true,
@@ -193,7 +219,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 50,
         }),
-        ctx.prisma.task.findMany({
+        prisma.task.findMany({
           where: { userId: ctx.userId, completedAt: null },
           select: {
             id: true,
@@ -210,7 +236,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 50,
         }),
-        ctx.prisma.client.findMany({
+        prisma.client.findMany({
           where: { userId: ctx.userId, status: "active" },
           select: {
             id: true,
@@ -225,7 +251,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 50,
         }),
-        ctx.prisma.goal.findMany({
+        prisma.goal.findMany({
           where: {
             yearPlan: { userId: ctx.userId },
             status: { not: "completed" },
@@ -242,7 +268,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 30,
         }),
-        ctx.prisma.deal.findMany({
+        prisma.deal.findMany({
           where: { userId: ctx.userId, status: "OPEN" },
           select: {
             id: true,
@@ -257,7 +283,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 30,
         }),
-        ctx.prisma.crmLead.findMany({
+        prisma.crmLead.findMany({
           where: {
             userId: ctx.userId,
             status: { notIn: ["WON", "LOST", "UNQUALIFIED"] },
@@ -275,7 +301,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 30,
         }),
-        ctx.prisma.research.findMany({
+        prisma.research.findMany({
           where: { userId: ctx.userId, status: "COMPLETED" },
           select: {
             id: true,
@@ -288,7 +314,7 @@ export const canvasRouter = router({
           orderBy: { updatedAt: "desc" },
           take: 20,
         }),
-        ctx.prisma.meeting.findMany({
+        prisma.meeting.findMany({
           where: { userId: ctx.userId },
           select: {
             id: true,
@@ -304,15 +330,16 @@ export const canvasRouter = router({
         }),
       ]);
 
-    return {
-      projects,
-      tasks,
-      clients,
-      goals,
-      deals,
-      leads,
-      research,
-      meetings,
-    };
+      return {
+        projects,
+        tasks,
+        clients,
+        goals,
+        deals,
+        leads,
+        research,
+        meetings,
+      };
+    });
   }),
 });

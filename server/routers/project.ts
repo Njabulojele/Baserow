@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { withTenant } from "@/lib/prisma";
 
 export const projectRouter = router({
   // Get all projects for the current user
@@ -19,27 +20,29 @@ export const projectRouter = router({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.project.findMany({
-        where: {
-          userId: ctx.userId,
-          archivedAt: null,
-          ...(input?.status && { status: input.status }),
-          ...(input?.type && { type: input.type }),
-          ...(input?.clientId && { clientId: input.clientId }),
-        },
-        include: {
-          _count: {
-            select: { tasks: true },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.project.findMany({
+          where: {
+            userId: ctx.userId,
+            archivedAt: null,
+            ...(input?.status && { status: input.status }),
+            ...(input?.type && { type: input.type }),
+            ...(input?.clientId && { clientId: input.clientId }),
           },
-          client: {
-            select: { id: true, name: true },
+          include: {
+            _count: {
+              select: { tasks: true },
+            },
+            client: {
+              select: { id: true, name: true },
+            },
           },
-        },
-        orderBy: [
-          { priority: "asc" },
-          { deadline: "asc" },
-          { createdAt: "desc" },
-        ],
+          orderBy: [
+            { priority: "asc" },
+            { deadline: "asc" },
+            { createdAt: "desc" },
+          ],
+        });
       });
     }),
 
@@ -47,25 +50,27 @@ export const projectRouter = router({
   getProject: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const project = await ctx.prisma.project.findUnique({
-        where: { id: input.id },
-        include: {
-          tasks: {
-            orderBy: [{ status: "asc" }, { priority: "asc" }],
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const project = await prisma.project.findUnique({
+          where: { id: input.id },
+          include: {
+            tasks: {
+              orderBy: [{ status: "asc" }, { priority: "asc" }],
+            },
+            client: true,
+            timeEntries: {
+              orderBy: { startTime: "desc" },
+              take: 10,
+            },
           },
-          client: true,
-          timeEntries: {
-            orderBy: { startTime: "desc" },
-            take: 10,
-          },
-        },
+        });
+
+        if (!project || project.userId !== ctx.userId) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
+
+        return project;
       });
-
-      if (!project || project.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
-
-      return project;
     }),
 
   // Create a new project
@@ -95,11 +100,14 @@ export const projectRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.project.create({
-        data: {
-          ...input,
-          userId: ctx.userId,
-        },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.project.create({
+          data: {
+            ...input,
+            userId: ctx.userId,
+            organizationId: ctx.organizationId,
+          },
+        });
       });
     }),
 
@@ -132,19 +140,21 @@ export const projectRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
 
-      const project = await ctx.prisma.project.findUnique({ where: { id } });
-      if (!project || project.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const project = await prisma.project.findUnique({ where: { id } });
+        if (!project || project.userId !== ctx.userId) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
 
-      // If status changed to completed, set completedAt
-      if (input.status === "completed" && project.status !== "completed") {
-        (data as Record<string, unknown>).completedAt = new Date();
-      }
+        // If status changed to completed, set completedAt
+        if (input.status === "completed" && project.status !== "completed") {
+          (data as Record<string, unknown>).completedAt = new Date();
+        }
 
-      return ctx.prisma.project.update({
-        where: { id },
-        data,
+        return prisma.project.update({
+          where: { id },
+          data,
+        });
       });
     }),
 
@@ -152,17 +162,19 @@ export const projectRouter = router({
   deleteProject: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const project = await ctx.prisma.project.findUnique({
-        where: { id: input.id },
-      });
-      if (!project || project.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const project = await prisma.project.findUnique({
+          where: { id: input.id },
+        });
+        if (!project || project.userId !== ctx.userId) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
 
-      // Soft delete by archiving
-      return ctx.prisma.project.update({
-        where: { id: input.id },
-        data: { archivedAt: new Date() },
+        // Soft delete by archiving
+        return prisma.project.update({
+          where: { id: input.id },
+          data: { archivedAt: new Date() },
+        });
       });
     }),
 
@@ -170,54 +182,59 @@ export const projectRouter = router({
   getProjectStats: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const project = await ctx.prisma.project.findUnique({
-        where: { id: input.id },
-        include: {
-          tasks: {
-            select: {
-              status: true,
-              actualMinutes: true,
-              estimatedMinutes: true,
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const project = await prisma.project.findUnique({
+          where: { id: input.id },
+          include: {
+            tasks: {
+              select: {
+                status: true,
+                actualMinutes: true,
+                estimatedMinutes: true,
+              },
+            },
+            timeEntries: {
+              select: { duration: true, billable: true, amount: true },
             },
           },
-          timeEntries: {
-            select: { duration: true, billable: true, amount: true },
-          },
-        },
+        });
+
+        if (!project || project.userId !== ctx.userId) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
+
+        const taskStats = {
+          total: project.tasks.length,
+          completed: project.tasks.filter((t) => t.status === "done").length,
+          inProgress: project.tasks.filter((t) => t.status === "in_progress")
+            .length,
+          notStarted: project.tasks.filter((t) => t.status === "not_started")
+            .length,
+        };
+
+        const timeStats = {
+          totalMinutes: project.timeEntries.reduce(
+            (acc, e) => acc + e.duration,
+            0,
+          ),
+          billableMinutes: project.timeEntries
+            .filter((e) => e.billable)
+            .reduce((acc, e) => acc + e.duration, 0),
+          totalRevenue: project.timeEntries.reduce(
+            (acc, e) => acc + e.amount,
+            0,
+          ),
+        };
+
+        return {
+          ...taskStats,
+          completionRate:
+            taskStats.total > 0
+              ? (taskStats.completed / taskStats.total) * 100
+              : 0,
+          ...timeStats,
+        };
       });
-
-      if (!project || project.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
-
-      const taskStats = {
-        total: project.tasks.length,
-        completed: project.tasks.filter((t) => t.status === "done").length,
-        inProgress: project.tasks.filter((t) => t.status === "in_progress")
-          .length,
-        notStarted: project.tasks.filter((t) => t.status === "not_started")
-          .length,
-      };
-
-      const timeStats = {
-        totalMinutes: project.timeEntries.reduce(
-          (acc, e) => acc + e.duration,
-          0,
-        ),
-        billableMinutes: project.timeEntries
-          .filter((e) => e.billable)
-          .reduce((acc, e) => acc + e.duration, 0),
-        totalRevenue: project.timeEntries.reduce((acc, e) => acc + e.amount, 0),
-      };
-
-      return {
-        ...taskStats,
-        completionRate:
-          taskStats.total > 0
-            ? (taskStats.completed / taskStats.total) * 100
-            : 0,
-        ...timeStats,
-      };
     }),
 
   // Get all projects classified by urgency
@@ -292,85 +309,87 @@ export const projectRouter = router({
   getUrgencyStatus: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const project = await ctx.prisma.project.findUnique({
-        where: { id: input.id },
-        include: {
-          client: true,
-          tasks: { select: { status: true } },
-        },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const project = await prisma.project.findUnique({
+          where: { id: input.id },
+          include: {
+            client: true,
+            tasks: { select: { status: true } },
+          },
+        });
+
+        if (!project || project.userId !== ctx.userId) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
+
+        if (project.status === "completed" || project.status === "cancelled") {
+          return { status: "Completed", score: 0, color: "bg-gray-500" };
+        }
+
+        // 1. Deadline Score (0-40 points)
+        let deadlineScore = 0;
+        if (project.deadline) {
+          const now = new Date();
+          const deadline = new Date(project.deadline);
+          const daysUntil = Math.ceil(
+            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          );
+
+          if (daysUntil < 0)
+            deadlineScore = 40; // Overdue
+          else if (daysUntil <= 3)
+            deadlineScore = 35; // < 3 days
+          else if (daysUntil <= 7)
+            deadlineScore = 25; // < 1 week
+          else if (daysUntil <= 14)
+            deadlineScore = 15; // < 2 weeks
+          else deadlineScore = 5;
+        }
+
+        // 2. Client Priority Score (0-20 points)
+        let priorityScore = 0;
+        if (project.priority === "critical") priorityScore = 20;
+        else if (project.priority === "high") priorityScore = 15;
+        else if (project.priority === "medium") priorityScore = 5;
+
+        // 3. Completion Score (Inverse: less complete = higher urgency if deadline near) (0-30 points)
+        const totalTasks = project.tasks.length;
+        const completedTasks = project.tasks.filter(
+          (t) => t.status === "done",
+        ).length;
+        const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
+
+        let completionScore = 0;
+        // If we are < 50% done, that adds urgency
+        if (completionRate < 0.5) completionScore = 15;
+        if (completionRate < 0.2) completionScore = 30;
+
+        const totalScore = deadlineScore + priorityScore + completionScore;
+
+        let status = "On Track";
+        let color = "bg-emerald-500";
+
+        if (totalScore >= 70) {
+          status = "Critical";
+          color = "bg-red-500";
+        } else if (totalScore >= 50) {
+          status = "Urgent";
+          color = "bg-orange-500";
+        } else if (totalScore >= 30) {
+          status = "Attention";
+          color = "bg-yellow-500";
+        }
+
+        return {
+          score: totalScore,
+          status,
+          color,
+          details: {
+            deadlineScore,
+            priorityScore,
+            completionScore,
+          },
+        };
       });
-
-      if (!project || project.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }
-
-      if (project.status === "completed" || project.status === "cancelled") {
-        return { status: "Completed", score: 0, color: "bg-gray-500" };
-      }
-
-      // 1. Deadline Score (0-40 points)
-      let deadlineScore = 0;
-      if (project.deadline) {
-        const now = new Date();
-        const deadline = new Date(project.deadline);
-        const daysUntil = Math.ceil(
-          (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-        );
-
-        if (daysUntil < 0)
-          deadlineScore = 40; // Overdue
-        else if (daysUntil <= 3)
-          deadlineScore = 35; // < 3 days
-        else if (daysUntil <= 7)
-          deadlineScore = 25; // < 1 week
-        else if (daysUntil <= 14)
-          deadlineScore = 15; // < 2 weeks
-        else deadlineScore = 5;
-      }
-
-      // 2. Client Priority Score (0-20 points)
-      let priorityScore = 0;
-      if (project.priority === "critical") priorityScore = 20;
-      else if (project.priority === "high") priorityScore = 15;
-      else if (project.priority === "medium") priorityScore = 5;
-
-      // 3. Completion Score (Inverse: less complete = higher urgency if deadline near) (0-30 points)
-      const totalTasks = project.tasks.length;
-      const completedTasks = project.tasks.filter(
-        (t) => t.status === "done",
-      ).length;
-      const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
-
-      let completionScore = 0;
-      // If we are < 50% done, that adds urgency
-      if (completionRate < 0.5) completionScore = 15;
-      if (completionRate < 0.2) completionScore = 30;
-
-      const totalScore = deadlineScore + priorityScore + completionScore;
-
-      let status = "On Track";
-      let color = "bg-emerald-500";
-
-      if (totalScore >= 70) {
-        status = "Critical";
-        color = "bg-red-500";
-      } else if (totalScore >= 50) {
-        status = "Urgent";
-        color = "bg-orange-500";
-      } else if (totalScore >= 30) {
-        status = "Attention";
-        color = "bg-yellow-500";
-      }
-
-      return {
-        score: totalScore,
-        status,
-        color,
-        details: {
-          deadlineScore,
-          priorityScore,
-          completionScore,
-        },
-      };
     }),
 });

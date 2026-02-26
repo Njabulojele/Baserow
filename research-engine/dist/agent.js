@@ -19,6 +19,10 @@ exports.researchAgent = inngest.createFunction({
     id: "research-agent",
     name: "Deep Research Agent",
     retries: 2,
+    concurrency: {
+        limit: 2,
+        key: "event.data.userId",
+    },
 }, { event: "research/initiated" }, async ({ event, step }) => {
     const { researchId, userId } = event.data;
     const socket = socket_1.SocketService.getInstance();
@@ -648,6 +652,10 @@ exports.generateLeadsAgent = inngest.createFunction({
     id: "generate-leads-agent",
     name: "Lead Generation Agent",
     retries: 1,
+    concurrency: {
+        limit: 2,
+        key: "event.data.userId",
+    },
 }, { event: "research/generate-leads-requested" }, async ({ event, step }) => {
     const { researchId, userId } = event.data;
     const research = await step.run("fetch-research", async () => {

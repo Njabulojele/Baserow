@@ -1,5 +1,7 @@
 import { Server as SocketIOServer } from "socket.io";
 import { Server as HttpServer } from "http";
+import { createAdapter } from "@socket.io/redis-adapter";
+import Redis from "ioredis";
 
 export class SocketService {
   private static instance: SocketService;
@@ -26,6 +28,27 @@ export class SocketService {
         methods: ["GET", "POST"],
       },
     });
+
+    if (process.env.REDIS_URL) {
+      const pubClient = new Redis(process.env.REDIS_URL);
+      const subClient = pubClient.duplicate();
+
+      pubClient.on("error", (err) =>
+        console.error("[SocketService] Redis Pub Error:", err),
+      );
+      subClient.on("error", (err) =>
+        console.error("[SocketService] Redis Sub Error:", err),
+      );
+
+      this.io.adapter(createAdapter(pubClient, subClient));
+      console.log(
+        "[SocketService] Redis Adapter applied for horizontal scaling",
+      );
+    } else {
+      console.warn(
+        "[SocketService] REDIS_URL not provided. Falling back to in-memory adapter (single-node only).",
+      );
+    }
 
     console.log("[SocketService] Socket.io initialized");
 

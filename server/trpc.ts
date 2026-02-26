@@ -10,9 +10,20 @@ import * as Sentry from "@sentry/nextjs";
 export const createTRPCContext = async () => {
   const { userId } = await auth();
 
+  let activeOrgId: string | null = null;
+
+  if (userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeOrgId: true },
+    });
+    activeOrgId = user?.activeOrgId || null;
+  }
+
   return {
     prisma,
     userId,
+    organizationId: activeOrgId,
   };
 };
 
@@ -87,6 +98,7 @@ const isAuthed = t.middleware(async ({ ctx, next }) => {
     ctx: {
       ...ctx,
       userId: ctx.userId,
+      organizationId: ctx.organizationId,
     },
   });
 });
