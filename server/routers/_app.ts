@@ -24,6 +24,9 @@ import { crmActivityRouter } from "./crmActivity";
 // Canvas
 import { canvasRouter } from "./canvas";
 
+// Team
+import { teamRouter } from "./team";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -49,6 +52,9 @@ export const appRouter = router({
 
   // Canvas
   canvas: canvasRouter,
+
+  // Team
+  team: teamRouter,
 });
 
 export type AppRouter = typeof appRouter;

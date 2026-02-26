@@ -374,24 +374,60 @@ export function CanvasViewport() {
           ? "cell"
           : "default";
 
+  // Calculate visible nodes for culling to boost performance
+  const visibleNodes = React.useMemo(() => {
+    const width = typeof window !== "undefined" ? window.innerWidth : 1920;
+    const height = typeof window !== "undefined" ? window.innerHeight : 1080;
+
+    // Convert screen viewport to canvas coordinates
+    const startX = -viewport.x / viewport.zoom;
+    const startY = -viewport.y / viewport.zoom;
+    const endX = startX + width / viewport.zoom;
+    const endY = startY + height / viewport.zoom;
+
+    // Add a 20% buffer outside the visible area
+    const bufferX = (endX - startX) * 0.2;
+    const bufferY = (endY - startY) * 0.2;
+
+    const minX = startX - bufferX;
+    const maxX = endX + bufferX;
+    const minY = startY - bufferY;
+    const maxY = endY + bufferY;
+
+    return nodes.filter((node) => {
+      const nodeRight = node.x + Math.max(node.width || 200, 50);
+      const nodeBottom = node.y + Math.max(node.height || 200, 50);
+      return (
+        nodeRight >= minX &&
+        node.x <= maxX &&
+        nodeBottom >= minY &&
+        node.y <= maxY
+      );
+    });
+  }, [nodes, viewport]);
+
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-hidden"
-      style={{ cursor: cursorStyle }}
+      className={`relative w-full h-full overflow-hidden bg-[#121214] ${
+        activeTool === "pan" || spaceDownRef.current
+          ? "cursor-grab active:cursor-grabbing"
+          : "cursor-default"
+      }`}
+      onContextMenu={(e) => e.preventDefault()}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onContextMenu={(e) => e.preventDefault()}
+      onMouseLeave={handleMouseUp}
     >
       {/* Grid background */}
       {showGrid && (
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none opacity-20"
           style={{
-            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)`,
-            backgroundSize: `${20 * viewport.zoom}px ${20 * viewport.zoom}px`,
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: `${40 * viewport.zoom}px ${40 * viewport.zoom}px`,
             backgroundPosition: `${viewport.x}px ${viewport.y}px`,
           }}
         />
@@ -415,8 +451,8 @@ export function CanvasViewport() {
         {/* Free draw */}
         <FreeDrawLayer drawings={drawings} currentPath={currentDrawingPath} />
 
-        {/* Nodes */}
-        {nodes.map((node) => (
+        {/* Nodes (Filtered by Viewport Culling) */}
+        {visibleNodes.map((node) => (
           <CanvasNodeComponent
             key={node.id}
             node={node}

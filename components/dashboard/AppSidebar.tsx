@@ -76,6 +76,11 @@ const mainRoutes = [
     icon: PenTool,
     href: "/canvas",
   },
+  {
+    label: "Team",
+    icon: Users,
+    href: "/team",
+  },
 ];
 
 const crmRoutes = [

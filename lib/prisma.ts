@@ -1,13 +1,59 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+const softDeleteModels = [
+  "User",
+  "Project",
+  "Task",
+  "Client",
+  "Deal",
+  "CanvasBoard",
+];
+
 // Standard Prisma client for Vercel deployment
 // The PrismaPg adapter is ONLY used in research-engine (Render)
 const prismaClientSingleton = () => {
-  return new PrismaClient({
+  const baseClient = new PrismaClient({
     adapter: new PrismaPg({
       connectionString: process.env.DATABASE_URL!,
     }),
+  });
+
+  return baseClient.$extends({
+    query: {
+      $allModels: {
+        async delete({ model, args, query }) {
+          if (softDeleteModels.includes(model)) {
+            return (baseClient as any)[model].update({
+              ...args,
+              data: { deletedAt: new Date() },
+            });
+          }
+          return query(args);
+        },
+        async deleteMany({ model, args, query }) {
+          if (softDeleteModels.includes(model)) {
+            return (baseClient as any)[model].updateMany({
+              where: args.where,
+              data: { deletedAt: new Date() },
+            });
+          }
+          return query(args);
+        },
+        async findMany({ model, args, query }) {
+          if (softDeleteModels.includes(model)) {
+            args.where = { deletedAt: null, ...args.where };
+          }
+          return query(args);
+        },
+        async findFirst({ model, args, query }) {
+          if (softDeleteModels.includes(model)) {
+            args.where = { deletedAt: null, ...args.where };
+          }
+          return query(args);
+        },
+      },
+    },
   });
 };
 

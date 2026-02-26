@@ -69,12 +69,55 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
   const utils = trpc.useUtils();
 
   const updateStatusMutation = trpc.crmLead.update.useMutation({
-    onSuccess: () => {
-      toast.success("Lead status updated");
+    onMutate: async (newLead) => {
+      await utils.crmLead.getByStatus.cancel();
+      const previousLeads = utils.crmLead.getByStatus.getData();
+
+      utils.crmLead.getByStatus.setQueryData(undefined, (old: any) => {
+        if (!old) return old;
+        const newObj = { ...old };
+        let foundLead: any = null;
+
+        // Remove from old column
+        for (const status in newObj) {
+          const col = newObj[status as CrmLeadStatus];
+          if (!col) continue;
+          const idx = col.findIndex((l: any) => l.id === newLead.id);
+          if (idx !== -1) {
+            foundLead = col[idx];
+            newObj[status as CrmLeadStatus] = col.filter(
+              (l: any) => l.id !== newLead.id,
+            );
+            break;
+          }
+        }
+
+        // Add to new column
+        if (foundLead && newLead.status) {
+          if (!newObj[newLead.status]) newObj[newLead.status] = [];
+          newObj[newLead.status] = [
+            { ...foundLead, status: newLead.status },
+            ...newObj[newLead.status],
+          ];
+        }
+        return newObj;
+      });
+
+      return { previousLeads };
+    },
+    onError: (err, newLead, context) => {
+      toast.error("Failed to update status");
+      if (context?.previousLeads) {
+        utils.crmLead.getByStatus.setQueryData(
+          undefined,
+          context.previousLeads,
+        );
+      }
+    },
+    onSettled: () => {
       utils.crmLead.getByStatus.invalidate();
       utils.crmLead.getStats.invalidate();
     },
-    onError: (err) => toast.error(err.message),
   });
 
   const convertToClientMutation = trpc.crmLead.convertToClient.useMutation({

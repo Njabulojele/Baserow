@@ -51,6 +51,14 @@ model User {
   wellBeingEntries   WellBeingEntry[]
   yearPlans          YearPlan[]
   canvasBoards       CanvasBoard[]
+  ownedOrgs          Organization[]
+  orgMemberships     OrganizationMember[]
+  sentInvitations    Invitation[]
+  activityLogs       ActivityLog[]
+  auditLogs          AuditLog[]
+  activeOrgId        String?
+  deletedAt          DateTime?
+  version            Int              @default(1)
 }
 
 model YearPlan {
@@ -340,33 +348,37 @@ model TimeBlock {
 }
 
 model Project {
-  id                   String      @id @default(cuid())
+  id                   String        @id @default(cuid())
   userId               String
   name                 String
   description          String?
   type                 String
   status               String
   clientId             String?
-  billable             Boolean     @default(false)
+  billable             Boolean       @default(false)
   hourlyRate           Float?
   budgetHours          Float?
   startDate            DateTime?
   deadline             DateTime?
   estimatedHours       Float?
-  actualHoursSpent     Float       @default(0)
-  completionPercentage Float       @default(0)
+  actualHoursSpent     Float         @default(0)
+  completionPercentage Float         @default(0)
   goalId               String?
   parentProjectId      String?
   priority             String
   tags                 String[]
-  color                String?     @default("#000000")
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  color                String?       @default("#000000")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
   completedAt          DateTime?
   archivedAt           DateTime?
   icon                 String?
-  client               Client?     @relation(fields: [clientId], references: [id])
-  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId       String?
+  deletedAt            DateTime?
+  version              Int           @default(1)
+  client               Client?       @relation(fields: [clientId], references: [id])
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization         Organization? @relation(fields: [organizationId], references: [id])
   tasks                Task[]
   timeBlocks           TimeBlock[]
   timeEntries          TimeEntry[]
@@ -375,20 +387,21 @@ model Project {
   @@index([userId, status])
   @@index([userId, archivedAt])
   @@index([clientId])
+  @@index([organizationId])
 }
 
 model Task {
-  id                String      @id @default(cuid())
+  id                String        @id @default(cuid())
   userId            String
   projectId         String?
   title             String
   description       String?
-  status            String      @default("not_started")
+  status            String        @default("not_started")
   startedAt         DateTime?
   completedAt       DateTime?
   estimatedMinutes  Int?
-  actualMinutes     Int         @default(0)
-  timerRunning      Boolean     @default(false)
+  actualMinutes     Int           @default(0)
+  timerRunning      Boolean       @default(false)
   currentTimerStart DateTime?
   scheduledDate     DateTime?
   dueDate           DateTime?
@@ -399,20 +412,24 @@ model Task {
   dependsOn         String[]
   blocks            String[]
   energyRequired    Float?
-  isAdHoc           Boolean     @default(false)
-  isRecurring       Boolean     @default(false)
+  isAdHoc           Boolean       @default(false)
+  isRecurring       Boolean       @default(false)
   recurringPattern  String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   meetingId         String?
   goalId            String?
   keyStepId         String?
+  organizationId    String?
+  deletedAt         DateTime?
+  version           Int           @default(1)
   actionItem        ActionItem?
-  goal              Goal?       @relation(fields: [goalId], references: [id])
-  keyStep           KeyStep?    @relation(fields: [keyStepId], references: [id])
-  meeting           Meeting?    @relation(fields: [meetingId], references: [id])
-  project           Project?    @relation(fields: [projectId], references: [id])
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal              Goal?         @relation(fields: [goalId], references: [id])
+  keyStep           KeyStep?      @relation(fields: [keyStepId], references: [id])
+  meeting           Meeting?      @relation(fields: [meetingId], references: [id])
+  project           Project?      @relation(fields: [projectId], references: [id])
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization      Organization? @relation(fields: [organizationId], references: [id])
   timeBlocks        TimeBlock[]
   timeEntries       TimeEntry[]
 
@@ -424,6 +441,7 @@ model Task {
   @@index([projectId])
   @@index([goalId])
   @@index([keyStepId])
+  @@index([organizationId])
 }
 
 model TimeEntry {
@@ -488,7 +506,11 @@ model Client {
   contractStartDate      DateTime?
   lifetimeValue          Float              @default(0)
   renewalDate            DateTime?
+  organizationId         String?
+  deletedAt              DateTime?
+  version                Int                @default(1)
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization           Organization?      @relation(fields: [organizationId], references: [id])
   healthScore            ClientHealthScore?
   milestones             ClientMilestone[]
   communications         Communication[]
@@ -500,6 +522,8 @@ model Client {
   timeBlocks             TimeBlock[]
   timeEntries            TimeEntry[]
   canvasBoards           CanvasBoard[]
+
+  @@index([organizationId])
 }
 
 model Communication {
@@ -902,6 +926,8 @@ model Deal {
   customFields       Json?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+  version            Int           @default(1)
   activities         CrmActivity[]
   client             Client?       @relation(fields: [clientId], references: [id])
   lead               CrmLead?      @relation(fields: [leadId], references: [id])
@@ -1120,28 +1146,119 @@ model EmailTemplate {
 }
 
 model CanvasBoard {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  emoji       String?  @default("🧠")
-  type        String   @default("brainstorm")
-  color       String?  @default("#6EE7B7")
-  boardData   Json     @default("{}")
-  projectId   String?
-  clientId    String?
-  goalId      String?
-  taskId      String?
-  thumbnail   String?
-  isFavorited Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project     Project? @relation(fields: [projectId], references: [id])
-  client      Client?  @relation(fields: [clientId], references: [id])
+  id             String        @id @default(cuid())
+  userId         String
+  name           String
+  emoji          String?       @default("🧠")
+  type           String        @default("brainstorm")
+  color          String?       @default("#6EE7B7")
+  boardData      Json          @default("{}")
+  projectId      String?
+  clientId       String?
+  goalId         String?
+  taskId         String?
+  thumbnail      String?
+  isFavorited    Boolean       @default(false)
+  organizationId String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  version        Int           @default(1)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project        Project?      @relation(fields: [projectId], references: [id])
+  client         Client?       @relation(fields: [clientId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([userId])
   @@index([projectId])
   @@index([clientId])
+  @@index([organizationId])
+}
+
+model Organization {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  logo        String?
+  plan        String               @default("free")
+  ownerId     String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  owner       User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     OrganizationMember[]
+  invitations Invitation[]
+  activities  ActivityLog[]
+  projects    Project[]
+  tasks       Task[]
+  clients     Client[]
+  boards      CanvasBoard[]
+
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model OrganizationMember {
+  id        String       @id @default(cuid())
+  userId    String
+  orgId     String
+  role      OrgRole      @default(MEMBER)
+  joinedAt  DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+  @@index([userId])
+}
+
+model Invitation {
+  id           String           @id @default(cuid())
+  email        String
+  orgId        String
+  role         OrgRole          @default(MEMBER)
+  token        String           @unique @default(cuid())
+  status       InvitationStatus @default(PENDING)
+  invitedById  String
+  expiresAt    DateTime
+  createdAt    DateTime         @default(now())
+  acceptedAt   DateTime?
+  org          Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedBy    User             @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([email])
+  @@index([token])
+}
+
+model ActivityLog {
+  id           String       @id @default(cuid())
+  userId       String
+  orgId        String
+  action       String
+  entityType   String
+  entityId     String?
+  entityName   String?
+  metadata     Json?        @default("{}")
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@index([userId, createdAt])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
 }
 
 enum ResearchScope {
@@ -1257,4 +1374,19 @@ enum WorkflowStatus {
   PAUSED
   DRAFT
   ARCHIVED
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
 }

@@ -37,6 +37,11 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Research Engine is running!");
 });
 
+// Health check endpoint for UptimeRobot / BetterStack
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Endpoint to receive logs from external runners (like Next.js Inngest)
 app.post("/emit-log", (req: Request, res: Response) => {
   const { researchId, message } = req.body;
@@ -45,6 +50,17 @@ app.post("/emit-log", (req: Request, res: Response) => {
     res.status(200).json({ success: true });
   } else {
     res.status(400).json({ error: "Missing researchId or message" });
+  }
+});
+
+// Endpoint to broadcast team activity events
+app.post("/emit-activity", (req: Request, res: Response) => {
+  const { orgId, activity } = req.body;
+  if (orgId && activity) {
+    SocketService.getInstance().emitActivity(orgId, activity);
+    res.status(200).json({ success: true });
+  } else {
+    res.status(400).json({ error: "Missing orgId or activity" });
   }
 });
 
