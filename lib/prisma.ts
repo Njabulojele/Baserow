@@ -34,7 +34,7 @@ const prismaClientSingleton = () => {
         async deleteMany({ model, args, query }) {
           if (softDeleteModels.includes(model)) {
             return (baseClient as any)[model].updateMany({
-              where: args.where,
+              where: args?.where,
               data: { deletedAt: new Date() },
             });
           }
@@ -42,13 +42,19 @@ const prismaClientSingleton = () => {
         },
         async findMany({ model, args, query }) {
           if (softDeleteModels.includes(model)) {
-            args.where = { deletedAt: null, ...args.where };
+            return query({
+              ...args,
+              where: { deletedAt: null, ...(args?.where || {}) },
+            } as any);
           }
           return query(args);
         },
         async findFirst({ model, args, query }) {
           if (softDeleteModels.includes(model)) {
-            args.where = { deletedAt: null, ...args.where };
+            return query({
+              ...args,
+              where: { deletedAt: null, ...(args?.where || {}) },
+            } as any);
           }
           return query(args);
         },

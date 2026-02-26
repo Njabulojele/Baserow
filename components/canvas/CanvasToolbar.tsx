@@ -134,41 +134,47 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
 
   return (
     <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-[#1a1a1e]/95 backdrop-blur-md border border-white/10 rounded-xl p-1.5 shadow-2xl">
-      {tools.map(({ tool, icon, label, shortcut }) => (
-        <button
-          key={tool}
-          onClick={() => setActiveTool(tool)}
-          className={`relative w-9 h-9 flex items-center justify-center rounded-lg transition-all group ${
-            activeTool === tool
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "text-white/50 hover:bg-white/10 hover:text-white/80"
-          }`}
-          title={`${label}${shortcut ? ` (${shortcut})` : ""}`}
-        >
-          {icon}
-          {/* Tooltip */}
-          <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
-            {label}
-            {shortcut && (
-              <span className="ml-1.5 text-white/30 font-mono">{shortcut}</span>
-            )}
-          </div>
-        </button>
-      ))}
+      <div className="grid grid-cols-2 gap-1">
+        {tools.map(({ tool, icon, label, shortcut }) => (
+          <button
+            key={tool}
+            onClick={() => setActiveTool(tool)}
+            className={`relative w-9 h-9 flex items-center justify-center rounded-lg transition-all group ${
+              activeTool === tool
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "text-white/50 hover:bg-white/10 hover:text-white/80"
+            }`}
+            title={`${label}${shortcut ? ` (${shortcut})` : ""}`}
+          >
+            {icon}
+            {/* Tooltip */}
+            <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
+              {label}
+              {shortcut && (
+                <span className="ml-1.5 text-white/30 font-mono">
+                  {shortcut}
+                </span>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
 
       <div className="w-full h-px bg-white/10 my-1" />
 
       {/* Entity button */}
-      <button
-        onClick={onOpenEntityModal}
-        className="w-9 h-9 flex items-center justify-center rounded-lg text-white/50 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all group relative"
-        title="Attach Entity"
-      >
-        <PlusCircle className="w-4 h-4" />
-        <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
-          Attach Entity
-        </div>
-      </button>
+      <div className="flex justify-center">
+        <button
+          onClick={onOpenEntityModal}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/50 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all group relative"
+          title="Attach Entity"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
+            Attach Entity
+          </div>
+        </button>
+      </div>
 
       <div className="w-full h-px bg-white/10 my-1" />
 
@@ -202,52 +208,58 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
       )}
 
       {/* Grid & Snap */}
-      <button
-        onClick={toggleGrid}
-        className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-          showGrid ? "text-white/70" : "text-white/30"
-        } hover:bg-white/10`}
-        title="Toggle Grid"
-      >
-        <Grid3X3 className="w-4 h-4" />
-      </button>
-      <button
-        onClick={toggleSnap}
-        className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-          snapToGrid ? "text-emerald-400" : "text-white/30"
-        } hover:bg-white/10`}
-        title="Snap to Grid"
-      >
-        <Magnet className="w-4 h-4" />
-      </button>
+      <div className="grid grid-cols-2 gap-1">
+        <button
+          onClick={toggleGrid}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
+            showGrid ? "text-white/70" : "text-white/30"
+          } hover:bg-white/10`}
+          title="Toggle Grid"
+        >
+          <Grid3X3 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={toggleSnap}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
+            snapToGrid ? "text-emerald-400" : "text-white/30"
+          } hover:bg-white/10`}
+          title="Snap to Grid"
+        >
+          <Magnet className="w-4 h-4" />
+        </button>
+      </div>
 
       <div className="w-full h-px bg-white/10 my-1" />
 
       {/* Undo / Redo */}
-      <button
-        onClick={undo}
-        className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
-        title="Undo (Ctrl+Z)"
-      >
-        <Undo2 className="w-4 h-4" />
-      </button>
-      <button
-        onClick={redo}
-        className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
-        title="Redo (Ctrl+Y)"
-      >
-        <Redo2 className="w-4 h-4" />
-      </button>
+      <div className="grid grid-cols-2 gap-1">
+        <button
+          onClick={undo}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={redo}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+          title="Redo (Ctrl+Y)"
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Delete */}
       {selectedNodeIds.size > 0 && (
-        <button
-          onClick={deleteSelectedNodes}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-red-400/70 hover:bg-red-500/20 hover:text-red-400 transition-all"
-          title="Delete selected"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex justify-center mt-1">
+          <button
+            onClick={deleteSelectedNodes}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-red-400/70 hover:bg-red-500/20 hover:text-red-400 transition-all"
+            title="Delete selected"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );

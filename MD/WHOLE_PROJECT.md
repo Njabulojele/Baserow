@@ -39,7 +39,10 @@
     - [9.1 The Hierarchy of Plans](#91-the-hierarchy-of-plans)
   - [10. Well-being \& Energy Management](#10-well-being--energy-management)
     - [10.1 Energy Tracking (`/well-being`)](#101-energy-tracking-well-being)
-  - [11. Integrations \& Subsystems](#11-integrations--subsystems)
+  - [11. Platform Robustness \& Data Integrity](#11-platform-robustness--data-integrity)
+    - [11.1 Soft Deletes \& Optimistic Concurrency](#111-soft-deletes--optimistic-concurrency)
+    - [11.2 Error Tracking \& Middlewares](#112-error-tracking--middlewares)
+  - [12. Integrations \& Subsystems](#12-integrations--subsystems)
 
 ---
 
@@ -207,7 +210,24 @@ Because high performance requires recovery.
 
 ---
 
-## 11. Integrations & Subsystems
+## 11. Platform Robustness & Data Integrity
+
+A high-resilience layer ensuring zero data loss and automated error tracking.
+
+### 11.1 Soft Deletes & Optimistic Concurrency
+
+- **Global Prisma Intercept:** The ORM is extended to trap `delete` and `deleteMany` commands, transforming them into `deletedAt` timestamp updates to preserve data history. Regular queries automatically filter out deleted records.
+- **Concurrency Control:** Critical entities feature a `@default(1) version` integer to strictly prevent stale data overwrites in the multi-user Team Hub.
+
+### 11.2 Error Tracking & Middlewares
+
+- **Sentry Sideloading:** Edge, Server, and Client crash telemetry mapped natively.
+- **Global tRPC Error Boundary:** Intercepts unhandled procedure exceptions, reports context (user, path, input) to Sentry, and returns normalized `TRPCError` to the UI.
+- **Audit Logs Middleware:** All state-mutating API calls are intercepted, with entity signatures automatically extracted and saved to an `AuditLog` table.
+
+---
+
+## 12. Integrations & Subsystems
 
 - **AI Assistants (Gemini/Groq):** Woven throughout the app for text generation, summarizing meeting notes, and structuring day plans.
 - **Payments (PayFast):** Integrated webhook routes (`/api/payfast/checkout`, `/api/payfast/notify`) to handle B2B SaaS subscription billing.

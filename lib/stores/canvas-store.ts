@@ -474,19 +474,48 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
 
     // ──── Drawing ────
     startDrawing: (point) => {
-      const { penColor, penThickness, activeTool } = get();
+      const { penColor, penThickness, activeTool, drawings } = get();
+
+      if (activeTool === "eraser") {
+        const remainingDrawings = drawings.filter(
+          (d) =>
+            !d.points.some(
+              (p) => Math.hypot(p.x - point.x, p.y - point.y) < 20,
+            ),
+        );
+        if (remainingDrawings.length !== drawings.length) {
+          set({ drawings: remainingDrawings, isDirty: true, isDrawing: true });
+        } else {
+          set({ isDrawing: true });
+        }
+        return;
+      }
+
       const path: DrawingPath = {
         id: generateId(),
         points: [point],
-        color: activeTool === "eraser" ? "erase" : penColor,
-        thickness: activeTool === "eraser" ? 20 : penThickness,
-        tool: activeTool === "eraser" ? "eraser" : "pen",
+        color: penColor,
+        thickness: penThickness,
+        tool: "pen",
       };
       set({ isDrawing: true, currentDrawingPath: path });
     },
 
     continueDrawing: (point) =>
       set((s) => {
+        if (s.activeTool === "eraser") {
+          const remainingDrawings = s.drawings.filter(
+            (d) =>
+              !d.points.some(
+                (p) => Math.hypot(p.x - point.x, p.y - point.y) < 20,
+              ),
+          );
+          if (remainingDrawings.length !== s.drawings.length) {
+            return { drawings: remainingDrawings, isDirty: true };
+          }
+          return {};
+        }
+
         if (!s.currentDrawingPath) return {};
         return {
           currentDrawingPath: {
@@ -497,7 +526,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
       }),
 
     endDrawing: () => {
-      const { currentDrawingPath } = get();
+      const { currentDrawingPath, activeTool } = get();
+
+      if (activeTool === "eraser") {
+        set({ isDrawing: false });
+        get().pushHistory();
+        return;
+      }
+
       if (!currentDrawingPath || currentDrawingPath.points.length < 2) {
         set({ isDrawing: false, currentDrawingPath: null });
         return;

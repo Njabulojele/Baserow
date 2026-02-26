@@ -365,15 +365,6 @@ export function CanvasViewport() {
     [nodes, viewport.zoom, updateNode, pushHistory],
   );
 
-  const cursorStyle =
-    activeTool === "pan" || spaceDownRef.current
-      ? "grab"
-      : activeTool === "pen"
-        ? "crosshair"
-        : activeTool === "eraser"
-          ? "cell"
-          : "default";
-
   // Calculate visible nodes for culling to boost performance
   const visibleNodes = React.useMemo(() => {
     const width = typeof window !== "undefined" ? window.innerWidth : 1920;
@@ -412,7 +403,11 @@ export function CanvasViewport() {
       className={`relative w-full h-full overflow-hidden bg-[#121214] ${
         activeTool === "pan" || spaceDownRef.current
           ? "cursor-grab active:cursor-grabbing"
-          : "cursor-default"
+          : activeTool === "pen"
+            ? "cursor-crosshair"
+            : activeTool === "eraser"
+              ? "cursor-cell"
+              : "cursor-default"
       }`}
       onContextMenu={(e) => e.preventDefault()}
       onWheel={handleWheel}
