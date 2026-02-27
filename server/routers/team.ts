@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { TRPCError } from "@trpc/server";
 import { EmailService } from "../services/emailService";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const teamRouter = router({
   // ----- Organization Methods -----
@@ -247,9 +248,17 @@ export const teamRouter = router({
     }),
 
   // Accept an invite
-  acceptInvite: protectedProcedure
+  acceptInvite: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
+      const { userId } = await auth();
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be signed in to accept an invitation.",
+        });
+      }
+
       const invite = await prisma.invitation.findUnique({
         where: { token: input.token },
       });
@@ -268,9 +277,32 @@ export const teamRouter = router({
         });
       }
 
+      // Ensure user exists in our database (Sync from Clerk)
+      let user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        const clerkUser = await currentUser();
+        if (!clerkUser) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Clerk user session not found.",
+          });
+        }
+
+        user = await prisma.user.create({
+          data: {
+            id: userId,
+            email: clerkUser.emailAddresses[0].emailAddress,
+            name:
+              `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() ||
+              null,
+            avatar: clerkUser.imageUrl,
+          },
+        });
+      }
+
       // Check if user is already a member
       const existingMember = await prisma.organizationMember.findUnique({
-        where: { userId_orgId: { userId: ctx.userId, orgId: invite.orgId } },
+        where: { userId_orgId: { userId: userId, orgId: invite.orgId } },
       });
 
       if (existingMember) {
@@ -284,7 +316,7 @@ export const teamRouter = router({
         // Create membership
         await tx.organizationMember.create({
           data: {
-            userId: ctx.userId,
+            userId: userId,
             orgId: invite.orgId,
             role: invite.role,
           },
@@ -301,7 +333,7 @@ export const teamRouter = router({
 
         // Set as user's active org
         await tx.user.update({
-          where: { id: ctx.userId },
+          where: { id: userId },
           data: { activeOrgId: invite.orgId },
         });
 
@@ -312,7 +344,7 @@ export const teamRouter = router({
         // Log activity
         await tx.activityLog.create({
           data: {
-            userId: ctx.userId,
+            userId: userId,
             orgId: invite.orgId,
             action: "JOINED",
             entityType: "MEMBER",
