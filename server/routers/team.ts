@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { TRPCError } from "@trpc/server";
+import { EmailService } from "../services/emailService";
 
 export const teamRouter = router({
   // ----- Organization Methods -----
@@ -185,8 +186,30 @@ export const teamRouter = router({
         },
       });
 
-      // TODO: Send email via RESEND or EmailJS
+      const org = await prisma.organization.findUnique({
+        where: { id: input.orgId },
+      });
+      const inviter = await prisma.user.findUnique({
+        where: { id: ctx.userId },
+      });
 
+      const emailService = new EmailService();
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const inviteUrl = `${appUrl}/invite/${invite.token}`;
+
+      await emailService.sendEmail({
+        to: input.email,
+        subject: `You have been invited to join ${org?.name}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+            <h2 style="color: #10b981;">You've been invited!</h2>
+            <p><strong>${inviter?.name || inviter?.email || "A team member"}</strong> has invited you to join <strong>${org?.name}</strong> as a ${input.role.toLowerCase()}.</p>
+            <p>Click the button below to accept your invitation and access the workspace.</p>
+            <a href="${inviteUrl}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 16px;">Accept Invitation</a>
+            <p style="margin-top: 32px; font-size: 12px; color: #888;">If you did not expect this invitation, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
       await prisma.activityLog.create({
         data: {
           userId: ctx.userId,
@@ -221,6 +244,86 @@ export const teamRouter = router({
         },
         orderBy: { createdAt: "desc" },
       });
+    }),
+
+  // Accept an invite
+  acceptInvite: protectedProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const invite = await prisma.invitation.findUnique({
+        where: { token: input.token },
+      });
+
+      if (!invite) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid invitation link.",
+        });
+      }
+
+      if (invite.status !== "PENDING" || invite.expiresAt < new Date()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invitation expired or already used.",
+        });
+      }
+
+      // Check if user is already a member
+      const existingMember = await prisma.organizationMember.findUnique({
+        where: { userId_orgId: { userId: ctx.userId, orgId: invite.orgId } },
+      });
+
+      if (existingMember) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "You are already a member of this organization.",
+        });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Create membership
+        await tx.organizationMember.create({
+          data: {
+            userId: ctx.userId,
+            orgId: invite.orgId,
+            role: invite.role,
+          },
+        });
+
+        // Mark invite as accepted
+        await tx.invitation.update({
+          where: { id: invite.id },
+          data: {
+            status: "ACCEPTED",
+            acceptedAt: new Date(),
+          },
+        });
+
+        // Set as user's active org
+        await tx.user.update({
+          where: { id: ctx.userId },
+          data: { activeOrgId: invite.orgId },
+        });
+
+        const org = await tx.organization.findUnique({
+          where: { id: invite.orgId },
+        });
+
+        // Log activity
+        await tx.activityLog.create({
+          data: {
+            userId: ctx.userId,
+            orgId: invite.orgId,
+            action: "JOINED",
+            entityType: "MEMBER",
+            entityName: "Organization",
+          },
+        });
+
+        return { success: true, orgId: invite.orgId, orgName: org?.name };
+      });
+
+      return result;
     }),
 
   // ----- Activity Feed -----
