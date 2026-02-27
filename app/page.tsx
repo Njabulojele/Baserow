@@ -16,7 +16,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/50 supports-[backdrop-filter]:bg-background/60">
+      <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/50 supports-backdrop-filter:bg-background/60">
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4363461712198221"
@@ -71,22 +71,28 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-4xl text-center space-y-6 md:space-y-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/50 border border-accent text-accent-foreground text-xs md:text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
             </span>
-            Mobile-First Experience
+            Enterprise-Grade Business OS
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1] animate-in fade-in slide-in-from-bottom-8 duration-700">
-            Never rely on <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">
-              memory again.
+            One unified brain for <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-500 to-purple-600 animate-gradient-x">
+              your entire business.
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 px-2">
-            Transform long-term visions into executable daily actions. Join
-            thousands of high-achievers orchestrating their lives with Baserow.
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 px-2 flex flex-col gap-2">
+            <span>
+              CRM, Infinite Canvas, Project Management, and Autonomous AI
+              Research.
+            </span>
+            <span>
+              Seamlessly integrated to replace 10 disjointed apps. Run your
+              operations from a single pane of glass.
+            </span>
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 w-full sm:w-auto px-4 sm:px-0">
@@ -94,7 +100,7 @@ export default function LandingPage() {
               href="/register"
               className="w-full sm:w-auto h-12 px-8 rounded-full bg-primary text-primary-foreground font-medium flex items-center justify-center gap-2 hover:bg-primary/90 hover:scale-105 transition-all shadow-lg shadow-primary/20 active:scale-95"
             >
-              Start for free
+              Launch Your Hub
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -134,45 +140,83 @@ export default function LandingPage() {
           <div className="text-center mb-12 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
               Everything you need to <br />
-              <span className="text-primary">master your workflow</span>
+              <span className="text-primary">run your entire company</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Stop switching between five different apps. Baserow brings your
-              goals, tasks, and habits into one unified system.
+              team, clients, projects, and pipeline into one unified system.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
             <FeatureCard
               icon={<Zap className="w-6 h-6 text-yellow-500" />}
-              title="Focus Mode"
-              description="Eliminate distractions with our purpose-built focus timer and blocking tools."
+              title="Infinite Canvas"
+              description="Drop live tasks, client profiles, and projects onto a boundless visual workspace. Connect ideas seamlessly."
             />
             <FeatureCard
               icon={<BarChart3 className="w-6 h-6 text-indigo-500" />}
-              title="Advanced Analytics"
-              description="Visualize your productivity trends and identify your peak performance hours."
+              title="Sales & CRM Pipeline"
+              description="Track high-ticket deals, client health scores, and automated follow-ups directly tied to your daily tasks."
             />
             <FeatureCard
               icon={<Bot className="w-6 h-6 text-cyan-500" />}
-              title="Research Agent"
-              description="AI-powered research assistant that gathers and summarizes information for you."
+              title="Autonomous AI Engine"
+              description="Deploy background AI agents that scrape competitors, synthesize data, and stream insights in real-time."
             />
             <FeatureCard
               icon={<Workflow className="w-6 h-6 text-orange-500" />}
-              title="Automated Workflows"
-              description="Streamline repetitive tasks with customizable automated workflows."
+              title="Multi-Tenant Team Hub"
+              description="Collaborate instantly with live presence, shared pipelines, and a real-time organizational activity feed."
             />
             <FeatureCard
               icon={<CheckCircle2 className="w-6 h-6 text-green-500" />}
-              title="Goal Tracking"
-              description="Break down annual vision goals into quarterly, monthly, and weekly actionable steps."
+              title="Project & Delivery"
+              description="Track budgets, dependencies, and recurring workloads with integrated time-boxing and calendar sync."
             />
             <FeatureCard
               icon={<Shield className="w-6 h-6 text-blue-500" />}
-              title="Private & Secure"
-              description="Your data is your own. We use enterprise-grade encryption to keep your plans safe."
+              title="Bank-Grade Execution"
+              description="Zero data loss architecture with global soft-deletes, enterprise audit logging, and strict optimistic concurrency."
             />
+          </div>
+        </div>
+      </section>
+
+      {/* The Consolidation / Stickiness Section */}
+      <section className="py-16 md:py-24 px-4 bg-primary/5 border-y border-border/50">
+        <div className="container mx-auto max-w-5xl text-center space-y-8">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+            Stop paying for 5 different subscriptions.
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            In Baserow, everything is connected. Your daily task is linked to
+            your project budget, which is attached to your CRM client, which
+            lives visually on your infinite canvas.{" "}
+            <strong className="text-foreground">
+              True context never leaves the screen.
+            </strong>
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-muted-foreground pt-8">
+            <div className="px-6 py-3 rounded-xl bg-card border border-border/50 line-through opacity-60">
+              Miro ($20/mo)
+            </div>
+            <span className="text-primary font-bold">+</span>
+            <div className="px-6 py-3 rounded-xl bg-card border border-border/50 line-through opacity-60">
+              HubSpot ($50/mo)
+            </div>
+            <span className="text-primary font-bold">+</span>
+            <div className="px-6 py-3 rounded-xl bg-card border border-border/50 line-through opacity-60">
+              Asana ($15/mo)
+            </div>
+            <span className="text-primary font-bold">+</span>
+            <div className="px-6 py-3 rounded-xl bg-card border border-border/50 line-through opacity-60">
+              ChatGPT ($20/mo)
+            </div>
+            <span className="text-primary font-bold text-xl">=</span>
+            <div className="px-8 py-4 rounded-2xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 transform scale-110">
+              Baserow Hub
+            </div>
           </div>
         </div>
       </section>
@@ -239,16 +283,16 @@ export default function LandingPage() {
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 <PricingItem text="Everything in Starter" included />
-                <PricingItem text="Unlock Analytics Dashboard" included />
-                <PricingItem text="AI Research Agent (Unlimited)" included />
-                <PricingItem text="Custom Workflows" included />
-                <PricingItem text="Priority Support" included />
+                <PricingItem text="Infinite Canvas Network" included />
+                <PricingItem text="AI Research Engine (Unlimited)" included />
+                <PricingItem text="CRM & Client Portals" included />
+                <PricingItem text="Enterprise Audit Logs" included />
               </ul>
               <Link
                 href="/api/payfast/checkout"
                 className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center hover:bg-primary/90 transition-all shadow-lg active:scale-95"
               >
-                Upgrade to Pro
+                Launch Team Hub
               </Link>
             </div>
           </div>
@@ -264,17 +308,17 @@ export default function LandingPage() {
 
             <div className="relative z-10 space-y-6 md:space-y-8">
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-                Ready to take control?
+                Ready to scale your execution?
               </h2>
               <p className="text-lg text-white/90 max-w-xl mx-auto">
-                Join the waitlist today and get early access to the future of
-                personal productivity.
+                Join high-performing teams trading fragmented tools for one
+                authoritative Business Operating System.
               </p>
               <Link
                 href="/register"
                 className="inline-flex h-12 md:h-14 px-8 rounded-full bg-white text-primary font-bold text-lg items-center justify-center hover:bg-gray-100 transition-colors shadow-lg active:scale-95"
               >
-                Get Started for Free
+                Launch Your Workspace
               </Link>
             </div>
           </div>

@@ -17,6 +17,7 @@ import {
   Activity,
   Briefcase,
   Zap,
+  PenTool,
 } from "lucide-react";
 
 import {
@@ -69,6 +70,16 @@ const mainRoutes = [
     label: "Calendar",
     icon: Calendar,
     href: "/calendar",
+  },
+  {
+    label: "Canvas",
+    icon: PenTool,
+    href: "/canvas",
+  },
+  {
+    label: "Team",
+    icon: Users,
+    href: "/team",
   },
 ];
 

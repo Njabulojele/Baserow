@@ -4,8 +4,9 @@ import {
   WorkflowTriggerType,
 } from "@prisma/client";
 import { EmailService } from "./emailService";
+import { ExtendedPrismaClient } from "../../lib/prisma";
 
-type PrismaInstance = PrismaClient;
+type PrismaInstance = ExtendedPrismaClient;
 
 interface WorkflowContext {
   leadId?: string;

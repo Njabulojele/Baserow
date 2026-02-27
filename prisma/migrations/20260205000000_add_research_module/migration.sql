@@ -1,4 +1,3 @@
-[dotenv@17.2.3] injecting env (4) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
 -- CreateEnum
 CREATE TYPE "ResearchScope" AS ENUM ('MARKET_ANALYSIS', 'LEAD_GENERATION', 'COMPETITIVE_INTELLIGENCE', 'BUSINESS_STRATEGY', 'INDUSTRY_TRENDS', 'CUSTOMER_INSIGHTS', 'GENERAL_RESEARCH');
 

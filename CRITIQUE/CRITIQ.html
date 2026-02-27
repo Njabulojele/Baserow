@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engineering Critique — OpenInfi BaseRow 2.0</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap");
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0a0b;
+        --surface: #111114;
+        --border: #1f1f27;
+        --accent: #e8ff47;
+        --accent2: #ff6b35;
+        --accent3: #5b8dee;
+        --text: #e2e2e8;
+        --muted: #6b6b78;
+        --critical: #ff4757;
+        --warning: #ffa502;
+        --good: #2ed573;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        min-height: 100vh;
+      }
+
+      /* Noise texture overlay */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.4;
+      }
+
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 48px 64px 40px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      header::after {
+        content: "";
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(
+          circle,
+          rgba(232, 255, 71, 0.07) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      .badge {
+        display: inline-block;
+        font-family: "Syne", sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        background: var(--accent);
+        color: #0a0a0b;
+        padding: 4px 10px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        font-family: "Fraunces", serif;
+        font-size: clamp(32px, 4vw, 58px);
+        font-weight: 700;
+        line-height: 1.05;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+      }
+
+      h1 em {
+        font-style: italic;
+        color: var(--accent);
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        max-width: 600px;
+      }
+
+      .meta {
+        display: flex;
+        gap: 32px;
+        margin-top: 28px;
+        flex-wrap: wrap;
+      }
+
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .meta-label {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .meta-value {
+        font-family: "Syne", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      /* Nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(10, 10, 11, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 0 64px;
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nav-tab {
+        font-family: "Syne", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 16px 20px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: all 0.2s;
+        text-decoration: none;
+      }
+
+      .nav-tab:hover {
+        color: var(--text);
+      }
+      .nav-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* Main layout */
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 64px 96px;
+      }
+
+      /* Score card */
+      .scorecard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        margin: 48px 0;
+      }
+
+      .score-cell {
+        background: var(--surface);
+        padding: 28px 24px;
+        text-align: center;
+      }
+
+      .score-label {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+
+      .score-value {
+        font-family: "Fraunces", serif;
+        font-size: 42px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .score-sub {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .score-red {
+        color: var(--critical);
+      }
+      .score-yellow {
+        color: var(--warning);
+      }
+      .score-green {
+        color: var(--good);
+      }
+      .score-blue {
+        color: var(--accent3);
+      }
+      .score-accent {
+        color: var(--accent);
+      }
+
+      /* Section */
+      .section {
+        padding-top: 72px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        margin-bottom: 32px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 16px;
+      }
+
+      .section-num {
+        font-family: "Syne", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+      }
+
+      h2 {
+        font-family: "Fraunces", serif;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        flex: 1;
+      }
+
+      h3 {
+        font-family: "Syne", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text);
+        margin: 28px 0 12px;
+      }
+
+      /* Critique cards */
+      .critique-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .critique-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid;
+        padding: 24px 28px;
+        transition: transform 0.15s;
+      }
+
+      .critique-card:hover {
+        transform: translateX(4px);
+      }
+
+      .critique-card.critical {
+        border-left-color: var(--critical);
+      }
+      .critique-card.warning {
+        border-left-color: var(--warning);
+      }
+      .critique-card.opportunity {
+        border-left-color: var(--accent3);
+      }
+      .critique-card.strength {
+        border-left-color: var(--good);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .severity-tag {
+        font-family: "Syne", sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 2px;
+      }
+
+      .tag-critical {
+        background: rgba(255, 71, 87, 0.15);
+        color: var(--critical);
+      }
+      .tag-warning {
+        background: rgba(255, 165, 2, 0.15);
+        color: var(--warning);
+      }
+      .tag-opportunity {
+        background: rgba(91, 141, 238, 0.15);
+        color: var(--accent3);
+      }
+      .tag-strength {
+        background: rgba(46, 213, 115, 0.15);
+        color: var(--good);
+      }
+
+      .card-title {
+        font-family: "Syne", sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        flex: 1;
+      }
+
+      .card-body {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.75;
+      }
+
+      .card-body strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .fix-block {
+        margin-top: 16px;
+        padding: 12px 16px;
+        background: rgba(232, 255, 71, 0.04);
+        border: 1px solid rgba(232, 255, 71, 0.1);
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .fix-block::before {
+        content: "→ FIX: ";
+        font-weight: 700;
+      }
+
+      /* Code snippet */
+      pre {
+        background: #0d0d10;
+        border: 1px solid var(--border);
+        padding: 16px 20px;
+        font-size: 12px;
+        overflow-x: auto;
+        margin: 12px 0;
+        color: #a8b2d8;
+        line-height: 1.6;
+      }
+
+      code {
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .keyword {
+        color: #c792ea;
+      }
+      .string {
+        color: #c3e88d;
+      }
+      .comment {
+        color: #546e7a;
+      }
+      .fn {
+        color: #82aaff;
+      }
+
+      /* What employees want */
+      .persona-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 20px 0;
+      }
+
+      @media (max-width: 700px) {
+        .persona-grid {
+          grid-template-columns: 1fr;
+        }
+        main,
+        header,
+        nav {
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+      }
+
+      .persona-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 24px;
+      }
+
+      .persona-icon {
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+
+      .persona-role {
+        font-family: "Syne", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent2);
+        margin-bottom: 8px;
+      }
+
+      .persona-name {
+        font-family: "Fraunces", serif;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .persona-wants {
+        list-style: none;
+        color: var(--muted);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .persona-wants li::before {
+        content: "▸ ";
+        color: var(--accent);
+      }
+
+      /* Roadmap */
+      .roadmap {
+        display: grid;
+        gap: 0;
+        border: 1px solid var(--border);
+        margin-top: 20px;
+      }
+
+      .roadmap-row {
+        display: grid;
+        grid-template-columns: 100px 1fr 120px;
+        border-bottom: 1px solid var(--border);
+        align-items: stretch;
+      }
+
+      .roadmap-row:last-child {
+        border-bottom: none;
+      }
+
+      .roadmap-row.header {
+        background: var(--surface);
+      }
+
+      .roadmap-cell {
+        padding: 14px 20px;
+        border-right: 1px solid var(--border);
+        font-size: 12px;
+      }
+
+      .roadmap-cell:last-child {
+        border-right: none;
+      }
+
+      .roadmap-row.header .roadmap-cell {
+        font-family: "Syne", sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .priority-chip {
+        display: inline-block;
+        font-family: "Syne", sans-serif;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+      }
+
+      .p1 {
+        background: rgba(255, 71, 87, 0.15);
+        color: var(--critical);
+      }
+      .p2 {
+        background: rgba(255, 165, 2, 0.15);
+        color: var(--warning);
+      }
+      .p3 {
+        background: rgba(91, 141, 238, 0.15);
+        color: var(--accent3);
+      }
+
+      /* Quote */
+      blockquote {
+        border-left: 3px solid var(--accent);
+        padding: 16px 24px;
+        margin: 24px 0;
+        background: rgba(232, 255, 71, 0.03);
+        font-family: "Fraunces", serif;
+        font-style: italic;
+        font-size: 16px;
+        color: var(--text);
+      }
+
+      blockquote footer {
+        font-family: "IBM Plex Mono", monospace;
+        font-style: normal;
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
+      /* Divider */
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 40px 0;
+      }
+
+      p {
+        margin-bottom: 14px;
+      }
+      p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Animate in */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .section {
+        animation: fadeUp 0.5s ease both;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="badge">Engineering Review · Confidential</div>
+      <h1>What <em>Top-5</em> Engineers<br />Would Change</h1>
+      <p class="subtitle">
+        A principal-level architectural critique of OpenInfi BaseRow 2.0 — from
+        the lens of engineers at Google, Meta, Stripe, Shopify, and Linear.
+      </p>
+      <div class="meta">
+        <div class="meta-item">
+          <span class="meta-label">Reviewed By</span>
+          <span class="meta-value">Principal Eng. Perspective</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Stack</span>
+          <span class="meta-value">Next.js 15 / Prisma / tRPC</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Version</span>
+          <span class="meta-value">2.0.0</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Overall Verdict</span>
+          <span class="meta-value" style="color: var(--warning)"
+            >Ship-Worthy, But Fragile</span
+          >
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="#scores" class="nav-tab">Scores</a>
+      <a href="#arch" class="nav-tab">Architecture</a>
+      <a href="#perf" class="nav-tab">Performance</a>
+      <a href="#dx" class="nav-tab">Dev Experience</a>
+      <a href="#personas" class="nav-tab">User Needs</a>
+      <a href="#missing" class="nav-tab">Missing Features</a>
+      <a href="#roadmap" class="nav-tab">Priority Roadmap</a>
+    </nav>
+
+    <main>
+      <!-- Scorecards -->
+      <div id="scores" class="scorecard">
+        <div class="score-cell">
+          <div class="score-label">Architecture</div>
+          <div class="score-value score-yellow">6.5</div>
+          <div class="score-sub">Sound but fragile</div>
+        </div>
+        <div class="score-cell">
+          <div class="score-label">Scalability</div>
+          <div class="score-value score-red">4</div>
+          <div class="score-sub">Single-tenant risks</div>
+        </div>
+        <div class="score-cell">
+          <div class="score-label">Observability</div>
+          <div class="score-value score-red">3</div>
+          <div class="score-sub">Near-blind in prod</div>
+        </div>
+        <div class="score-cell">
+          <div class="score-label">DX Quality</div>
+          <div class="score-value score-green">7.5</div>
+          <div class="score-sub">tRPC + Prisma ✓</div>
+        </div>
+        <div class="score-cell">
+          <div class="score-label">Feature Breadth</div>
+          <div class="score-value score-accent">9</div>
+          <div class="score-sub">Impressively wide</div>
+        </div>
+        <div class="score-cell">
+          <div class="score-label">Production Readiness</div>
+          <div class="score-value score-yellow">5</div>
+          <div class="score-sub">Missing safety nets</div>
+        </div>
+      </div>
+
+      <blockquote>
+        "This is the most ambitious solo/small-team product architecture I've
+        seen — but ambition without guardrails is a liability. The gap between
+        'it works on my machine' and 'it works at 10,000 orgs' is exactly where
+        this lives right now."
+        <footer>— Simulated Principal Engineer, Infra Systems</footer>
+      </blockquote>
+
+      <!-- Architecture -->
+      <div id="arch" class="section">
+        <div class="section-header">
+          <span class="section-num">01</span>
+          <h2>Architecture Concerns</h2>
+        </div>
+
+        <div class="critique-grid">
+          <div class="critique-card critical">
+            <div class="card-header">
+              <span class="severity-tag tag-critical">Critical</span>
+              <span class="card-title"
+                >The Express Microservice is a Time Bomb</span
+              >
+            </div>
+            <div class="card-body">
+              Running a standalone Express server to bypass Vercel timeouts is
+              clever engineering — but it's an unmanaged, stateful process.
+              <strong
+                >When it crashes, all WebSocket connections die silently</strong
+              >, active research jobs are lost, and no client will know why.
+              There is no supervisor, no restart policy, no health check
+              endpoint, and likely no PM2 or container orchestration.
+              <div class="fix-block">
+                Run this on Railway/Fly.io in a Docker container with PM2 or a
+                systemd supervisor. Expose a /health endpoint. Add a
+                Redis-backed job queue (BullMQ) so jobs survive restarts.
+                Inngest already handles retries — lean into it fully.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card critical">
+            <div class="card-header">
+              <span class="severity-tag tag-critical">Critical</span>
+              <span class="card-title">No Row-Level Security on NeonDB</span>
+            </div>
+            <div class="card-body">
+              Org isolation is enforced entirely in application code via
+              <code>organizationId</code> filters on Prisma queries.
+              <strong
+                >A single missed WHERE clause leaks every org's data.</strong
+              >
+              This is a GDPR/SOC2 nightmare and a common attack vector. Stripe,
+              Linear, and Notion all learned this the hard way early.
+              <div class="fix-block">
+                Enable PostgreSQL Row-Level Security (RLS) on NeonDB. Create a
+                policy:
+                <code
+                  >USING (organization_id = current_setting('app.org_id'))</code
+                >. Set the config before every transaction in a Prisma
+                middleware. Defense in depth.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Warning</span>
+              <span class="card-title">WebSocket Rooms Scale to ~1 Server</span>
+            </div>
+            <div class="card-body">
+              Socket.io with in-memory rooms works beautifully on one server.
+              The moment you need
+              <strong>two instances for redundancy or load</strong>, users on
+              Server A can't see events from users on Server B. This isn't a
+              distant problem — a single deploy restart causes this.
+              <div class="fix-block">
+                Add socket.io-redis-adapter with an Upstash Redis instance. 3
+                lines of code. Solves horizontal scaling forever. Worth doing
+                now before any production load.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Warning</span>
+              <span class="card-title"
+                >Inngest Job Fan-out Has No Backpressure</span
+              >
+            </div>
+            <div class="card-body">
+              If 50 orgs trigger research jobs simultaneously,
+              <strong>50 headless Puppeteer browsers spin up at once</strong>.
+              This will OOM the Express server and cause all 50 to fail. There's
+              no concurrency limit, no queue depth awareness, and no job
+              priority system.
+              <div class="fix-block">
+                Set Inngest concurrency limits per org (e.g. max 2 concurrent
+                research jobs per org). Add a job_queued state in the DB so
+                users see "Your research is queued (position 3)" — this is
+                actually a delightful UX, not a limitation.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card opportunity">
+            <div class="card-header">
+              <span class="severity-tag tag-opportunity">Opportunity</span>
+              <span class="card-title"
+                >tRPC + Prisma is Excellent — Go All-in</span
+              >
+            </div>
+            <div class="card-body">
+              The tRPC + Prisma + TypeScript stack is genuinely what Linear,
+              Vercel, and Planetscale use internally.
+              <strong>This is a strength</strong>. But the mixing of tRPC with
+              direct Server Actions suggests inconsistency in the codebase. Pick
+              one mutation pattern and stick to it, or you'll have a split-brain
+              debugging experience in 6 months.
+              <div class="fix-block">
+                Standardize on tRPC for all mutations. Use Server Actions only
+                for form-based progressive enhancement (rare). Add Zod
+                validation on every tRPC input. The type-safety payoff compounds
+                exponentially as the codebase grows.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div id="perf" class="section">
+        <div class="section-header">
+          <span class="section-num">02</span>
+          <h2>Performance & Reliability</h2>
+        </div>
+
+        <div class="critique-grid">
+          <div class="critique-card critical">
+            <div class="card-header">
+              <span class="severity-tag tag-critical">Critical</span>
+              <span class="card-title"
+                >Zero Observability = Flying Blind in Production</span
+              >
+            </div>
+            <div class="card-body">
+              There is no mention of error tracking (Sentry), distributed
+              tracing (OpenTelemetry), or structured logging.
+              <strong
+                >When the research engine silently fails at 2 AM, you won't know
+                until a customer tweets at you.</strong
+              >
+              Google/Meta engineers get paged within 60 seconds of an error
+              spike. You'll find out in 3 days.
+              <div class="fix-block">
+                Add Sentry (free tier handles plenty). Add Pino or Winston with
+                structured JSON logging to your Express server. Add a /metrics
+                endpoint for Prometheus if you ever self-host. Costs $0 and
+                saves days of debugging.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Warning</span>
+              <span class="card-title">Infinite Canvas Will Lag at Scale</span>
+            </div>
+            <div class="card-body">
+              DOM-based canvas with absolute positioning works up to ~200-500
+              nodes. Beyond that,
+              <strong
+                >layout thrashing, expensive reflows, and React reconciliation
+                overhead</strong
+              >
+              will cause noticeable jank. Figma uses WebGL. Miro uses a hybrid
+              virtualization approach. This isn't a day-1 problem, but it's an
+              architectural ceiling.
+              <div class="fix-block">
+                Implement spatial indexing (quadtree or R-tree) to only render
+                nodes within the viewport. Virtualize off-screen nodes. This
+                single optimization extends the DOM approach 10x before needing
+                a WebGL rewrite.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Warning</span>
+              <span class="card-title">Prisma N+1 Queries on Dashboards</span>
+            </div>
+            <div class="card-body">
+              The Team Hub aggregates metrics from Projects, Tasks, Clients,
+              Goals, and Activity. Without explicit
+              <code>include</code> optimization and
+              <strong>Prisma query logging turned on</strong>, dashboards likely
+              fire 20-50 individual DB queries per load. NeonDB on free tier has
+              0.5s cold start latency — this compounds badly.
+              <div class="fix-block">
+                Enable Prisma query logging in development. Use
+                prisma.$transaction for atomic reads. Add a Redis cache layer
+                (Upstash) for dashboard aggregations with a 30-second TTL. The
+                dashboard doesn't need to be real-time for static metrics.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DX -->
+      <div id="dx" class="section">
+        <div class="section-header">
+          <span class="section-num">03</span>
+          <h2>Developer Experience</h2>
+        </div>
+
+        <div class="critique-grid">
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Warning</span>
+              <span class="card-title">No E2E Test Coverage Mentioned</span>
+            </div>
+            <div class="card-body">
+              A platform touching CRM data, financial records (lifetimeValue,
+              outstandingBalance), and authenticated multi-tenant data with
+              <strong>zero mention of Playwright or Cypress tests</strong> is a
+              confidence problem for enterprise buyers. When a CRM deal
+              accidentally shows in the wrong org, you need to know before they
+              do.
+              <div class="fix-block">
+                Add Playwright tests for critical paths: auth flow, deal CRUD,
+                canvas save/load, research job creation. 10 tests covering happy
+                paths. Run on every PR. This is non-negotiable for B2B SaaS
+                trust.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card opportunity">
+            <div class="card-header">
+              <span class="severity-tag tag-opportunity">Opportunity</span>
+              <span class="card-title"
+                >Zustand + Undo Stack is Well-Architected</span
+              >
+            </div>
+            <div class="card-body">
+              The canvas undo/redo with a 50-step history stack in Zustand is
+              genuinely good engineering.
+              <strong
+                >This is exactly what Figma's internal engineers
+                recommend</strong
+              >
+              for canvas state. Consider extracting this pattern into a
+              <code>useHistoryStore</code> generic hook — it could power task
+              editing, pipeline stage changes, and goal updates too.
+            </div>
+          </div>
+
+          <div class="critique-card opportunity">
+            <div class="card-header">
+              <span class="severity-tag tag-opportunity">Opportunity</span>
+              <span class="card-title"
+                >AI Integration is Scattered — Centralize It</span
+              >
+            </div>
+            <div class="card-body">
+              Gemini and Groq are used across research, text generation, meeting
+              notes, and day planning — but each call is likely its own
+              implementation.
+              <strong
+                >No prompt versioning, no usage tracking, no fallback
+                logic.</strong
+              >
+              When Groq's API is down, which features silently break?
+              <div class="fix-block">
+                Create an <code>ai-gateway.ts</code> module that wraps all LLM
+                calls. Add: provider fallback chain (try Groq → fallback
+                Gemini), prompt templates as constants (version-controlled),
+                usage logging to DB, and per-org token budgets for cost control.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Personas -->
+      <div id="personas" class="section">
+        <div class="section-header">
+          <span class="section-num">04</span>
+          <h2>What Employees & Companies Actually Want</h2>
+        </div>
+
+        <p style="color: var(--muted); margin-bottom: 24px">
+          The product has all the modules — but is it solving the right friction
+          for each buyer persona? Here's what real users inside companies would
+          demand.
+        </p>
+
+        <div class="persona-grid">
+          <div class="persona-card">
+            <div class="persona-icon">🧑‍💼</div>
+            <div class="persona-role">Individual Contributor</div>
+            <div class="persona-name">The Overwhelmed Employee</div>
+            <ul class="persona-wants">
+              <li>
+                <strong>One view to start the day</strong> — not 8 modules to
+                check
+              </li>
+              <li>Mobile-first. The daily task view must work on a phone</li>
+              <li>
+                Slack/Teams integration — tasks from messages, not another inbox
+              </li>
+              <li>No context switching: AI that writes the update for me</li>
+              <li>
+                Energy tracker is niche — they want
+                <strong>focus mode / DND</strong>
+              </li>
+              <li>Instant search across everything (Cmd+K)</li>
+            </ul>
+          </div>
+
+          <div class="persona-card">
+            <div class="persona-icon">📊</div>
+            <div class="persona-role">Sales Team</div>
+            <div class="persona-name">The Revenue Closer</div>
+            <ul class="persona-wants">
+              <li>
+                Email sequences tracked <strong>inside the CRM</strong> (open
+                rates, clicks)
+              </li>
+              <li>
+                One-click "call log" — voice memo → auto-transcribed to deal
+                notes
+              </li>
+              <li>AI that writes follow-up emails from meeting context</li>
+              <li>LinkedIn enrichment on leads (missing critical data)</li>
+              <li>
+                Deal health score <strong>prediction</strong> — not just
+                tracking
+              </li>
+              <li>Revenue forecasting dashboard (basic, but must-have)</li>
+            </ul>
+          </div>
+
+          <div class="persona-card">
+            <div class="persona-icon">🏢</div>
+            <div class="persona-role">Company (B2B Buyer)</div>
+            <div class="persona-name">The IT/Ops Decision Maker</div>
+            <ul class="persona-wants">
+              <li>
+                <strong>SSO via SAML/SCIM</strong> — non-negotiable for
+                enterprise
+              </li>
+              <li>Audit logs: who did what, when, from where</li>
+              <li>Data residency option (EU data stays in EU)</li>
+              <li>
+                Role permissions that are <strong>granular per module</strong>
+              </li>
+              <li>SOC2 Type II or ISO 27001 certification path</li>
+              <li>API access with rate limiting and per-key scoping</li>
+            </ul>
+          </div>
+
+          <div class="persona-card">
+            <div class="persona-icon">🧑‍🔧</div>
+            <div class="persona-role">Team Manager / Ops</div>
+            <div class="persona-name">The Delivery Lead</div>
+            <ul class="persona-wants">
+              <li>
+                Workload balancing view —
+                <strong>who is over-allocated?</strong>
+              </li>
+              <li>Automated standup summaries from task completions</li>
+              <li>
+                Project health alerts — if a deadline is at risk, tell me Monday
+              </li>
+              <li>Time tracking that exports to Harvest/Toggl format</li>
+              <li>Custom fields on everything (Notion-style)</li>
+              <li>Bulk actions: reassign 30 tasks at once</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Missing Features -->
+      <div id="missing" class="section">
+        <div class="section-header">
+          <span class="section-num">05</span>
+          <h2>What's Missing That Competitors Have</h2>
+        </div>
+
+        <div class="critique-grid">
+          <div class="critique-card critical">
+            <div class="card-header">
+              <span class="severity-tag tag-critical">Gap</span>
+              <span class="card-title">No Offline / Optimistic UI</span>
+            </div>
+            <div class="card-body">
+              Every mutation requires a network round trip.
+              <strong>Linear's killer feature is that it feels instant</strong>
+              — it writes to local state first, syncs in background. On a bad
+              connection (conference WiFi, mobile), this app will feel broken
+              while Linear feels native. This is the #1 differentiator people
+              don't realize they care about until they feel it.
+              <div class="fix-block">
+                Implement optimistic updates in tRPC with rollback on error.
+                Start with task completion — the most common action. TanStack
+                Query makes this trivial with <code>onMutate</code> +
+                <code>onError</code> rollback.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card critical">
+            <div class="card-header">
+              <span class="severity-tag tag-critical">Gap</span>
+              <span class="card-title"
+                >No Public API / Webhooks for Customers</span
+              >
+            </div>
+            <div class="card-body">
+              Enterprise customers need to connect this to their existing stack.
+              <strong
+                >No REST API, no webhook system, no Zapier integration</strong
+              >
+              means you're a dead-end tool. Every competing platform (Notion,
+              Monday, ClickUp, Pipedrive) solved this in year 1. Without it, you
+              cannot land mid-market deals.
+              <div class="fix-block">
+                Build a public REST API alongside tRPC (just expose tRPC
+                procedures as REST). Add a WebhooksConfig table: customers
+                register URLs, and your Inngest jobs fire them on events. This
+                unlocks Zapier natively and eliminates 80% of integration
+                objections.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Gap</span>
+              <span class="card-title">No Native Mobile App or PWA</span>
+            </div>
+            <div class="card-body">
+              The well-being tracker, daily planning, and task completion — the
+              highest-frequency features — are things
+              <strong>users want to do from their phone</strong>. A PWA with
+              service worker caching would unlock 2x daily active usage. No
+              mobile = no habit formation = churn.
+            </div>
+          </div>
+
+          <div class="critique-card warning">
+            <div class="card-header">
+              <span class="severity-tag tag-warning">Gap</span>
+              <span class="card-title">No Notification / Alerting System</span>
+            </div>
+            <div class="card-body">
+              Tasks go overdue. Deal stages change. Research completes.
+              <strong
+                >None of these trigger push notifications or in-app
+                alerts.</strong
+              >
+              The activity feed shows what happened — but only if you're already
+              looking at the dashboard. The app has no way to pull users back
+              in, which is a retention and awareness problem.
+              <div class="fix-block">
+                Build a Notification entity in Prisma. Trigger notifications via
+                Inngest on key events. Render an inbox (bell icon) in the nav.
+                Add email digest (Resend is already integrated). This closes the
+                engagement loop.
+              </div>
+            </div>
+          </div>
+
+          <div class="critique-card opportunity">
+            <div class="card-header">
+              <span class="severity-tag tag-opportunity">Untapped</span>
+              <span class="card-title"
+                >The AI Research Engine is a Standalone Product</span
+              >
+            </div>
+            <div class="card-body">
+              The Puppeteer-driven autonomous research engine with real-time
+              terminal streaming is
+              <strong>genuinely novel and valuable on its own</strong>. Most
+              CRMs charge $500+/mo for basic enrichment that doesn't do what
+              this does. This deserves its own pricing tier, its own landing
+              page, and its own API product. Don't bury it.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roadmap -->
+      <div id="roadmap" class="section">
+        <div class="section-header">
+          <span class="section-num">06</span>
+          <h2>Priority Roadmap — What to Build Next</h2>
+        </div>
+
+        <p style="color: var(--muted); margin-bottom: 20px">
+          Ranked by impact-to-effort ratio, as a principal engineer would
+          prioritize for a series-A sprint planning session.
+        </p>
+
+        <div class="roadmap">
+          <div class="roadmap-row header">
+            <div class="roadmap-cell">Priority</div>
+            <div class="roadmap-cell">Item</div>
+            <div class="roadmap-cell">Effort</div>
+          </div>
+
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P0</span>
+            </div>
+            <div class="roadmap-cell">
+              Row-Level Security on NeonDB (org data isolation)
+            </div>
+            <div class="roadmap-cell" style="color: var(--good)">~1 day</div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P0</span>
+            </div>
+            <div class="roadmap-cell">
+              Sentry + structured logging on Express server
+            </div>
+            <div class="roadmap-cell" style="color: var(--good)">~2 hours</div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P0</span>
+            </div>
+            <div class="roadmap-cell">
+              Containerize Express server with PM2 + health endpoint
+            </div>
+            <div class="roadmap-cell" style="color: var(--good)">~1 day</div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P1</span>
+            </div>
+            <div class="roadmap-cell">
+              Redis adapter for Socket.io (horizontal scale)
+            </div>
+            <div class="roadmap-cell" style="color: var(--good)">~3 hours</div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P1</span>
+            </div>
+            <div class="roadmap-cell">
+              In-app Notification system (bell icon + Inngest triggers)
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~3 days
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p1">P1</span>
+            </div>
+            <div class="roadmap-cell">
+              Optimistic UI for task completion (tRPC onMutate)
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~2 days
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p2">P2</span>
+            </div>
+            <div class="roadmap-cell">
+              Global Cmd+K search across all entities
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~3 days
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p2">P2</span>
+            </div>
+            <div class="roadmap-cell">
+              Public webhook system (customer-registered URLs)
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~1 week
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p2">P2</span>
+            </div>
+            <div class="roadmap-cell">
+              Audit log table (who changed what, when)
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~2 days
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p2">P2</span>
+            </div>
+            <div class="roadmap-cell">
+              AI gateway module (fallback chain + prompt versioning)
+            </div>
+            <div class="roadmap-cell" style="color: var(--warning)">
+              ~2 days
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p3">P3</span>
+            </div>
+            <div class="roadmap-cell">
+              PWA + service worker for mobile daily planning
+            </div>
+            <div class="roadmap-cell" style="color: var(--critical)">
+              ~1 week
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p3">P3</span>
+            </div>
+            <div class="roadmap-cell">
+              SAML/SCIM SSO via Clerk (enterprise deals unlock)
+            </div>
+            <div class="roadmap-cell" style="color: var(--critical)">
+              ~2 weeks
+            </div>
+          </div>
+          <div class="roadmap-row">
+            <div class="roadmap-cell">
+              <span class="priority-chip p3">P3</span>
+            </div>
+            <div class="roadmap-cell">
+              Canvas viewport virtualization (quadtree culling)
+            </div>
+            <div class="roadmap-cell" style="color: var(--critical)">
+              ~1 week
+            </div>
+          </div>
+        </div>
+
+        <hr />
+
+        <blockquote>
+          "The core insight here is sound — an all-in-one OS for small B2B
+          companies is a real market. The research engine alone is worth
+          funding. But you have to secure the foundation before scaling the
+          surface area. Ship fewer features. Make the ones you have
+          bulletproof."
+          <footer>— Simulated Staff Engineer, Distributed Systems</footer>
+        </blockquote>
+      </div>
+    </main>
+
+    <script>
+      // Active nav tab on scroll
+      const sections = document.querySelectorAll("[id]");
+      const navTabs = document.querySelectorAll(".nav-tab");
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              navTabs.forEach((t) => t.classList.remove("active"));
+              const active = document.querySelector(
+                `.nav-tab[href="#${entry.target.id}"]`,
+              );
+              if (active) active.classList.add("active");
+            }
+          });
+        },
+        { rootMargin: "-40% 0px -55% 0px" },
+      );
+
+      sections.forEach((s) => observer.observe(s));
+    </script>
+  </body>
+</html>

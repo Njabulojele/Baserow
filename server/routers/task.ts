@@ -5,6 +5,7 @@ import {
   recalculateKeyStepProgress,
   recalculateGoalProgress,
 } from "../progress-utils";
+import { dispatchWebhook } from "../../lib/webhooks";
 
 export const taskRouter = router({
   // Get all tasks for the current user
@@ -89,13 +90,16 @@ export const taskRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.task.create({
+      const task = await ctx.prisma.task.create({
         data: {
           ...input,
           userId: ctx.userId,
           status: "not_started",
         },
       });
+
+      await dispatchWebhook(ctx.organizationId, "task.created", task);
+      return task;
     }),
 
   // Update a task (triggering rebuild)
@@ -140,6 +144,8 @@ export const taskRouter = router({
         await recalculateKeyStepProgress(ctx.prisma, updatedTask.keyStepId);
       }
 
+      await dispatchWebhook(ctx.organizationId, "task.updated", updatedTask);
+
       return updatedTask;
     }),
 
@@ -163,6 +169,8 @@ export const taskRouter = router({
         // If linked directly to goal, we might want to handle that too
         // For now, let's just re-check direct goal tasks if we support that
       }
+
+      await dispatchWebhook(ctx.organizationId, "task.deleted", task);
 
       return task;
     }),

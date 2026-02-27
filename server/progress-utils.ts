@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
+import { ExtendedPrismaClient } from "../lib/prisma";
 
 /**
  * Recalculates the progress of a KeyStep based on its linked tasks.
  * Progress = (Completed Tasks / Total Tasks) * 100
  */
 export async function recalculateKeyStepProgress(
-  prisma: PrismaClient,
+  prisma: ExtendedPrismaClient,
   keyStepId: string,
 ) {
   const tasks = await prisma.task.findMany({
@@ -48,7 +49,7 @@ export async function recalculateKeyStepProgress(
  * So Goal Progress should be average of KeySteps progress.
  */
 export async function recalculateGoalProgress(
-  prisma: PrismaClient,
+  prisma: ExtendedPrismaClient,
   goalId: string,
 ) {
   const keySteps = await prisma.keyStep.findMany({

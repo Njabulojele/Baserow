@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { withTenant } from "@/lib/prisma";
 
 export const clientRouter = router({
   // Get all clients for the user
@@ -30,15 +31,17 @@ export const clientRouter = router({
         ];
       }
 
-      return ctx.prisma.client.findMany({
-        where,
-        orderBy: { updatedAt: "desc" },
-        include: {
-          _count: {
-            select: { projects: true, communications: true },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.client.findMany({
+          where,
+          orderBy: { updatedAt: "desc" },
+          include: {
+            _count: {
+              select: { projects: true, communications: true },
+            },
+            healthScore: true,
           },
-          healthScore: true,
-        },
+        });
       });
     }),
 
@@ -46,24 +49,29 @@ export const clientRouter = router({
   getClient: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const client = await ctx.prisma.client.findUnique({
-        where: { id: input.id },
-        include: {
-          projects: {
-            where: { archivedAt: null },
-            select: { id: true, name: true, color: true, status: true },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const client = await prisma.client.findUnique({
+          where: { id: input.id },
+          include: {
+            projects: {
+              where: { archivedAt: null },
+              select: { id: true, name: true, color: true, status: true },
+            },
+            _count: {
+              select: { communications: true, projects: true },
+            },
           },
-          _count: {
-            select: { communications: true, projects: true },
-          },
-        },
+        });
+
+        if (!client || client.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
+
+        return client;
       });
-
-      if (!client || client.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
-      }
-
-      return client;
     }),
 
   // Create client
@@ -81,21 +89,21 @@ export const clientRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Basic validation handled by Zod, but we can add logic here if needed
-      // For email, handle empty string as null if unique constraint issues arise (though optional string helps)
-
-      return ctx.prisma.client.create({
-        data: {
-          userId: ctx.userId,
-          name: input.name,
-          companyName: input.companyName,
-          email: input.email || "", // Schema has String (not optional? let's check view_file output)
-          phone: input.phone,
-          status: input.status,
-          notes: input.notes,
-          industry: input.industry,
-          website: input.website,
-        },
+      return withTenant(ctx.organizationId, async (prisma) => {
+        return prisma.client.create({
+          data: {
+            userId: ctx.userId,
+            organizationId: ctx.organizationId,
+            name: input.name,
+            companyName: input.companyName,
+            email: input.email || "", // Schema has String (not optional? let's check view_file output)
+            phone: input.phone,
+            status: input.status,
+            notes: input.notes,
+            industry: input.industry,
+            website: input.website,
+          },
+        });
       });
     }),
 
@@ -115,26 +123,31 @@ export const clientRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const client = await ctx.prisma.client.findUnique({
-        where: { id: input.id },
-      });
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const client = await prisma.client.findUnique({
+          where: { id: input.id },
+        });
 
-      if (!client || client.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
-      }
+        if (!client || client.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
 
-      return ctx.prisma.client.update({
-        where: { id: input.id },
-        data: {
-          name: input.name,
-          companyName: input.companyName,
-          email: input.email,
-          phone: input.phone,
-          status: input.status,
-          notes: input.notes,
-          industry: input.industry,
-          website: input.website,
-        },
+        return prisma.client.update({
+          where: { id: input.id },
+          data: {
+            name: input.name,
+            companyName: input.companyName,
+            email: input.email,
+            phone: input.phone,
+            status: input.status,
+            notes: input.notes,
+            industry: input.industry,
+            website: input.website,
+          },
+        });
       });
     }),
 
@@ -142,16 +155,21 @@ export const clientRouter = router({
   deleteClient: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const client = await ctx.prisma.client.findUnique({
-        where: { id: input.id },
-      });
+      return withTenant(ctx.organizationId, async (prisma) => {
+        const client = await prisma.client.findUnique({
+          where: { id: input.id },
+        });
 
-      if (!client || client.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
-      }
+        if (!client || client.userId !== ctx.userId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
 
-      return ctx.prisma.client.delete({
-        where: { id: input.id },
+        return prisma.client.delete({
+          where: { id: input.id },
+        });
       });
     }),
 });

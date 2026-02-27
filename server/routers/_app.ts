@@ -21,6 +21,21 @@ import { clientHealthRouter } from "./clientHealth";
 import { crmAutomationRouter } from "./crmAutomation";
 import { crmActivityRouter } from "./crmActivity";
 
+// Canvas
+import { canvasRouter } from "./canvas";
+
+// Team
+import { teamRouter } from "./team";
+
+// Notifications
+import { notificationRouter } from "./notification";
+
+// Global Search
+import { searchRouter } from "./search";
+
+// Webhooks
+import { webhookRouter } from "./webhook";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -43,6 +58,21 @@ export const appRouter = router({
   clientHealth: clientHealthRouter,
   crmAutomation: crmAutomationRouter,
   crmActivity: crmActivityRouter,
+
+  // Canvas
+  canvas: canvasRouter,
+
+  // Team
+  team: teamRouter,
+
+  // Notifications
+  notification: notificationRouter,
+
+  // Global Search
+  search: searchRouter,
+
+  // Webhooks
+  webhook: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;

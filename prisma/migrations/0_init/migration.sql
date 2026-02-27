@@ -1,4 +1,3 @@
-[dotenv@17.2.3] injecting env (4) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 

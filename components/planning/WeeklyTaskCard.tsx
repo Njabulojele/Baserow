@@ -30,16 +30,32 @@ const priorityColors: Record<string, string> = {
 export function WeeklyTaskCard({ task }: WeeklyTaskCardProps) {
   const utils = trpc.useUtils();
   const completeMutation = trpc.task.completeTask.useMutation({
-    onMutate: async () => {
+    onMutate: async ({ id }) => {
       // Optimistic update
       await utils.planning.getWeeklyOverview.cancel();
+      const previousData = utils.planning.getWeeklyOverview.getData();
+
+      utils.planning.getWeeklyOverview.setData({}, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          tasks: old.tasks.map((t: any) =>
+            t.id === id ? { ...t, status: "done" } : t,
+          ),
+        };
+      });
+
+      return { previousData };
     },
     onSuccess: () => {
       utils.planning.getWeeklyOverview.invalidate();
       toast.success("Task completed!");
     },
-    onError: (err) => {
+    onError: (err, newTodo, context) => {
       toast.error("Failed: " + err.message);
+      if (context?.previousData) {
+        utils.planning.getWeeklyOverview.setData({}, context.previousData);
+      }
     },
   });
 
