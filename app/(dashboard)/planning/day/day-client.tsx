@@ -161,7 +161,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
       {/* Header with Quick Actions */}
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Day Navigation
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">

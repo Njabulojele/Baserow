@@ -75,7 +75,7 @@ export function TeamClient() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
+              <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">{org.name}</h1>
               <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs font-mono text-white/60">
                 {org.plan.toUpperCase()}
               </span>

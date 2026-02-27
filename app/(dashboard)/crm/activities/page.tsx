@@ -103,7 +103,7 @@ export default function ActivitiesPage() {
         <div className="flex items-center gap-2">
           <Activity className="h-8 w-8 text-accent" />
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+            <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
               Activities
             </h2>
             <p className="text-muted-foreground">Log and track interactions</p>
@@ -115,13 +115,13 @@ export default function ActivitiesPage() {
         {/* Form (Left) */}
         <Card className="md:col-span-5 h-fit bg-card border-none shadow-sm">
           <CardHeader>
-            <CardTitle className="text-white-smoke">Log New Activity</CardTitle>
+            <CardTitle className="text-alabaster">Log New Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Type */}
               <div className="space-y-2">
-                <Label className="text-white-smoke">Activity Type *</Label>
+                <Label className="text-alabaster">Activity Type *</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {ACTIVITY_TYPES.map((t) => (
                     <Button
@@ -144,7 +144,7 @@ export default function ActivitiesPage() {
 
               {/* Subject */}
               <div className="space-y-2">
-                <Label htmlFor="subject" className="text-white-smoke">
+                <Label htmlFor="subject" className="text-alabaster">
                   Subject *
                 </Label>
                 <Input
@@ -158,7 +158,7 @@ export default function ActivitiesPage() {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-white-smoke">
+                <Label htmlFor="description" className="text-alabaster">
                   Description
                 </Label>
                 <Textarea
@@ -172,7 +172,7 @@ export default function ActivitiesPage() {
 
               {/* Related To (Lead) */}
               <div className="space-y-2">
-                <Label className="text-white-smoke">Lead</Label>
+                <Label className="text-alabaster">Lead</Label>
                 <Select
                   value={selectedLeadId}
                   onValueChange={setSelectedLeadId}
@@ -194,7 +194,7 @@ export default function ActivitiesPage() {
 
               {/* Related To (Client) */}
               <div className="space-y-2">
-                <Label className="text-white-smoke">Client</Label>
+                <Label className="text-alabaster">Client</Label>
                 <Select
                   value={selectedClientId}
                   onValueChange={setSelectedClientId}
@@ -236,7 +236,7 @@ export default function ActivitiesPage() {
         <Card className="md:col-span-7 flex flex-col overflow-hidden bg-card border-none shadow-sm">
           <CardHeader className="shrink-0">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-white-smoke">Activity Log</CardTitle>
+              <CardTitle className="text-alabaster">Activity Log</CardTitle>
               <div className="relative w-48">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -273,7 +273,7 @@ export default function ActivitiesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-semibold text-sm text-white-smoke truncate">
+                        <h4 className="font-semibold text-sm text-alabaster truncate">
                           {activity.subject}
                         </h4>
                         <span className="text-[10px] text-muted-foreground shrink-0 mt-1">

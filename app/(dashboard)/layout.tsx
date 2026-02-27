@@ -52,41 +52,43 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-30 flex h-14 sm:h-16 shrink-0 items-center gap-2 border-b px-4 bg-background/80 backdrop-blur-md">
-          <SidebarTrigger className="-ml-1 h-9 w-9 lg:hidden" />
-          <div className="w-px h-4 bg-border mx-2" />
+        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b border-border/30 px-4 bg-background">
+          <SidebarTrigger className="-ml-1 h-8 w-8 lg:hidden text-muted-foreground/40" />
+          <div className="w-px h-4 bg-border/20 mx-2" />
           <div className="flex items-center gap-2 lg:hidden">
             <Image
               src="/logo.png"
               alt="Logo"
-              width={24}
-              height={24}
+              width={20}
+              height={20}
               className="rounded"
             />
-            <span className="font-bold text-sm tracking-tight text-white-smoke">
+            <span className="font-mono text-xs font-bold tracking-wide text-alabaster">
               BaseRow
             </span>
           </div>
           <div className="flex-1" />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <NotificationBell />
           </div>
         </header>
         <DashboardShell>
           <div className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-[1600px] mx-auto min-w-0 flex flex-col">
             <main className="flex-1 w-full min-h-0">{children}</main>
-            <footer className="py-6 text-center text-sm text-muted-foreground shrink-0">
-              Made with{" "}
-              <Heart className="w-4 h-4 text-red-500 fill-red-500 inline mx-0.5" />{" "}
-              by{" "}
-              <a
-                href="https://pinltdco.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium hover:underline text-foreground"
-              >
-                OpenInfinity Pty Ltd
-              </a>
+            <footer className="py-4 text-center shrink-0">
+              <p className="text-[10px] font-mono text-muted-foreground/30 uppercase tracking-widest">
+                Made with{" "}
+                <Heart className="w-3 h-3 text-red-500/40 fill-red-500/40 inline mx-0.5" />{" "}
+                by{" "}
+                <a
+                  href="https://pinltdco.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-alabaster transition-colors"
+                >
+                  OpenInfinity Pty Ltd
+                </a>
+              </p>
             </footer>
           </div>
         </DashboardShell>

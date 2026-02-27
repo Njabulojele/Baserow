@@ -428,10 +428,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   return (
     <div className="w-full max-w-full overflow-x-hidden p-4 sm:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
+        <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
           Dashboard
         </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1 text-white-smoke/60">
+        <p className="text-[10px] font-mono text-muted-foreground/40 mt-1 uppercase tracking-widest">
           Your productivity at a glance
         </p>
       </div>

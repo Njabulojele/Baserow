@@ -20,14 +20,24 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { ResearchScope, SearchMethod } from "@prisma/client";
 import ReactMarkdown from "react-markdown";
+import { cn } from "@/lib/utils";
 
 interface ResearchCreationModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+const DEFAULT_FORM = {
+  title: "",
+  originalPrompt: "",
+  scope: ResearchScope.GENERAL_RESEARCH as ResearchScope,
+  searchMethod: SearchMethod.GEMINI_GROUNDING as SearchMethod,
+  goalId: undefined as string | undefined,
+  geminiApiKey: "",
+};
 
 export function ResearchCreationModal({
   open,
@@ -36,98 +46,59 @@ export function ResearchCreationModal({
   const [step, setStep] = useState<
     "create" | "refining" | "review" | "starting"
   >("create");
-  const [formData, setFormData] = useState({
-    title: "",
-    originalPrompt: "",
-    scope: ResearchScope.GENERAL_RESEARCH as ResearchScope,
-    searchMethod: SearchMethod.GEMINI_GROUNDING as SearchMethod,
-    goalId: undefined as string | undefined,
-    geminiApiKey: "",
-  });
+  const [formData, setFormData] = useState({ ...DEFAULT_FORM });
   const [researchId, setResearchId] = useState<string>("");
   const [refinedPrompt, setRefinedPrompt] = useState<string>("");
 
   const createMutation = trpc.research.create.useMutation();
   const refineMutation = trpc.research.refinePrompt.useMutation();
   const startMutation = trpc.research.startResearch.useMutation();
-
   const { data: goals } = trpc.planning.listGoals.useQuery();
+
+  const resetForm = () => {
+    setStep("create");
+    setFormData({ ...DEFAULT_FORM });
+  };
 
   const handleCreateAndRefine = async () => {
     if (!formData.title || !formData.originalPrompt) {
-      toast.error("Missing fields", {
-        description: "Please fill in all required fields",
-      });
+      toast.error("Fill in all required fields");
       return;
     }
-
     try {
       setStep("refining");
-      // 1. Create research record
-      const research = await createMutation.mutateAsync({
-        ...formData,
-      });
+      const research = await createMutation.mutateAsync({ ...formData });
       setResearchId(research.id);
-
-      // 2. Transmit to AI for refinement
       const refined = await refineMutation.mutateAsync({
         researchId: research.id,
         originalPrompt: formData.originalPrompt,
         scope: formData.scope,
       });
-
       setRefinedPrompt(refined.refinedPrompt);
       setStep("review");
     } catch (error: any) {
       setStep("create");
-      toast.error("Error", {
-        description: error.message || "Something went wrong",
-      });
+      toast.error(error.message || "Something went wrong");
     }
   };
 
   const handleSkipRefinement = async () => {
     if (!formData.title || !formData.originalPrompt) {
-      toast.error("Missing fields", {
-        description: "Please fill in all required fields",
-      });
+      toast.error("Fill in all required fields");
       return;
     }
-
     try {
       setStep("starting");
-      // Create research record without refinement
-      const research = await createMutation.mutateAsync({
-        ...formData,
-      });
+      const research = await createMutation.mutateAsync({ ...formData });
       setResearchId(research.id);
-
-      // Start research immediately with original prompt
       await startMutation.mutateAsync({ researchId: research.id });
-
-      toast.success("Research Started!", {
-        description: "Using your original prompt without AI refinement.",
-      });
-
+      toast.success("Research started");
       onClose();
-      setTimeout(() => {
-        setStep("create");
-        setFormData({
-          title: "",
-          originalPrompt: "",
-          scope: ResearchScope.GENERAL_RESEARCH as ResearchScope,
-          searchMethod: SearchMethod.GEMINI_GROUNDING as SearchMethod,
-          goalId: undefined,
-          geminiApiKey: "",
-        });
-      }, 500);
-
+      setTimeout(resetForm, 500);
       window.location.href = `/research/${research.id}`;
     } catch (error: any) {
       setStep("create");
-      toast.error("Error", {
-        description: error.message || "Failed to start research",
-      });
+      toast.error(error.message || "Failed to start");
     }
   };
 
@@ -135,31 +106,13 @@ export function ResearchCreationModal({
     try {
       setStep("starting");
       await startMutation.mutateAsync({ researchId });
-
-      toast.success("Research Dispatched!", {
-        description: "Your agent is now scouring the web.",
-      });
-
+      toast.success("Research dispatched");
       onClose();
-      // Reset state for next time
-      setTimeout(() => {
-        setStep("create");
-        setFormData({
-          title: "",
-          originalPrompt: "",
-          scope: ResearchScope.GENERAL_RESEARCH as ResearchScope,
-          searchMethod: SearchMethod.GEMINI_GROUNDING as SearchMethod,
-          goalId: undefined,
-          geminiApiKey: "",
-        });
-      }, 500);
-
+      setTimeout(resetForm, 500);
       window.location.href = `/research/${researchId}`;
     } catch (error: any) {
       setStep("review");
-      toast.error("Error", {
-        description: error.message || "Failed to start research",
-      });
+      toast.error(error.message || "Failed to start");
     }
   };
 
@@ -169,18 +122,15 @@ export function ResearchCreationModal({
       onOpenChange={(val) => {
         if (!val && step !== "starting") {
           onClose();
-          // Reset to create step if closed mid-process
-          if (step === "refining" || step === "review") {
-            setStep("create");
-          }
+          if (step === "refining" || step === "review") setStep("create");
         }
       }}
     >
-      <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white max-w-2xl w-[95vw] md:w-full max-h-[85vh] md:max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-xl">
+      <DialogContent className="bg-card border-border text-foreground max-w-2xl w-[95vw] md:w-full max-h-[85vh] md:max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-lg">
         {/* Progress bar */}
-        <div className="h-1 w-full bg-black/20">
+        <div className="h-[2px] w-full bg-border">
           <div
-            className="h-full bg-[#a9927d] transition-all duration-500"
+            className="h-full bg-blu transition-all duration-500"
             style={{
               width:
                 step === "create"
@@ -196,90 +146,79 @@ export function ResearchCreationModal({
 
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar max-h-[calc(85vh-4px)]">
           <DialogHeader className="mb-6">
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              {step === "create" && "New Research Mission"}
-              {step === "refining" && "Consulting Gemini AI..."}
-              {step === "review" && "Mission Briefing Refined"}
-              {step === "starting" && "Dispatching Agent..."}
-              {step === "create" && (
-                <Sparkles className="w-5 h-5 text-[#a9927d]" />
-              )}
+            <DialogTitle className="font-mono text-sm uppercase tracking-widest text-muted-foreground">
+              {step === "create" && "NEW RESEARCH"}
+              {step === "refining" && "REFINING OBJECTIVE..."}
+              {step === "review" && "REVIEW OBJECTIVE"}
+              {step === "starting" && "DEPLOYING AGENT..."}
             </DialogTitle>
           </DialogHeader>
 
           {step === "create" && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* Title */}
+            <div className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-gray-400">
-                  Mission Title
+                <Label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                  Title
                 </Label>
                 <Input
-                  id="title"
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="e.g., Q1 Market Expansion Analysis"
-                  className="bg-black/20 border-[#2f3e46] focus:border-[#a9927d] h-12"
+                  className="bg-background border-border focus:border-blu/40 h-10 font-mono text-xs text-foreground"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Scope */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="scope"
-                    className="text-gray-400 whitespace-nowrap"
-                  >
-                    Research Scope
+                  <Label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                    Scope
                   </Label>
                   <Select
                     value={formData.scope}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        scope: value as ResearchScope,
-                      })
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, scope: v as ResearchScope })
                     }
                   >
-                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12 w-full min-w-0">
-                      <SelectValue className="truncate" />
+                    <SelectTrigger className="bg-background border-border h-10 w-full font-mono text-xs text-muted-foreground">
+                      <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                       {Object.values(ResearchScope).map((s) => (
-                        <SelectItem key={s} value={s}>
+                        <SelectItem
+                          key={s}
+                          value={s}
+                          className="font-mono text-xs"
+                        >
                           {s.replace(/_/g, " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Goal Link */}
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="goal"
-                    className="text-gray-400 whitespace-nowrap"
-                  >
-                    Link to Strategic Goal
+                  <Label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                    Strategic Goal{" "}
+                    <span className="text-muted-foreground/30">(opt)</span>
                   </Label>
                   <Select
                     value={formData.goalId}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, goalId: value })
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, goalId: v })
                     }
                   >
-                    <SelectTrigger className="bg-black/20 border-[#2f3e46] h-12 w-full min-w-0">
-                      <SelectValue
-                        placeholder="Unlinked"
-                        className="truncate"
-                      />
+                    <SelectTrigger className="bg-background border-border h-10 w-full font-mono text-xs text-muted-foreground">
+                      <SelectValue placeholder="Unlinked" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
-                      {goals?.map((goal: any) => (
-                        <SelectItem key={goal.id} value={goal.id}>
-                          {goal.title}
+                    <SelectContent className="bg-card border-border text-foreground">
+                      {goals?.map((g: any) => (
+                        <SelectItem
+                          key={g.id}
+                          value={g.id}
+                          className="font-mono text-xs"
+                        >
+                          {g.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -287,73 +226,39 @@ export function ResearchCreationModal({
                 </div>
               </div>
 
-              {/* Search Method */}
+              {/* Search Mode */}
               <div className="space-y-2">
-                <Label className="text-gray-400">Search Strategy</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                <Label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                  Mode
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() =>
                       setFormData({
                         ...formData,
-                        searchMethod: SearchMethod.GEMINI_GROUNDING,
+                        searchMethod:
+                          SearchMethod.GEMINI_GROUNDING as SearchMethod,
                       })
                     }
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      formData.searchMethod === SearchMethod.GEMINI_GROUNDING
-                        ? "border-[#a9927d] bg-[#a9927d]/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-[#a9927d]/50"
-                    }`}
-                  >
-                    <p className="font-medium text-white text-sm">Grounding</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Fast Google Search via Gemini
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        searchMethod: SearchMethod.SERPER_API,
-                      })
-                    }
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      formData.searchMethod === SearchMethod.SERPER_API
-                        ? "border-[#6b9080] bg-[#6b9080]/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-[#6b9080]/50"
-                    }`}
-                  >
-                    <p className="font-medium text-white text-sm">Serper</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Deep custom web scraping
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        searchMethod: (SearchMethod as any).JINA_SERPER,
-                      })
-                    }
-                    className={`p-3 rounded-lg border text-left transition-all ${
+                    className={cn(
+                      "p-3 rounded-md border text-left transition-all duration-200",
                       formData.searchMethod ===
-                      (SearchMethod as any).JINA_SERPER
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-blue-500/50"
-                    }`}
+                        (SearchMethod.GEMINI_GROUNDING as SearchMethod)
+                        ? "border-blu/30 bg-blu/5 ring-1 ring-blu/20"
+                        : "border-border bg-background hover:border-charcoal",
+                    )}
                   >
-                    <div className="flex items-center gap-1">
-                      <p className="font-medium text-white text-sm">
-                        Deep Search
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-mono text-xs text-alabaster">
+                        GOOGLE SEARCH
                       </p>
-                      <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1 rounded">
-                        NEW
+                      <span className="text-[8px] font-mono bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        FREE
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Iterative Loop (Clean Extraction)
+                    <p className="text-[10px] text-muted-foreground/60 font-mono">
+                      Fast · Seconds · Free tier
                     </p>
                   </button>
                   <button
@@ -361,74 +266,73 @@ export function ResearchCreationModal({
                     onClick={() =>
                       setFormData({
                         ...formData,
-                        searchMethod: SearchMethod.GEMINI_DEEP_RESEARCH,
+                        searchMethod:
+                          SearchMethod.GEMINI_DEEP_RESEARCH as SearchMethod,
                       })
                     }
-                    className={`p-3 rounded-lg border text-left transition-all ${
+                    className={cn(
+                      "p-3 rounded-md border text-left transition-all duration-200",
                       formData.searchMethod ===
-                      SearchMethod.GEMINI_DEEP_RESEARCH
-                        ? "border-amber-500 bg-amber-500/10"
-                        : "border-[#2f3e46] bg-black/20 hover:border-amber-500/50"
-                    }`}
+                        (SearchMethod.GEMINI_DEEP_RESEARCH as SearchMethod)
+                        ? "border-amber-500/30 bg-amber-500/5 ring-1 ring-amber-500/20"
+                        : "border-border bg-background hover:border-charcoal",
+                    )}
                   >
-                    <div className="flex items-center gap-1">
-                      <p className="font-medium text-white text-sm">
-                        Deep Research
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-mono text-xs text-alabaster">
+                        DEEP RESEARCH
                       </p>
-                      <span className="text-[8px] bg-amber-500/20 text-amber-500 px-1 rounded">
-                        PRO
+                      <span className="text-[8px] font-mono bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        ~$2-5
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Autonomous agent (Gemini Native)
+                    <p className="text-[10px] text-muted-foreground/60 font-mono">
+                      Autonomous · Minutes · Cited
                     </p>
                   </button>
                 </div>
               </div>
 
-              {/* Prompt */}
               <div className="space-y-2">
-                <Label htmlFor="prompt" className="text-gray-400">
-                  Objective Description
+                <Label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                  Objective
                 </Label>
                 <Textarea
-                  id="prompt"
                   value={formData.originalPrompt}
                   onChange={(e) =>
                     setFormData({ ...formData, originalPrompt: e.target.value })
                   }
-                  placeholder="Describe what you want to find. Be as specific as possible about the data, regions, or competitors."
+                  placeholder="What do you want to understand deeply?"
                   rows={4}
-                  className="bg-black/20 border-[#2f3e46] focus:border-[#a9927d] resize-none"
+                  className="bg-background border-border focus:border-blu/40 resize-none font-mono text-xs text-muted-foreground leading-relaxed"
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-3">
                 <Button
                   variant="ghost"
                   onClick={handleSkipRefinement}
                   disabled={createMutation.isPending || startMutation.isPending}
-                  className="text-gray-400 hover:text-white order-2 sm:order-1"
+                  className="text-muted-foreground hover:text-alabaster text-xs font-mono order-2 sm:order-1"
                 >
-                  Skip Refinement →
+                  SKIP REFINEMENT →
                 </Button>
-                <div className="flex gap-3 justify-end order-1 sm:order-2">
+                <div className="flex gap-2 justify-end order-1 sm:order-2">
                   <Button
                     variant="ghost"
                     onClick={onClose}
-                    className="text-gray-400 hover:text-white"
+                    className="text-muted-foreground hover:text-alabaster text-xs font-mono"
                   >
-                    Abort
+                    CANCEL
                   </Button>
                   <Button
                     onClick={handleCreateAndRefine}
                     disabled={
                       createMutation.isPending || refineMutation.isPending
                     }
-                    className="bg-[#a9927d] hover:bg-[#8f7a68] text-white px-8 h-12 whitespace-nowrap"
+                    className="bg-blu hover:bg-blu/90 text-white text-xs font-mono px-5 h-9"
                   >
-                    Refine Mission <ArrowRight className="w-4 h-4 ml-2" />
+                    REFINE <ArrowRight className="w-3 h-3 ml-1.5" />
                   </Button>
                 </div>
               </div>
@@ -436,59 +340,45 @@ export function ResearchCreationModal({
           )}
 
           {(step === "refining" || step === "starting") && (
-            <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
-              <div className="relative">
-                <div className="absolute inset-0 bg-[#a9927d]/20 blur-2xl rounded-full animate-pulse" />
-                <Loader2 className="w-16 h-16 text-[#a9927d] animate-spin relative" />
-              </div>
-              <p className="mt-8 text-xl font-medium text-white">
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 text-blu/60 animate-spin" />
+              <p className="mt-6 text-xs font-mono text-muted-foreground uppercase tracking-widest">
                 {step === "refining"
-                  ? "Optimizing Research Parameters..."
-                  : "Deploying Web Crawlers..."}
-              </p>
-              <p className="mt-2 text-muted-foreground">
-                This will only take a moment.
+                  ? "OPTIMIZING PARAMETERS"
+                  : "DEPLOYING AGENT"}
               </p>
             </div>
           )}
 
           {step === "review" && (
-            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-              <div className="bg-black/40 border border-[#6b9080]/30 rounded-xl p-5 relative overflow-y-auto max-h-[50vh]">
-                <div className="absolute top-0 right-0 p-2">
-                  <Sparkles className="w-4 h-4 text-[#6b9080]" />
-                </div>
-                <Label className="text-[#6b9080] text-xs font-bold uppercase tracking-wider mb-2 block">
-                  Refined Mission Briefing
+            <div className="space-y-5">
+              <div className="border border-border rounded-md p-4 bg-card/80 max-h-[50vh] overflow-y-auto custom-scrollbar">
+                <Label className="text-[10px] font-mono text-blu/60 uppercase tracking-widest mb-3 block">
+                  Refined Objective
                 </Label>
-                <div className="prose prose-invert prose-sm max-w-none text-gray-300">
+                <div className="prose prose-invert prose-sm max-w-none prose-headings:font-mono prose-headings:text-alabaster prose-p:text-muted-foreground prose-p:leading-relaxed">
                   <ReactMarkdown>{refinedPrompt}</ReactMarkdown>
                 </div>
               </div>
-
-              <div className="bg-[#2f3e46]/20 rounded-lg p-4 flex gap-3">
-                <CheckCircle2 className="w-5 h-5 text-[#6b9080] shrink-0" />
-                <p className="text-sm text-gray-300">
-                  Our AI has expanded your request to target better sources and
-                  ensure comprehensive coverage of the $
-                  {formData.scope.toLowerCase()} sector.
+              <div className="flex items-start gap-2.5 px-3 py-2.5 border border-emerald-500/10 rounded-md bg-emerald-500/5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-muted-foreground font-mono">
+                  Objective expanded for better source targeting and coverage.
                 </p>
               </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
                   variant="ghost"
                   onClick={() => setStep("create")}
-                  className="text-gray-400"
+                  className="text-muted-foreground hover:text-alabaster text-xs font-mono"
                 >
-                  Edit Brief
+                  EDIT
                 </Button>
                 <Button
                   onClick={handleStartResearch}
-                  className="bg-[#6b9080] hover:bg-[#5a7a6b] text-white px-8 h-12"
+                  className="bg-blu hover:bg-blu/90 text-white text-xs font-mono px-5 h-9"
                 >
-                  Commence Research
+                  START RESEARCH
                 </Button>
               </div>
             </div>

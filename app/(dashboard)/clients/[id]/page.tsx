@@ -146,7 +146,7 @@ export default function ClientDetailPage({
             </AvatarFallback>
           </Avatar>
           <div className="space-y-1">
-            <h2 className="text-3xl font-bold tracking-tight">{client.name}</h2>
+            <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">{client.name}</h2>
             <div className="flex items-center gap-2 text-muted-foreground">
               {client.companyName && (
                 <div className="flex items-center">

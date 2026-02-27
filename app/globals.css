@@ -54,6 +54,13 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Custom named colors — use as bg-eggshell, text-carbon, etc. */
+  --color-eggshell: #f3efe0;
+  --color-carbon: #1b1b1e;
+  --color-charcoal: #373f51;
+  --color-alabaster: #eae6e5;
+  --color-blu: #2176ff;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -63,89 +70,93 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.625rem;
 
-  /* Primary Colors */
-  --primary: #a9927d; /* Dusty Taupe */
-  --primary-foreground: #000000;
+  /* Primary — Electric Blue */
+  --primary: #2176ff;
+  --primary-foreground: #ffffff;
 
-  --secondary: #6b9080; /* Jungle Teal */
-  --secondary-foreground: #ffffff;
+  /* Secondary — Eggshell */
+  --secondary: #f3efe0;
+  --secondary-foreground: #1b1b1e;
 
   --success: #10b981;
-  --warning: #ee6c4d; /* Burnt Peach */
-  --danger: #c5283d; /* Intense Cherry */
-  --info: #98c1d9; /* Powder Blue */
-  --destructive: #c5283d;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #2176ff;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  /* Base - FORCE DARK LUXURY */
-  --background: #000000; /* Black */
-  --foreground: #f2f4f3; /* White Smoke */
+  /* Base — True Black */
+  --background: #000000;
+  --foreground: #ffffff;
 
-  --card: #22333b; /* Jet Black */
-  --card-foreground: #f2f4f3;
+  /* Cards — Carbon Black */
+  --card: #1b1b1e;
+  --card-foreground: #eae6e5;
 
-  --popover: #22333b;
-  --popover-foreground: #f2f4f3;
+  --popover: #1b1b1e;
+  --popover-foreground: #eae6e5;
 
-  --muted: #2f3e46; /* Charcoal Blue */
-  --muted-foreground: #76818e; /* Slate Gray */
+  /* Muted — Charcoal Blue */
+  --muted: #373f51;
+  --muted-foreground: #8a8f9e;
 
-  --accent: #5497a7; /* Pacific Blue */
+  /* Accent — Blue */
+  --accent: #2176ff;
   --accent-foreground: #ffffff;
 
-  --border: #2f3e46;
-  --input: #2f3e46;
-  --ring: #a9927d;
+  /* Borders — dark charcoal */
+  --border: #2a2a2e;
+  --input: #2a2a2e;
+  --ring: #2176ff;
 
   /* Chart Colors */
-  --chart-1: #a9927d;
-  --chart-2: #6b9080;
-  --chart-3: #5497a7;
-  --chart-4: #ee6c4d;
-  --chart-5: #98c1d9;
+  --chart-1: #2176ff;
+  --chart-2: #f3efe0;
+  --chart-3: #373f51;
+  --chart-4: #eae6e5;
+  --chart-5: #1b1b1e;
 
   /* Sidebar */
-  --sidebar: #22333b;
-  --sidebar-foreground: #f2f4f3;
-  --sidebar-primary: #a9927d;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #2f3e46;
-  --sidebar-accent-foreground: #f2f4f3;
-  --sidebar-border: #2f3e46;
-  --sidebar-ring: #a9927d;
+  --sidebar: #000000;
+  --sidebar-foreground: #eae6e5;
+  --sidebar-primary: #2176ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1b1b1e;
+  --sidebar-accent-foreground: #eae6e5;
+  --sidebar-border: #1b1b1e;
+  --sidebar-ring: #2176ff;
 }
 
 .dark {
-  /* Inherit from root or explicit re-declare for safety */
   --background: #000000;
-  --foreground: #f2f4f3;
-  --card: #22333b;
-  --card-foreground: #f2f4f3;
-  --popover: #22333b;
-  --popover-foreground: #f2f4f3;
-  --primary: #a9927d;
-  --primary-foreground: #000000;
-  --secondary: #6b9080;
-  --secondary-foreground: #ffffff;
-  --muted: #2f3e46;
-  --muted-foreground: #76818e;
-  --accent: #5497a7;
+  --foreground: #ffffff;
+  --card: #1b1b1e;
+  --card-foreground: #eae6e5;
+  --popover: #1b1b1e;
+  --popover-foreground: #eae6e5;
+  --primary: #2176ff;
+  --primary-foreground: #ffffff;
+  --secondary: #f3efe0;
+  --secondary-foreground: #1b1b1e;
+  --muted: #373f51;
+  --muted-foreground: #8a8f9e;
+  --accent: #2176ff;
   --accent-foreground: #ffffff;
-  --destructive: #c5283d;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #2f3e46;
-  --input: #2f3e46;
-  --ring: #a9927d;
-  --sidebar: #22333b;
-  --sidebar-foreground: #f2f4f3;
-  --sidebar-primary: #a9927d;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #2f3e46;
-  --sidebar-accent-foreground: #f2f4f3;
-  --sidebar-border: #2f3e46;
-  --sidebar-ring: #a9927d;
+  --border: #2a2a2e;
+  --input: #2a2a2e;
+  --ring: #2176ff;
+  --sidebar: #000000;
+  --sidebar-foreground: #eae6e5;
+  --sidebar-primary: #2176ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1b1b1e;
+  --sidebar-accent-foreground: #eae6e5;
+  --sidebar-border: #1b1b1e;
+  --sidebar-ring: #2176ff;
 }
 
 @layer base {
@@ -160,9 +171,23 @@
     overflow-x: hidden;
     max-width: 100vw;
   }
-  /* Prevent any flex/grid child from stretching beyond its container */
   .flex > *,
   .grid > * {
     min-width: 0;
   }
+}
+
+/* Custom scrollbar for dark theme */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a2a2e;
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #373f51;
 }

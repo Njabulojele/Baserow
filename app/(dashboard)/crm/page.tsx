@@ -50,7 +50,7 @@ export default function CRMPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
+          <h2 className="text-2xl sm:text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Dashboard
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -85,7 +85,7 @@ export default function CRMPage() {
                 <Skeleton className="h-7 w-16" />
               ) : (
                 <>
-                  <div className="text-xl sm:text-2xl font-bold text-white-smoke">
+                  <div className="text-xl sm:text-2xl font-bold text-alabaster">
                     {leadStats?.total ?? 0}
                   </div>
                   <div className="flex items-center gap-1 text-xs mt-1">
@@ -200,7 +200,7 @@ export default function CRMPage() {
         <div className="md:col-span-8 flex flex-col space-y-6 min-w-0">
           <Card className="bg-card border-none max-h-[420px] overflow-y-auto">
             <CardHeader>
-              <CardTitle className="text-white-smoke">
+              <CardTitle className="text-alabaster">
                 Recent Activities
               </CardTitle>
               <CardDescription className="text-muted-foreground">
@@ -222,7 +222,7 @@ export default function CRMPage() {
                       <div className="flex-1 pb-3 border-b border-border/50 last:border-0 min-w-0">
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
-                            <h4 className="font-semibold text-sm text-white-smoke truncate">
+                            <h4 className="font-semibold text-sm text-alabaster truncate">
                               {activity.subject}
                             </h4>
                             <p className="text-[10px] text-muted-foreground mt-0.5">

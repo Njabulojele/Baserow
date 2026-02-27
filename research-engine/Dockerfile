@@ -1,20 +1,9 @@
 FROM node:20-alpine AS builder
 
-# Install necessary libraries for Puppeteer/Chrome to run on Alpine Linux
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont \
-      nodejs \
-      yarn
+# Basic system libraries
+RUN apk add --no-cache ca-certificates
 
-# Tell Puppeteer to skip installing Chrome, we'll use the installed package
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    NODE_ENV=production
+ENV NODE_ENV=production
 
 WORKDIR /app
 
@@ -34,17 +23,9 @@ RUN npm run build
 # --- Runtime Stage ---
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont
+RUN apk add --no-cache ca-certificates
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    NODE_ENV=production
+ENV NODE_ENV=production
 
 WORKDIR /app
 

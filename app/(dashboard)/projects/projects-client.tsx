@@ -43,10 +43,10 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     <div className="container mx-auto py-6 sm:py-8 px-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Projects
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 text-white-smoke/60">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 muted-foreground/40">
             Organize and track your work
           </p>
         </div>

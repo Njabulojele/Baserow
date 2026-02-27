@@ -15,7 +15,7 @@ export default function LeadsPage() {
     <div className="flex flex-col h-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between shrink-0 mb-6 gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+          <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Leads
           </h2>
           <p className="text-muted-foreground">Manage and track your leads</p>

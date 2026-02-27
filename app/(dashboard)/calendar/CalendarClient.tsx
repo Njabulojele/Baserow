@@ -193,7 +193,7 @@ export function CalendarClient() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold truncate text-white-smoke">
+            <h2 className="text-sm font-mono font-bold truncate text-alabaster">
               {format(date, view === "day" ? "MMMM do" : "MMMM yyyy")}
             </h2>
           </div>

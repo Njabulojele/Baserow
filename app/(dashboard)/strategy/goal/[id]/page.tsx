@@ -176,7 +176,7 @@ export default function GoalDetailPage() {
                 {goal.category}
               </Badge>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
               {goal.title}
             </h1>
           </div>

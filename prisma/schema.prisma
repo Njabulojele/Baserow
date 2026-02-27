@@ -60,6 +60,7 @@ model User {
   activeOrgId        String?
   deletedAt          DateTime?
   version            Int              @default(1)
+  aiContext          UserAIContext?
 }
 
 model YearPlan {
@@ -713,6 +714,8 @@ model Research {
   insights       ResearchInsight[]
   sources        ResearchSource[]
   crmLeads       CrmLead[]
+  researchPlan   Json?
+  citedReport    Json?
 
   @@index([userId, status])
   @@index([goalId])
@@ -1437,3 +1440,19 @@ model WebhookDelivery {
 
   @@index([webhookEndpointId])
 }
+
+/// Persistent AI memory per user — stores preferences, patterns, and learned context.
+model UserAIContext {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  preferredTopics   String[] @default([])
+  researchStyle     String?  // e.g. "data-heavy", "narrative", "executive-summary"
+  industryFocus     String[] @default([])
+  previousFindings  Json?    // Compressed summaries of past research
+  communicationPref String?  // "formal", "casual", "technical"
+  customInstructions String? // Free-form user instructions for the AI
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

@@ -121,7 +121,7 @@ export default function SettingsPage() {
           <Settings className="w-8 h-8 text-[#a9927d]" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-white">Settings</h1>
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">Settings</h1>
           <p className="text-gray-400 mt-1">
             Manage your account preferences and integrations
           </p>

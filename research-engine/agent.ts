@@ -1,14 +1,10 @@
 import { Inngest } from "inngest";
 import { prisma } from "./lib/prisma";
-import { WebScraper } from "./lib/scraper";
-import { SerperClient } from "./lib/search-client";
 import { GeminiClient } from "./lib/gemini-client";
-import { JinaClient } from "./lib/jina-client";
 import { getLLMClientWithFallback } from "./lib/llm-provider";
 import { ResearchStatus, ActionPriority, SearchMethod } from "@prisma/client";
 import { LeadScoringService } from "./lib/lead-scoring";
 import { LeadPromotionService } from "./lib/lead-promotion";
-import { checkL2Cache } from "./lib/cache";
 
 // Initialize Inngest with the same ID to maintain event compatibility
 const inngest = new Inngest({
@@ -100,7 +96,7 @@ export const researchAgent = inngest.createFunction(
         return existingSources;
       });
     } else if (research.searchMethod === SearchMethod.GEMINI_DEEP_RESEARCH) {
-      // 🚀 DEEP RESEARCH (AUTONOMOUS AGENT)
+      // 🚀 DEEP RESEARCH (AUTONOMOUS AGENT via Gemini Interactions API)
       const interaction = await step.run("create-deep-research", async () => {
         const freshUser = await getFreshUser();
         if (!freshUser?.geminiApiKey) throw new Error("API key missing");
@@ -143,7 +139,6 @@ export const researchAgent = inngest.createFunction(
         );
         pollingAttempts++;
 
-        // Update progress in DB (outside of step.run is fine for simple updates)
         await prisma.research.update({
           where: { id: researchId },
           data: { progress: Math.min(10 + pollingAttempts * 1, 60) },
@@ -154,7 +149,7 @@ export const researchAgent = inngest.createFunction(
         throw new Error(`Deep Research Failed: ${statusResult.error}`);
       }
 
-      // Step 3b: Save results as synthetic sources
+      // Save results as synthetic sources
       sources = await step.run("process-deep-results", async () => {
         const scrapedData: any[] = [];
         let finalReport = "";
@@ -224,308 +219,77 @@ export const researchAgent = inngest.createFunction(
         }));
       });
     } else {
-      // 🌐 STANDARD MODES (SCRAPE + ANALYZE)
-      sources = await step.run("scrape-sources", async () => {
-        const scraper = new WebScraper();
-        await scraper.initialize();
-        socket.emitLog(researchId, "Browser scraper initialized");
+      // 🔍 GOOGLE SEARCH (Grounding — fast, free-tier compatible)
+      sources = await step.run("grounding-search", async () => {
+        const freshUser = await getFreshUser();
+        if (!freshUser?.geminiApiKey) throw new Error("Gemini API key missing");
+        const geminiClient = new GeminiClient(
+          freshUser.geminiApiKey,
+          freshUser.geminiModel || "gemini-2.0-flash",
+        );
 
-        try {
-          let scrapedData: any[] = [];
+        socket.emitLog(researchId, "Starting Google Search via Grounding...");
 
-          if (research.searchMethod === SearchMethod.JINA_SERPER) {
-            // 🚀 JINA + SERPER LOGIC (Configurable Mode)
-            const freshUser = await getFreshUser();
-            if (!freshUser?.serperApiKey) {
-              throw new Error(
-                "Serper API key required for Jina + Serper mode.",
-              );
-            }
+        const result = await geminiClient.groundingSearch(
+          research.refinedPrompt,
+        );
 
-            const serper = new SerperClient(freshUser.serperApiKey);
-            const jina = new JinaClient();
-            const scrapingMode = (freshUser as any).scrapingMode || "AGENTIC";
+        socket.emitLog(
+          researchId,
+          `Found ${result.sources.length} sources from ${result.searchQueries.length} search queries.`,
+        );
 
-            let allScrapedData: any[] = [];
+        // Emit individual sources for live UI display
+        result.sources.forEach((s) => {
+          socket.emitLog(researchId, `📎 ${s.title} — ${s.url}`);
+        });
 
-            if (scrapingMode === "SCRAPER") {
-              // ⚡️ FAST SCRAPER MODE (Single Pass, No LLM)
-              socket.emitLog(researchId, "Running in Fast Scraper Mode...");
-
-              // 1. Search
-              const searchResults = await serper.search(
-                research.refinedPrompt,
-                10,
-              );
-              const urls = jina.filterUrls(searchResults.map((r) => r.url));
-
-              socket.emitLog(
-                researchId,
-                `Found ${urls.length} relevant sources. beginning extraction...`,
-              );
-
-              // 2. Extract
-              const extractions = await jina.extractMultiple(urls, (msg) =>
-                socket.emitLog(researchId, msg),
-              );
-              allScrapedData = extractions
-                .filter((e) => e.success)
-                .map((e) => ({
-                  url: e.url,
-                  title: e.title,
-                  content: e.content,
-                  excerpt: e.excerpt,
-                }));
-            } else {
-              // 🤖 AGENTIC MODE (Iterative + LLM)
-              socket.emitLog(researchId, "Running in Agentic Search Mode...");
-
-              // Smart Default: If no DB setting, use GROQ only if key exists, else GEMINI
-              let defaultProvider = "GEMINI";
-              if (freshUser.groqApiKey) {
-                defaultProvider = "GROQ";
-              }
-
-              let primaryProvider =
-                (freshUser.llmProvider as any) || defaultProvider;
-              let primaryKey = freshUser.geminiApiKey || "";
-
-              if (primaryProvider === "GROQ") {
-                primaryKey = freshUser.groqApiKey || "";
-              }
-
-              const { client: llm } = await getLLMClientWithFallback(
-                primaryProvider,
-                primaryKey,
-                primaryProvider === "GEMINI" ? "GROQ" : "GEMINI",
-                primaryProvider === "GROQ"
-                  ? freshUser.geminiApiKey || ""
-                  : freshUser.groqApiKey || "",
-              );
-
-              let currentQuery = research.refinedPrompt;
-              let accumulatedContent = "";
-              let iteration = 0;
-              const maxIterations = 2;
-
-              while (iteration < maxIterations) {
-                iteration++;
-                socket.emitLog(
-                  researchId,
-                  `Iteration ${iteration}/${maxIterations}: Searching for "${currentQuery}"...`,
-                );
-                const searchResults = await serper.search(currentQuery, 5);
-                const urls = jina.filterUrls(searchResults.map((r) => r.url));
-
-                socket.emitLog(
-                  researchId,
-                  `Found ${urls.length} relevant sources. beginning extraction...`,
-                );
-
-                const extractions = await jina.extractMultiple(urls, (msg) =>
-                  socket.emitLog(researchId, msg),
-                );
-                const newScraped = extractions
-                  .filter((e) => e.success)
-                  .map((e) => ({
-                    url: e.url,
-                    title: e.title,
-                    content: e.content,
-                    excerpt: e.excerpt,
-                  }));
-
-                allScrapedData = [...allScrapedData, ...newScraped];
-                accumulatedContent += newScraped
-                  .map((s) => s.content)
-                  .join("\n\n---\n\n");
-
-                if (iteration < maxIterations) {
-                  try {
-                    const gapAnalysis = await llm.identifyGaps!(
-                      currentQuery,
-                      accumulatedContent,
-                    );
-                    if (
-                      !gapAnalysis.hasGaps ||
-                      !gapAnalysis.suggestedQueries ||
-                      gapAnalysis.suggestedQueries.length === 0
-                    ) {
-                      socket.emitLog(
-                        researchId,
-                        "Sufficient data collected. Finishing search...",
-                      );
-                      break;
-                    }
-                    currentQuery = gapAnalysis.suggestedQueries[0];
-                  } catch (error: any) {
-                    console.error("Agentic Loop LLM Error:", error);
-                    socket.emitLog(
-                      researchId,
-                      `Agentic planning failed: ${error?.message || "Unknown error"}. Stopping early.`,
-                    );
-                    break;
-                  }
-                }
-              }
-
-              scrapedData = allScrapedData;
-
-              const finalReport = await llm.synthesizeFinalReport!(
-                research.refinedPrompt,
-                accumulatedContent,
-                iteration,
-              );
-
-              scrapedData = [
-                ...allScrapedData,
-                {
-                  url: "final-synthesis",
-                  title: "Synthesized Research Report",
-                  content: finalReport,
-                  excerpt: finalReport.substring(0, 500),
-                },
-              ];
-            }
-          } else if (research.searchMethod === SearchMethod.SERPER_API) {
-            const freshUser = await getFreshUser();
-            if (!freshUser?.serperApiKey) {
-              throw new Error(
-                "Serper API key not configured. Please add it in Settings.",
-              );
-            }
-            const serperClient = new SerperClient(freshUser.serperApiKey);
-            const jinaClient = new JinaClient();
-
-            const searchResults = await serperClient.search(
-              research.refinedPrompt,
-              10,
-            );
-            const urls = jinaClient.filterUrls(searchResults.map((r) => r.url));
-
-            // L2 Cache: Skip URLs scraped within 7 days
-            const urlCache = await checkL2Cache(prisma, urls);
-            const uncachedUrls = urls.filter((u) => !urlCache.has(u));
-            const cachedData = [...urlCache.entries()].map(([url, data]) => ({
-              url,
-              title: data.title,
-              content: data.content,
-              excerpt: data.excerpt,
-            }));
-
-            if (uncachedUrls.length < urls.length) {
-              socket.emitLog(
-                researchId,
-                `L2 cache: reusing ${urls.length - uncachedUrls.length} cached sources, scraping ${uncachedUrls.length} new URLs`,
-              );
-            }
-
-            const extractions =
-              uncachedUrls.length > 0
-                ? await jinaClient.extractMultiple(uncachedUrls, (msg) =>
-                    SocketService.getInstance().emitLog(researchId, msg),
-                  )
-                : [];
-
-            scrapedData = [
-              ...cachedData,
-              ...extractions
-                .filter((e) => e.success)
-                .map((e) => ({
-                  url: e.url,
-                  title: e.title,
-                  content: e.content,
-                  excerpt: e.excerpt,
-                })),
-            ];
-
-            if (scrapedData.length === 0) {
-              scrapedData = searchResults.map((r) => ({
-                url: r.url,
-                title: r.title,
-                content: r.snippet,
-                excerpt: r.snippet,
-              }));
-            }
-          } else {
-            const freshUser = await getFreshUser();
-            if (!freshUser?.geminiApiKey) {
-              throw new Error("Gemini API key not found");
-            }
-            const geminiClient = new GeminiClient(
-              freshUser.geminiApiKey,
-              "gemini-2.0-flash",
-            );
-
-            const groundingResult = await geminiClient.retryWithBackoff(() =>
-              geminiClient.model.generateContent({
-                contents: [
-                  {
-                    role: "user",
-                    parts: [
-                      {
-                        text: `Search the web and provide comprehensive information about: ${research.refinedPrompt}. Include specific facts, data, and cite your sources with URLs.`,
-                      },
-                    ],
-                  },
-                ],
-                tools: [{ googleSearchRetrieval: {} } as any],
-              }),
-            );
-
-            const groundingResponse = await groundingResult.response;
-            const groundingText = groundingResponse.text();
-
-            const groundingMetadata =
-              groundingResponse.candidates?.[0]?.groundingMetadata;
-            const groundingChunks = groundingMetadata?.groundingChunks || [];
-
-            scrapedData = groundingChunks.map((chunk: any, index: number) => ({
-              url: chunk.web?.uri || `grounding-${index}`,
-              title: chunk.web?.title || `Grounding Source ${index + 1}`,
-              content:
-                groundingText || "Content extracted via Gemini Grounding",
-              excerpt: groundingText.substring(0, 500),
-            }));
-
-            if (scrapedData.length === 0) {
-              scrapedData = [
-                {
-                  url: "gemini-grounding",
-                  title: "AI Grounded Research",
-                  content: groundingText,
-                  excerpt: groundingText.substring(0, 500),
-                },
-              ];
-            }
-          }
-
-          if (scrapedData.length > 0) {
-            await prisma.researchSource.createMany({
-              data: scrapedData.map((s: any) => ({
-                researchId: research.id,
-                url: s.url,
-                title: s.title,
-                content: s.content || s.excerpt || "",
-                excerpt:
-                  s.excerpt || (s.content ? s.content.substring(0, 500) : ""),
-              })),
-              skipDuplicates: true,
-            });
-          }
-
-          await prisma.research.update({
-            where: { id: researchId },
-            data: { progress: 30 },
-          });
-
-          return scrapedData.map((s: any) => ({
+        const scrapedData = [
+          // Real grounding sources with URLs
+          ...result.sources.map((s, i) => ({
             url: s.url,
             title: s.title,
-            excerpt: s.excerpt,
-          }));
-        } finally {
-          await scraper.close();
-        }
+            content: result.text,
+            excerpt: result.text.substring(0, 500),
+          })),
+          // The full grounded response
+          {
+            url: "google-search-grounding",
+            title: "Google Search Grounded Report",
+            content: result.text,
+            excerpt: result.text.substring(0, 500),
+          },
+        ];
+
+        // De-duplicate by URL
+        const seen = new Set<string>();
+        const uniqueData = scrapedData.filter((s) => {
+          if (seen.has(s.url)) return false;
+          seen.add(s.url);
+          return true;
+        });
+
+        await prisma.researchSource.createMany({
+          data: uniqueData.map((s) => ({
+            researchId,
+            url: s.url,
+            title: s.title,
+            content: s.content || "",
+            excerpt: s.excerpt || "",
+          })),
+          skipDuplicates: true,
+        });
+
+        await prisma.research.update({
+          where: { id: researchId },
+          data: { progress: 50 },
+        });
+
+        return uniqueData.map((s) => ({
+          url: s.url,
+          title: s.title,
+          excerpt: s.excerpt,
+        }));
       });
     }
 
@@ -660,18 +424,48 @@ export const researchAgent = inngest.createFunction(
       );
 
       const prompt = `
-        Based on these research findings, generate 10 specific, high-impact actionable items.
-        Goal: ${research.refinedPrompt}
-        Summary: ${analysis.summary}
-        
-        CRITICAL INSTRUCTIONS:
-        - make actions CONCRETE (e.g., "Contact X" -> "Email Head of Sales at Company X asking for Y").
-        - include "WHY" this action is needed in the description.
-        - mix Strategic (long-term) and Tactical (immediate) actions.
-        
-        Return as JSON array only:
+        You are a COO writing Monday morning action items for a team. These must be things someone can DO, not things to "think about."
+
+        Research Goal: ${research.refinedPrompt}
+        Key Findings Summary: ${analysis.summary}
+
+        ════════════════════════════════════════
+        RULES FOR ACTION ITEMS — FOLLOW EXACTLY:
+        ════════════════════════════════════════
+
+        1. BANNED WORDS: "Consider", "Explore", "Evaluate", "Look into", "Think about", "Assess", "Research further"
+           → Replace with: "Schedule", "Build", "Launch", "Email", "Call", "Draft", "Ship", "Hire", "Cut", "Negotiate"
+
+        2. Every action MUST answer: WHO does WHAT by WHEN?
+           Bad: "Improve content marketing strategy"
+           Good: "Marketing lead drafts 4 SEO-optimized articles targeting [specific keyword cluster] by end of week, publish 2 per week starting next Monday"
+
+        3. Include EXPECTED IMPACT for each action:
+           "This could increase [metric] by [X]% based on [finding from research]"
+           OR "This mitigates the risk of [specific threat] which could cost [estimate]"
+
+        4. Priority rules:
+           - HIGH = revenue at risk or major opportunity window closing. Do this week.
+           - MEDIUM = competitive advantage. Do this month.
+           - LOW = optimization or future-proofing. Do this quarter.
+
+        5. Effort scale:
+           1 = One person, one hour (e.g., send an email)
+           2 = One person, one day (e.g., draft a proposal)
+           3 = Small team, one week (e.g., build a landing page)
+           4 = Cross-functional, 2-4 weeks (e.g., launch a campaign)
+           5 = Major initiative, 1-3 months (e.g., enter a new market)
+
+        6. Mix of timeframes:
+           - At least 3 quick wins (effort 1-2, do THIS WEEK)
+           - At least 3 strategic plays (effort 3-4, do THIS MONTH)
+           - Up to 2 big bets (effort 4-5, do THIS QUARTER)
+
+        Generate exactly 8-10 action items.
+
+        Return as JSON array only (no other text):
         [
-          { "description": "Specific Action + Rationale", "priority": "HIGH" | "MEDIUM" | "LOW", "effort": 1-5 }
+          { "description": "VERB + specific action + who + timeline + expected impact", "priority": "HIGH" | "MEDIUM" | "LOW", "effort": 1-5 }
         ]
       `;
 
