@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
-  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 
   if (!WEBHOOK_SECRET) {
     console.error("Missing WEBHOOK_SECRET in .env");
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
   }
 
   // Get the body
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
+  const payload = await req.text();
+  const body = payload;
 
   // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET);
