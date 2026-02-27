@@ -49,23 +49,23 @@ interface ProjectCardProps {
 const statusConfig: Record<string, { label: string; className: string }> = {
   active: {
     label: "Active",
-    className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    className: "bg-[#0a0c10] text-[#a9927d] border-[#a9927d]/30",
   },
   planning: {
     label: "Planning",
-    className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    className: "bg-[#0a0c10] text-blue-400 border-blue-500/30",
   },
   on_hold: {
     label: "On Hold",
-    className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    className: "bg-[#0a0c10] text-amber-400 border-amber-500/30",
   },
   completed: {
     label: "Completed",
-    className: "bg-slate-100 text-slate-600 border-slate-200",
+    className: "bg-[#0a0c10] text-gray-400 border-[#2f3e46]",
   },
   cancelled: {
     label: "Cancelled",
-    className: "bg-red-500/10 text-red-600 border-red-500/20",
+    className: "bg-[#0a0c10] text-red-400 border-red-500/30",
   },
 };
 
@@ -144,7 +144,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link href={`/projects/${project.id}`}>
       <Card
-        className={`relative group hover:shadow-lg transition-all duration-300 bg-card border-none cursor-pointer overflow-hidden ${
+        className={`relative group hover:shadow-2xl transition-all duration-300 bg-[#1a252f] border border-[#2f3e46] hover:border-[#a9927d]/40 cursor-pointer overflow-hidden ${
           isUpdating ? "opacity-60 pointer-events-none" : ""
         }`}
       >
@@ -159,11 +159,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <CardHeader className="pb-2 pt-4 px-4 sm:px-6">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base sm:text-lg truncate">
+              <CardTitle className="text-base sm:text-lg truncate font-light text-white">
                 {project.name}
               </CardTitle>
               {project.client && (
-                <CardDescription className="text-xs truncate mt-0.5">
+                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-[#a9927d] truncate mt-0.5">
                   {project.client.name}
                 </CardDescription>
               )}
@@ -185,7 +185,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-[#0a0c10]"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -198,9 +198,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                     <DropdownMenuItem
                       key={action.status}
                       onClick={(e) => handleStatusChange(e, action.status)}
-                      className={`cursor-pointer ${action.className}`}
+                      className={`cursor-pointer text-[10px] font-mono uppercase tracking-widest focus:bg-[#1a252f] ${action.className}`}
                     >
-                      <action.icon className="h-4 w-4 mr-2" />
+                      <action.icon className="h-3 w-3 mr-2" />
                       {action.label}
                     </DropdownMenuItem>
                   ))}
@@ -210,51 +210,53 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 sm:px-6 pb-4 space-y-3">
+        <CardContent className="px-4 sm:px-6 pb-4 space-y-3 border-t border-[#2f3e46]/30 pt-4">
           {project.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
+            <p className="text-[10px] font-mono text-gray-400 line-clamp-2">
               {project.description}
             </p>
           )}
 
           {/* Progress Bar */}
           <div>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+                Progress
+              </span>
+              <span className="font-mono text-[10px] text-[#a9927d]">
                 {Math.round(project.completionPercentage)}%
               </span>
             </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="h-1.5 bg-[#0a0c10] border border-[#2f3e46] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${Math.min(project.completionPercentage, 100)}%`,
                   backgroundColor:
                     project.completionPercentage >= 100
-                      ? "var(--success)"
+                      ? "#34d399"
                       : project.completionPercentage >= 50
-                        ? "var(--secondary)"
-                        : "var(--primary)",
+                        ? "#a9927d"
+                        : "#4b5563",
                 }}
               />
             </div>
           </div>
 
           {/* Meta Info */}
-          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <ListChecks className="h-3 w-3" />
+          <div className="flex items-center gap-3 flex-wrap text-[10px] font-mono uppercase tracking-widest text-gray-500 pt-2">
+            <span className="flex items-center gap-1.5">
+              <ListChecks className="h-3 w-3 text-[#a9927d]" />
               {project._count.tasks} task{project._count.tasks !== 1 ? "s" : ""}
             </span>
-            <span className="flex items-center gap-1 shrink-0">
-              <Clock className="h-3 w-3" />
+            <span className="flex items-center gap-1.5 shrink-0">
+              <Clock className="h-3 w-3 text-[#a9927d]" />
               {project.actualHoursSpent.toFixed(1)}h
             </span>
             {deadlineText && (
               <span
-                className={`flex items-center gap-1 shrink-0 ${
-                  isOverdue ? "text-danger font-medium" : ""
+                className={`flex items-center gap-1.5 shrink-0 ${
+                  isOverdue ? "text-red-400" : ""
                 }`}
               >
                 📅 {deadlineText}

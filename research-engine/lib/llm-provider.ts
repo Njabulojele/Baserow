@@ -49,65 +49,27 @@ class GeminiWrapper implements UnifiedLLMClient {
   constructor(encryptedApiKey: string, model?: string) {
     this.client = new GeminiClient(
       encryptedApiKey,
-      model || "gemini-2.0-flash",
+      model || "gemini-2.5-flash",
     );
   }
 
   async refinePrompt(prompt: string): Promise<string> {
-    // GeminiClient.refinePrompt takes (prompt, scope), use prompt as both
     return this.client.refinePrompt(prompt, "general");
   }
 
   async generateText(prompt: string): Promise<string> {
-    const result = await this.client.model.generateContent(prompt);
-    return result.response.text();
+    return this.client.generateContent(prompt);
   }
 
   async generateJSON<T>(prompt: string): Promise<T> {
     const text = await this.generateText(prompt);
-
-    // First try to extract from code blocks
-    const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlockMatch) {
-      try {
-        return JSON.parse(codeBlockMatch[1]);
-      } catch (e) {
-        // Continue if parse fails
-      }
-    }
-
-    // Try finding the first JSON object or array
-    const jsonStart = text.indexOf("{");
-    const arrayStart = text.indexOf("[");
-
-    let start = -1;
-    let end = -1;
-
-    if (jsonStart !== -1 && (arrayStart === -1 || jsonStart < arrayStart)) {
-      start = jsonStart;
-      end = text.lastIndexOf("}");
-    } else if (arrayStart !== -1) {
-      start = arrayStart;
-      end = text.lastIndexOf("]");
-    }
-
-    if (start !== -1 && end !== -1) {
-      try {
-        const potentialJson = text.substring(start, end + 1);
-        return JSON.parse(potentialJson);
-      } catch (e) {
-        // Continue
-      }
-    }
-
-    throw new Error("No valid JSON found in response");
+    return this.client.extractJson<T>(text);
   }
 
   async analyzeContent(
     prompt: string,
     content: string,
   ): Promise<LLMAnalysisResult> {
-    // Create a synthetic source for analyzeSources
     const sources = [
       {
         url: "research-content",
@@ -119,19 +81,12 @@ class GeminiWrapper implements UnifiedLLMClient {
     return result as LLMAnalysisResult;
   }
 
-  // Gemini doesn't have native gap detection, so we'll use a prompt-based approach
   async identifyGaps(
     query: string,
     content: string,
   ): Promise<GapAnalysisResult> {
     try {
-      const result = await this.client.model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `Analyze this research and identify CRITICAL gaps.
+      const prompt = `Analyze this research and identify CRITICAL gaps.
 1. Only report gaps that are blocking the core research goal.
 2. Ignore minor missing details if the main picture is clear.
 3. Suggest queries that are distinctly different from previous ones (look for specific data points).
@@ -144,15 +99,10 @@ ${content.substring(0, 8000)}
 Respond in JSON format only:
 {"hasGaps": boolean, "gaps": ["string"], "suggestedQueries": ["string"]}
 
-Maximum 3 gaps and 3 queries.`,
-              },
-            ],
-          },
-        ],
-      });
+Maximum 3 gaps and 3 queries.`;
 
-      const response = result.response.text();
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const text = await this.client.generateContent(prompt);
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
@@ -168,13 +118,7 @@ Maximum 3 gaps and 3 queries.`,
     content: string,
     iterations: number,
   ): Promise<string> {
-    const result = await this.client.model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `Create a comprehensive research report.
+    const prompt = `Create a comprehensive research report.
 
 Research Query: ${query}
 Research Iterations: ${iterations}
@@ -186,14 +130,9 @@ Requirements:
 - Use clear headings and Markdown formatting
 - Include key statistics and facts
 - Cite sources where possible
-- Provide actionable conclusions`,
-            },
-          ],
-        },
-      ],
-    });
+- Provide actionable conclusions`;
 
-    return result.response.text();
+    return this.client.generateContent(prompt);
   }
 }
 

@@ -40,21 +40,21 @@ function getGoalStatus(progress: number): {
       status: "ahead",
       label: "Ahead",
       icon: TrendingUp,
-      color: "text-green-500 bg-green-500/10",
+      color: "text-emerald-400 bg-[#0a0c10] border border-emerald-500/20",
     };
   } else if (progress >= monthProgress - 15) {
     return {
       status: "on_track",
       label: "On Track",
       icon: Minus,
-      color: "text-blue-500 bg-blue-500/10",
+      color: "text-blue-400 bg-[#0a0c10] border border-blue-500/20",
     };
   } else {
     return {
       status: "behind",
       label: "Behind",
       icon: TrendingDown,
-      color: "text-red-500 bg-red-500/10",
+      color: "text-red-400 bg-[#0a0c10] border border-red-500/20",
     };
   }
 }
@@ -70,31 +70,39 @@ export function StrategyAnalytics() {
   const AnnualView = () => (
     <div className="space-y-4 pt-4">
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="p-3 bg-green-500/10 rounded-lg text-center">
-          <p className="text-lg font-bold text-green-600">
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="p-3 bg-[#0a0c10] border border-[#2f3e46] rounded-lg text-center shadow-inner">
+          <p className="text-xl font-light text-white">
             {weeklyInsights?.tasksCompleted || 0}
           </p>
-          <p className="text-[10px] text-muted-foreground">Tasks This Week</p>
+          <p className="text-[10px] uppercase font-mono tracking-widest text-[#a9927d] mt-1">
+            Tasks
+          </p>
         </div>
-        <div className="p-3 bg-blue-500/10 rounded-lg text-center">
-          <p className="text-lg font-bold text-blue-600">
+        <div className="p-3 bg-[#0a0c10] border border-[#2f3e46] rounded-lg text-center shadow-inner">
+          <p className="text-xl font-light text-white">
             {weeklyInsights?.focusHours || 0}h
           </p>
-          <p className="text-[10px] text-muted-foreground">Focus Hours</p>
+          <p className="text-[10px] uppercase font-mono tracking-widest text-[#a9927d] mt-1">
+            Focus
+          </p>
         </div>
-        <div className="p-3 bg-purple-500/10 rounded-lg text-center">
-          <p className="text-lg font-bold text-purple-600">
+        <div className="p-3 bg-[#0a0c10] border border-[#2f3e46] rounded-lg text-center shadow-inner">
+          <p className="text-xl font-light text-white">
             {weeklyInsights?.productivityScore || 0}
           </p>
-          <p className="text-[10px] text-muted-foreground">Productivity</p>
+          <p className="text-[10px] uppercase font-mono tracking-widest text-[#a9927d] mt-1">
+            Score
+          </p>
         </div>
       </div>
 
       {data?.annualGoals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-          <Trophy className="h-8 w-8 mb-2 opacity-50" />
-          <p>No active annual goals found.</p>
+        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 border border-[#2f3e46] border-dashed rounded-lg bg-[#0a0c10]">
+          <Trophy className="h-8 w-8 mb-3 opacity-30 text-[#a9927d]" />
+          <p className="text-xs font-mono uppercase tracking-widest">
+            No active annual goals.
+          </p>
         </div>
       ) : (
         data?.annualGoals.map((goal, idx) => {
@@ -104,31 +112,41 @@ export function StrategyAnalytics() {
             <Link
               key={goal.id || idx}
               href={`/strategy/goal/${goal.id}`}
-              className="block space-y-2 p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
+              className="block space-y-3 p-4 rounded-lg border border-[#2f3e46] bg-[#0a0c10] hover:border-[#a9927d]/40 transition-colors shadow-sm"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-1">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="font-medium truncate">{goal.title}</span>
+                  <span className="font-light text-sm text-white truncate">
+                    {goal.title}
+                  </span>
                   <Badge
                     variant="outline"
-                    className="text-[10px] h-5 px-1.5 shrink-0"
+                    className="text-[10px] font-mono tracking-widest uppercase h-5 px-1.5 shrink-0 bg-[#1a252f] border-[#2f3e46] text-gray-400"
                   >
                     {goal.category}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <Badge
-                    className={cn("text-[10px] h-5 px-1.5 gap-1", status.color)}
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-mono uppercase tracking-widest h-5 px-2 gap-1.5",
+                      status.color,
+                    )}
                   >
                     <StatusIcon className="h-3 w-3" />
                     {status.label}
                   </Badge>
-                  <span className="font-mono text-xs font-medium">
+                  <span className="font-mono text-xs font-medium text-[#a9927d]">
                     {goal.progress}%
                   </span>
                 </div>
               </div>
-              <Progress value={goal.progress} className="h-2" />
+              <Progress
+                value={goal.progress}
+                className="h-1 bg-[#2f3e46]"
+                indicatorClassName="bg-[#a9927d]"
+              />
             </Link>
           );
         })
@@ -139,9 +157,11 @@ export function StrategyAnalytics() {
   const QuarterlyView = () => (
     <div className="space-y-4 pt-4">
       {data?.quarterFocuses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-          <Target className="h-8 w-8 mb-2 opacity-50" />
-          <p>No quarterly focuses linked yet.</p>
+        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 border border-[#2f3e46] border-dashed rounded-lg bg-[#0a0c10]">
+          <Target className="h-8 w-8 mb-3 opacity-30 text-[#a9927d]" />
+          <p className="text-xs font-mono uppercase tracking-widest">
+            No quarterly focuses linked yet.
+          </p>
         </div>
       ) : (
         data?.quarterFocuses.map((focus, idx) => {
@@ -150,31 +170,41 @@ export function StrategyAnalytics() {
           return (
             <div
               key={idx}
-              className="space-y-2 p-3 rounded-lg border bg-card/50"
+              className="space-y-3 p-4 rounded-lg border border-[#2f3e46] bg-[#0a0c10] shadow-sm"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-1">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="font-medium truncate">{focus.title}</span>
+                  <span className="font-light text-sm text-white truncate">
+                    {focus.title}
+                  </span>
                   <Badge
-                    variant="secondary"
-                    className="text-[10px] h-5 px-1.5 shrink-0"
+                    variant="outline"
+                    className="text-[10px] font-mono tracking-widest uppercase h-5 px-1.5 shrink-0 bg-[#1a252f] border-[#2f3e46] text-gray-400"
                   >
                     {focus.category}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <Badge
-                    className={cn("text-[10px] h-5 px-1.5 gap-1", status.color)}
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-mono uppercase tracking-widest h-5 px-2 gap-1.5",
+                      status.color,
+                    )}
                   >
                     <StatusIcon className="h-3 w-3" />
                     {status.label}
                   </Badge>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="font-mono text-xs font-medium text-[#a9927d]">
                     {focus.progress}%
                   </span>
                 </div>
               </div>
-              <Progress value={focus.progress} className="h-2" />
+              <Progress
+                value={focus.progress}
+                className="h-1 bg-[#2f3e46]"
+                indicatorClassName="bg-[#a9927d]"
+              />
             </div>
           );
         })
@@ -183,21 +213,31 @@ export function StrategyAnalytics() {
   );
 
   return (
-    <Card className="col-span-full border-border/60 min-w-0 overflow-hidden">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Target className="w-5 h-5 text-indigo-500" />
+    <Card className="col-span-full border-[#2f3e46] bg-[#1a252f] shadow-xl min-w-0 overflow-hidden">
+      <CardHeader className="pb-3 border-b border-[#2f3e46]/50 mb-3">
+        <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
+          <Target className="w-4 h-4 text-[#a9927d]" />
           Goal Alignment
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
           Tracking against big picture objectives
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         <Tabs defaultValue="quarter" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="quarter">This Quarter</TabsTrigger>
-            <TabsTrigger value="annual">Annual Goals</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-[#0a0c10] border border-[#2f3e46] p-1 rounded-md mb-2">
+            <TabsTrigger
+              value="quarter"
+              className="text-xs font-mono uppercase tracking-widest data-[state=active]:bg-[#1a252f] data-[state=active]:text-white text-gray-400"
+            >
+              This Quarter
+            </TabsTrigger>
+            <TabsTrigger
+              value="annual"
+              className="text-xs font-mono uppercase tracking-widest data-[state=active]:bg-[#1a252f] data-[state=active]:text-white text-gray-400"
+            >
+              Annual Goals
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="quarter">
             <QuarterlyView />

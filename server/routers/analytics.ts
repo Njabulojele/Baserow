@@ -720,8 +720,8 @@ export const analyticsRouter = router({
 
   // Inactivity alerts: clients/leads not contacted in 2+ days
   getInactivityAlerts: protectedProcedure.query(async ({ ctx }) => {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // Find clients with no recent activity
     const staleClients = await ctx.prisma.client.findMany({
@@ -729,7 +729,7 @@ export const analyticsRouter = router({
         userId: ctx.userId,
         status: "active",
         OR: [
-          { lastContactedAt: { lt: twoDaysAgo } },
+          { lastContactedAt: { lt: sevenDaysAgo } },
           { lastContactedAt: null },
         ],
       },
@@ -751,7 +751,7 @@ export const analyticsRouter = router({
         status: {
           in: ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "NEGOTIATION"],
         },
-        lastEngagement: { lt: twoDaysAgo },
+        lastEngagement: { lt: sevenDaysAgo },
       },
       select: {
         id: true,
@@ -772,7 +772,7 @@ export const analyticsRouter = router({
         userId: ctx.userId,
         status: "active",
         archivedAt: null,
-        updatedAt: { lt: twoDaysAgo },
+        updatedAt: { lt: sevenDaysAgo },
       },
       select: {
         id: true,

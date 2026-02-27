@@ -15,7 +15,7 @@ export default function PipelinePage() {
     <div className="flex flex-col h-full min-w-0">
       <div className="flex  items-center justify-between shrink-0 mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white-smoke">
+          <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Pipeline
           </h2>
           <p className="text-muted-foreground">Manage deal flow and stages</p>

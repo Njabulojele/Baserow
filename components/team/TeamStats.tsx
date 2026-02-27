@@ -11,7 +11,7 @@ export function TeamStats({ orgId }: { orgId: string }) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 w-full bg-[#1a1a1e] rounded-xl" />
+          <Skeleton key={i} className="h-24 w-full bg-[#1a252f] rounded-xl" />
         ))}
       </div>
     );
@@ -22,29 +22,29 @@ export function TeamStats({ orgId }: { orgId: string }) {
       label: "Active Projects",
       value: stats.activeProjects,
       icon: FolderKanban,
-      color: "text-blue-400",
-      bg: "bg-blue-500/10",
+      color: "text-[#a9927d]",
+      bg: "bg-[#1a252f]",
     },
     {
       label: "Tasks IP",
       value: stats.activeTasks,
       icon: CheckSquare,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
+      color: "text-[#a9927d]",
+      bg: "bg-[#1a252f]",
     },
     {
       label: "Active Clients",
       value: stats.activeClients,
       icon: Handshake,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
+      color: "text-[#a9927d]",
+      bg: "bg-[#1a252f]",
     },
     {
       label: "Total Members",
       value: stats.totalMembers,
       icon: Users,
-      color: "text-purple-400",
-      bg: "bg-purple-500/10",
+      color: "text-[#a9927d]",
+      bg: "bg-[#1a252f]",
     },
   ];
 
@@ -53,19 +53,21 @@ export function TeamStats({ orgId }: { orgId: string }) {
       {items.map((item, idx) => (
         <div
           key={idx}
-          className="bg-[#1a1a1e] border border-white/5 rounded-xl p-4 flex flex-col justify-between"
+          className="bg-[#0a0c10] border border-[#2f3e46] rounded-xl p-4 flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-4">
-            <span className="text-white/50 text-xs font-medium uppercase tracking-wider">
+            <span className="text-gray-500 text-[10px] uppercase font-mono tracking-widest">
               {item.label}
             </span>
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg}`}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg} border border-[#2f3e46]`}
             >
-              <item.icon className={`w-4 h-4 ${item.color}`} />
+              <item.icon className={`w-3 h-3 ${item.color}`} />
             </div>
           </div>
-          <div className="text-3xl font-bold tracking-tight">{item.value}</div>
+          <div className="text-3xl font-light font-mono text-white tracking-tight">
+            {item.value}
+          </div>
         </div>
       ))}
     </div>

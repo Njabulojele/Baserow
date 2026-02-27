@@ -1,28 +1,21 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect, useRef, useReducer } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ResearchOverview } from "@/components/research/ResearchOverview";
-import { ResearchSources } from "@/components/research/ResearchSources";
-import { ResearchInsights } from "@/components/research/ResearchInsights";
-import { ResearchActionItems } from "@/components/research/ResearchActionItems";
-import { ResearchLeads } from "@/components/research/ResearchLeads";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Download,
   RefreshCcw,
   Loader2,
   Play,
-  Maximize2,
   Key,
   XCircle,
   Star,
+  AlertCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PDFGenerator } from "@/lib/pdf-generator";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -31,27 +24,101 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { RetryAnalysisDialog } from "@/components/research/RetryAnalysisDialog";
-import ReactMarkdown from "react-markdown";
-import { ResearchLogs } from "@/components/research/ResearchLogs";
+import { ResearchOverview } from "@/components/research/ResearchOverview";
+import { ResearchSources } from "@/components/research/ResearchSources";
+import { ResearchInsights } from "@/components/research/ResearchInsights";
+import { ResearchActionItems } from "@/components/research/ResearchActionItems";
+import { ResearchLeads } from "@/components/research/ResearchLeads";
+import {
+  SourceCard,
+  SourceCardSkeleton,
+  type SourceCardData,
+} from "@/components/research/SourceCard";
+import { StatusBar } from "@/components/research/StatusBar";
+import io, { Socket } from "socket.io-client";
+import { cn } from "@/lib/utils";
 
+/* ─── Source feed reducer ─── */
+type FeedAction =
+  | { type: "ADD_SOURCE"; source: SourceCardData }
+  | { type: "SET_STATUS"; status: string }
+  | { type: "ADD_LOG"; message: string }
+  | { type: "RESET" };
+
+interface FeedState {
+  sources: SourceCardData[];
+  statusMessage: string;
+  logs: string[];
+}
+
+const initialFeedState: FeedState = {
+  sources: [],
+  statusMessage: "",
+  logs: [],
+};
+
+function feedReducer(state: FeedState, action: FeedAction): FeedState {
+  switch (action.type) {
+    case "ADD_SOURCE":
+      if (state.sources.some((s) => s.url === action.source.url)) return state;
+      return { ...state, sources: [...state.sources, action.source] };
+    case "SET_STATUS":
+      return { ...state, statusMessage: action.status };
+    case "ADD_LOG":
+      return { ...state, logs: [...state.logs, action.message] };
+    case "RESET":
+      return initialFeedState;
+    default:
+      return state;
+  }
+}
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return url.substring(0, 30);
+  }
+}
+
+function mapProgressToStatus(
+  progress: number,
+):
+  | "idle"
+  | "initializing"
+  | "searching"
+  | "scraping"
+  | "synthesizing"
+  | "complete"
+  | "failed" {
+  if (progress <= 0) return "idle";
+  if (progress < 15) return "initializing";
+  if (progress < 40) return "searching";
+  if (progress < 65) return "scraping";
+  if (progress < 90) return "synthesizing";
+  return "complete";
+}
+
+/* ─── Main Page ─── */
 export default function ResearchDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("feed");
   const [isExporting, setIsExporting] = useState(false);
   const [newApiKey, setNewApiKey] = useState("");
   const [isUpdatingKey, setIsUpdatingKey] = useState(false);
   const [showKeyDialog, setShowKeyDialog] = useState(false);
   const [showRetryDialog, setShowRetryDialog] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [feed, dispatch] = useReducer(feedReducer, initialFeedState);
+  const socketRef = useRef<Socket | null>(null);
+  const feedScrollRef = useRef<HTMLDivElement>(null);
 
-  // ... (keeping existing hooks)
-  // Poll for updates if research is in progress
   const {
     data: research,
     isLoading,
@@ -72,20 +139,14 @@ export default function ResearchDetailPage({
   const toggleFavorite = trpc.research.toggleFavorite.useMutation({
     onMutate: async ({ id: researchId }) => {
       await utils.research.getById.cancel({ id: researchId });
-      const previousResearch = utils.research.getById.getData({
-        id: researchId,
-      });
-
-      utils.research.getById.setData({ id: researchId }, (old) => {
-        if (!old) return old;
-        return { ...old, isFavorited: !old.isFavorited };
-      });
-
-      return { previousResearch };
+      const prev = utils.research.getById.getData({ id: researchId });
+      utils.research.getById.setData({ id: researchId }, (old) =>
+        old ? { ...old, isFavorited: !old.isFavorited } : old,
+      );
+      return { prev };
     },
-    onError: (err, newTodo, context) => {
-      utils.research.getById.setData({ id }, context?.previousResearch);
-      toast.error("Failed to toggle favorite");
+    onError: (_, __, ctx) => {
+      utils.research.getById.setData({ id }, ctx?.prev);
     },
     onSettled: () => {
       utils.research.getById.invalidate({ id });
@@ -93,25 +154,100 @@ export default function ResearchDetailPage({
     },
   });
 
-  // Map progress percentage to human-readable steps
-  const getProgressStep = (progress: number) => {
-    if (progress < 10) return "Initializing research agent...";
-    if (progress < 30) return "Scraping and verifying sources...";
-    if (progress < 50) return "Analyzing gathered content...";
-    if (progress < 70) return "Identifying key insights & gaps...";
-    if (progress < 90) return "Synthesizing final report...";
-    return "Finalizing research data...";
-  };
-
-  const handleManualRefresh = () => {
-    toast.promise(refetch(), {
-      loading: "Refreshing data...",
-      success: "Data updated",
-      error: "Failed to refresh",
+  // Populate live sources from DB when polling brings new data
+  useEffect(() => {
+    if (!research || !research.sources) return;
+    research.sources.forEach((s: any) => {
+      dispatch({
+        type: "ADD_SOURCE",
+        source: {
+          url: s.url,
+          title: s.title || extractDomain(s.url),
+          domain: extractDomain(s.url),
+          status: "scraped",
+          snippet: s.excerpt,
+        },
+      });
     });
-  };
+  }, [research?.sources]);
 
-  // ... (keeping existing handlers)
+  // Socket for live source feed
+  useEffect(() => {
+    if (!research || research.status !== "IN_PROGRESS") return;
+    if (!startedAt) setStartedAt(Date.now());
+
+    const ENGINE_URL =
+      process.env.NEXT_PUBLIC_RESEARCH_ENGINE_URL || "http://localhost:3010";
+    const socket = io(ENGINE_URL, {
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("join-research", id);
+    });
+
+    socket.on(
+      "research-log",
+      (data: { message: string; timestamp: string }) => {
+        dispatch({ type: "ADD_LOG", message: data.message });
+
+        // Parse source links (format: 📎 Title — URL)
+        const sourceMatch = data.message.match(
+          /📎\s*(.+?)\s*—\s*(https?:\/\/.+)/,
+        );
+        if (sourceMatch) {
+          const [, title, url] = sourceMatch;
+          dispatch({
+            type: "ADD_SOURCE",
+            source: {
+              url,
+              title: title.trim(),
+              domain: extractDomain(url),
+              status: "scraped",
+            },
+          });
+        } else if (data.message.includes("http")) {
+          const urlMatch = data.message.match(/(https?:\/\/[^\s]+)/);
+          if (urlMatch) {
+            dispatch({
+              type: "ADD_SOURCE",
+              source: {
+                url: urlMatch[1],
+                title: extractDomain(urlMatch[1]),
+                domain: extractDomain(urlMatch[1]),
+                status: "scraped",
+              },
+            });
+          }
+        }
+
+        dispatch({ type: "SET_STATUS", status: data.message });
+      },
+    );
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [research?.status, id]);
+
+  useEffect(() => {
+    if (feedScrollRef.current)
+      feedScrollRef.current.scrollTop = feedScrollRef.current.scrollHeight;
+  }, [feed.sources]);
+
+  const handleRetry = async () => {
+    try {
+      await startMutation.mutateAsync({ researchId: id });
+      toast.success("Research restarted");
+      dispatch({ type: "RESET" });
+      setStartedAt(Date.now());
+      refetch();
+    } catch {
+      toast.error("Failed to restart");
+    }
+  };
 
   const handleRetryAnalysis = async (options: {
     provider: string;
@@ -126,72 +262,26 @@ export default function ResearchDetailPage({
           model: options.model,
         },
       });
-      toast.success("Analysis Restarted", {
-        description: `Retrying analysis with ${options.provider}...`,
-      });
+      toast.success("Analysis restarted");
       refetch();
-    } catch (error) {
-      toast.error("Error", {
-        description: "Failed to restart analysis",
-      });
+    } catch {
+      toast.error("Failed to restart analysis");
     }
   };
-
-  // ... (keeping existing update key handler)
 
   const handleUpdateApiKey = async () => {
     if (!newApiKey) return;
     try {
       setIsUpdatingKey(true);
       await updateSettingsMutation.mutateAsync({ geminiApiKey: newApiKey });
-      toast.success("API Key updated successfully");
+      toast.success("API Key updated");
       setShowKeyDialog(false);
       setNewApiKey("");
       utils.research.getById.invalidate({ id });
-    } catch (error) {
+    } catch {
       toast.error("Failed to update API key");
     } finally {
       setIsUpdatingKey(false);
-    }
-  };
-
-  const isQuotaError =
-    research?.errorMessage?.includes("429") ||
-    research?.errorMessage?.includes("Quota exceeded");
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-12 h-12 text-[#a9927d] animate-spin mb-4" />
-        <p className="text-muted-foreground">Synthesizing research data...</p>
-      </div>
-    );
-  }
-
-  if (!research) {
-    return (
-      <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold text-white mb-4">
-          Research Not Found
-        </h1>
-        <Button asChild className="bg-[#a9927d]">
-          <Link href="/research">Back to Dashboard</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  const handleRetry = async () => {
-    try {
-      await startMutation.mutateAsync({ researchId: id });
-      toast.success("Research Restarted", {
-        description: "Agent has been redeployed.",
-      });
-      refetch();
-    } catch (error) {
-      toast.error("Error", {
-        description: "Failed to restart research",
-      });
     }
   };
 
@@ -202,317 +292,382 @@ export default function ResearchDetailPage({
       const url = window.URL.createObjectURL(
         new Blob([blob as unknown as BlobPart], { type: "application/pdf" }),
       );
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute(
-        "download",
-        `${research.title.replace(/\s+/g, "_")}_Report.pdf`,
-      );
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("Export Successful", {
-        description: "Report downloaded successfully.",
-      });
-    } catch (error) {
-      toast.error("Export Failed", {
-        description: "Failed to generate PDF",
-      });
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${research?.title.replace(/\s+/g, "_") || "Research"}_Report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("Report exported");
+    } catch {
+      toast.error("Export failed");
     } finally {
       setIsExporting(false);
     }
   };
 
-  return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      {/* Breadcrumbs & Header */}
-      <div className="mb-8">
-        <Link
-          href="/research"
-          className="text-sm text-muted-foreground hover:text-[#a9927d] flex items-center gap-1 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Research Lab
-        </Link>
+  const isQuotaError =
+    research?.errorMessage?.includes("429") ||
+    research?.errorMessage?.includes("quota") ||
+    research?.errorMessage?.includes("Quota");
 
-        <div className="flex flex-col xl:flex-row md:items-start justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
-                {research.title}
-              </h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 rounded-full transition-all ${
-                  research.isFavorited
-                    ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
-                    : "text-gray-400 hover:text-amber-500 hover:bg-amber-500/10"
-                }`}
-                onClick={() => toggleFavorite.mutate({ id: research.id })}
-              >
-                <Star
-                  className={`w-6 h-6 ${research.isFavorited ? "fill-amber-500" : ""}`}
-                />
-              </Button>
-              {research.status === "IN_PROGRESS" && (
-                <Badge className="bg-[#6b9080] animate-pulse">
-                  IN PROGRESS
-                </Badge>
-              )}
-              {research.status !== "IN_PROGRESS" && (
-                <Badge
-                  className={
-                    research.status === "COMPLETED"
-                      ? "bg-[#a9927d]"
-                      : "bg-destructive"
-                  }
-                >
-                  {research.status}
-                </Badge>
-              )}
-            </div>
-            <div className="mt-2">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-sm font-semibold text-[#6b9080] uppercase tracking-wider">
-                  Mission Objective
-                </p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-[#6b9080]/20"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5 text-[#6b9080]" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl bg-[#1a252f] border-[#2f3e46] text-white">
-                    <DialogHeader>
-                      <DialogTitle>Refined Mission Objective</DialogTitle>
-                    </DialogHeader>
-                    <div className="mt-4 max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none">
-                      <ReactMarkdown>{research.refinedPrompt}</ReactMarkdown>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <div className="text-lg text-[#6b9080] font-medium italic line-clamp-2">
-                <ReactMarkdown>{research.refinedPrompt}</ReactMarkdown>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {research.status === "PENDING" && (
-              <Button
-                onClick={handleRetry}
-                className="bg-[#6b9080] hover:bg-[#5a7a6b] text-white"
-              >
-                <Play className="w-4 h-4 mr-2" /> Commence Research
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={handleManualRefresh}
-              className="border-[#2f3e46] text-gray-400 hover:text-white"
-            >
-              <RefreshCcw className="w-4 h-4 mr-2" /> Refresh
-            </Button>
-            {research.status === "IN_PROGRESS" && (
-              <Button
-                onClick={async () => {
-                  await cancelMutation.mutateAsync({ researchId: id });
-                  toast.success("Research cancelled");
-                  refetch();
-                }}
-                disabled={cancelMutation.isPending}
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                {cancelMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-2" />
-                )}
-                Cancel
-              </Button>
-            )}
-            {(research.status === "FAILED" || isQuotaError) && (
-              <>
-                {isQuotaError && (
-                  <Button
-                    onClick={() => setShowKeyDialog(true)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                  >
-                    <Key className="w-4 h-4 mr-2" /> Update API Key
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setShowRetryDialog(true)}
-                  className="bg-[#6b9080] hover:bg-[#5a7a6b] text-white"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" /> Retry Analysis
-                </Button>
-                <Button
-                  onClick={handleRetry}
-                  className="bg-red-500 hover:bg-red-600 text-white"
-                >
-                  <Play className="w-4 h-4 mr-2" /> Retry Mission
-                </Button>
-              </>
-            )}
-            <Button
-              onClick={handleExportPDF}
-              disabled={isExporting || research.status !== "COMPLETED"}
-              className="bg-[#a9927d] hover:bg-[#8f7a68] text-white"
-            >
-              {isExporting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Export Report
-            </Button>
-          </div>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
       </div>
-      {/* Huge & Visible Progress Section with Side-by-Side Logs */}
-      {research.status === "IN_PROGRESS" && (
-        <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in zoom-in duration-700">
-          {/* Left: Progress Visualization */}
-          <div className="py-12 px-6 bg-black/40 border border-[#6b9080]/30 rounded-3xl flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-[#6b9080]/5" />
+    );
+  }
 
-            <div className="relative mb-8">
-              <div className="absolute inset-0 bg-[#6b9080]/20 blur-3xl rounded-full animate-pulse" />
-              <div className="text-5xl md:text-9xl font-black text-[#6b9080] tracking-tighter relative">
-                {research.progress}%
-              </div>
-            </div>
+  if (!research) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertCircle className="w-5 h-5 text-muted-foreground/40" />
+        <p className="text-xs font-mono text-muted-foreground">
+          RESEARCH NOT FOUND
+        </p>
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground text-xs font-mono"
+        >
+          <Link href="/research">← BACK</Link>
+        </Button>
+      </div>
+    );
+  }
 
-            <h2 className="text-xl md:text-3xl font-bold text-white mb-6 tracking-tight uppercase px-4 z-10">
-              {getProgressStep(research.progress)}
-            </h2>
+  const isActive = research.status === "IN_PROGRESS";
+  const researchStatus =
+    research.status === "FAILED"
+      ? ("failed" as const)
+      : research.status === "COMPLETED"
+        ? ("complete" as const)
+        : isActive
+          ? mapProgressToStatus(research.progress)
+          : ("idle" as const);
 
-            <div className="w-full max-w-md bg-[#1a252f] rounded-full h-4 overflow-hidden border border-[#2f3e46] mb-4 z-10">
-              <div
-                className="bg-linear-to-r from-[#6b9080] via-[#a9927d] to-[#6b9080] h-full rounded-full transition-all duration-1000 relative"
-                style={{ width: `${research.progress}%` }}
-              >
-                <div className="absolute inset-0 bg-white/10 animate-pulse" />
-              </div>
-            </div>
-
-            <p className="text-[#6b9080] text-sm font-medium flex items-center gap-2 animate-pulse z-10">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Research Agent Active
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ─── Top Bar ─── */}
+      <div className="border-b border-border bg-background px-4 md:px-6 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-4 min-w-0">
+          <Link
+            href="/research"
+            className="text-muted-foreground/40 hover:text-alabaster transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-sm font-mono font-bold text-alabaster truncate">
+              {research.title}
+            </h1>
+            <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+              {research.scope.replace(/_/g, " ")} ·{" "}
+              {research.searchMethod === "GEMINI_DEEP_RESEARCH"
+                ? "DEEP RESEARCH"
+                : "GOOGLE SEARCH"}
             </p>
           </div>
+        </div>
 
-          {/* Right: Live Terminal Logs */}
-          <div className="h-full">
-            <ResearchLogs researchId={research.id} status={research.status} />
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-7 w-7 rounded",
+              research.isFavorited
+                ? "text-amber-400"
+                : "text-muted-foreground/40 hover:text-amber-400",
+            )}
+            onClick={() => toggleFavorite.mutate({ id: research.id })}
+          >
+            <Star
+              className={cn(
+                "w-3.5 h-3.5",
+                research.isFavorited && "fill-amber-400",
+              )}
+            />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded text-muted-foreground/40 hover:text-alabaster"
+            onClick={() => refetch()}
+          >
+            <RefreshCcw className="w-3.5 h-3.5" />
+          </Button>
+          {isActive && (
+            <Button
+              onClick={async () => {
+                await cancelMutation.mutateAsync({ researchId: id });
+                toast.success("Cancelled");
+                refetch();
+              }}
+              disabled={cancelMutation.isPending}
+              size="sm"
+              className="h-7 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-mono border border-red-500/20 rounded px-3"
+            >
+              <XCircle className="w-3 h-3 mr-1" /> ABORT
+            </Button>
+          )}
+          {research.status === "PENDING" && (
+            <Button
+              onClick={handleRetry}
+              size="sm"
+              className="h-7 bg-blu/10 hover:bg-blu/20 text-blu text-[10px] font-mono border border-blu/20 rounded px-3"
+            >
+              <Play className="w-3 h-3 mr-1" /> START
+            </Button>
+          )}
+          {research.status === "FAILED" && (
+            <>
+              {isQuotaError && (
+                <Button
+                  onClick={() => setShowKeyDialog(true)}
+                  size="sm"
+                  className="h-7 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-mono border border-amber-500/20 rounded px-3"
+                >
+                  <Key className="w-3 h-3 mr-1" /> KEY
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowRetryDialog(true)}
+                size="sm"
+                className="h-7 bg-charcoal hover:bg-charcoal/80 text-muted-foreground text-[10px] font-mono border border-border rounded px-3"
+              >
+                <RefreshCcw className="w-3 h-3 mr-1" /> RETRY
+              </Button>
+              <Button
+                onClick={handleRetry}
+                size="sm"
+                className="h-7 bg-blu/10 hover:bg-blu/20 text-blu text-[10px] font-mono border border-blu/20 rounded px-3"
+              >
+                <Play className="w-3 h-3 mr-1" /> RESTART
+              </Button>
+            </>
+          )}
+          {research.status === "COMPLETED" && (
+            <Button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              size="sm"
+              className="h-7 bg-charcoal hover:bg-charcoal/80 text-muted-foreground text-[10px] font-mono border border-border rounded px-3"
+            >
+              {isExporting ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <Download className="w-3 h-3 mr-1" />
+              )}{" "}
+              EXPORT
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Status Bar ─── */}
+      {(isActive || research.status === "FAILED") && (
+        <StatusBar
+          status={researchStatus}
+          progress={research.progress}
+          stepDescription={feed.statusMessage || undefined}
+          startedAt={startedAt || undefined}
+        />
+      )}
+
+      {/* ─── Error Banner ─── */}
+      {research.status === "FAILED" && research.errorMessage && (
+        <div className="border-b border-red-500/10 bg-red-500/5 px-4 py-2">
+          <p className="text-[11px] font-mono text-red-400/80">
+            <AlertCircle className="w-3 h-3 inline mr-1.5 align-text-bottom" />
+            {research.errorMessage}
+          </p>
         </div>
       )}
+
+      {/* ─── Main Content ─── */}
+      <div className="flex-1 overflow-hidden">
+        {isActive ? (
+          <div className="h-full flex flex-col lg:flex-row">
+            {/* Sources Feed */}
+            <div className="flex-1 flex flex-col border-r border-border/40">
+              <div className="px-4 py-2.5 border-b border-border/40 flex items-center justify-between shrink-0">
+                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                  Sources · {feed.sources.length}
+                </span>
+                {feed.sources.length > 0 && (
+                  <span className="text-[10px] font-mono text-blu animate-pulse">
+                    LIVE
+                  </span>
+                )}
+              </div>
+              <div
+                ref={feedScrollRef}
+                className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar"
+              >
+                {feed.sources.length === 0 ? (
+                  <div className="space-y-1.5">
+                    {[...Array(4)].map((_, i) => (
+                      <SourceCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  feed.sources.map((source, i) => (
+                    <SourceCard key={source.url + i} source={source} />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Activity Log */}
+            <div className="w-full lg:w-[340px] flex flex-col shrink-0 bg-background">
+              <div className="px-4 py-2.5 border-b border-border/40 shrink-0">
+                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                  Activity
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+                <div className="space-y-0.5 font-mono text-[10px]">
+                  {feed.logs.slice(-40).map((log, i) => (
+                    <p
+                      key={i}
+                      className={cn(
+                        "text-muted-foreground/40 leading-relaxed break-words",
+                        log.includes("Error") && "text-red-400/60",
+                        log.includes("Found") && "text-emerald-400/50",
+                        log.includes("Starting") && "text-blu/50",
+                        log.includes("📎") && "text-muted-foreground/60",
+                      )}
+                    >
+                      {log}
+                    </p>
+                  ))}
+                  <p className="text-blu/40 animate-pulse mt-1">▌</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+            {research.refinedPrompt && (
+              <div className="mb-8 border-l-2 border-border pl-4">
+                <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-1.5">
+                  Objective
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                  {research.refinedPrompt}
+                </p>
+              </div>
+            )}
+
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="space-y-6"
+            >
+              <TabsList className="bg-transparent border-b border-border p-0 h-auto rounded-none w-full justify-start">
+                {[
+                  { value: "feed", label: "OVERVIEW" },
+                  {
+                    value: "sources",
+                    label: "SOURCES",
+                    count: research.sources.length,
+                  },
+                  {
+                    value: "insights",
+                    label: "INSIGHTS",
+                    count: research.insights.length,
+                  },
+                  {
+                    value: "actions",
+                    label: "ACTIONS",
+                    count: research.actionItems.length,
+                  },
+                  ...(research.scope === "LEAD_GENERATION"
+                    ? [{ value: "leads", label: "LEADS" }]
+                    : []),
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="relative px-4 pb-2.5 pt-1 text-[10px] font-mono tracking-widest text-muted-foreground data-[state=active]:text-blu data-[state=active]:bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-blu/50 transition-all uppercase"
+                  >
+                    {tab.label}
+                    {"count" in tab &&
+                      tab.count !== undefined &&
+                      tab.count > 0 && (
+                        <span className="ml-1.5 text-muted-foreground/30">
+                          {tab.count}
+                        </span>
+                      )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              <TabsContent value="feed">
+                <ResearchOverview research={research} onRetry={handleRetry} />
+              </TabsContent>
+              <TabsContent value="sources">
+                <ResearchSources
+                  sources={research.sources}
+                  onStartAnalysis={() => setShowRetryDialog(true)}
+                />
+              </TabsContent>
+              <TabsContent value="insights">
+                <ResearchInsights insights={research.insights} />
+              </TabsContent>
+              <TabsContent value="actions">
+                <ResearchActionItems
+                  actionItems={research.actionItems}
+                  researchId={research.id}
+                />
+              </TabsContent>
+              {research.scope === "LEAD_GENERATION" && (
+                <TabsContent value="leads">
+                  <ResearchLeads researchId={id} />
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Dialogs ─── */}
       <RetryAnalysisDialog
         open={showRetryDialog}
         onOpenChange={setShowRetryDialog}
         onConfirm={handleRetryAnalysis}
       />
       <Dialog open={showKeyDialog} onOpenChange={setShowKeyDialog}>
-        <DialogContent className="bg-[#1a252f] border-[#2f3e46] text-white">
+        <DialogContent className="bg-card border-border text-foreground">
           <DialogHeader>
-            <DialogTitle>Update Gemini API Key</DialogTitle>
+            <DialogTitle className="font-mono text-sm">
+              UPDATE API KEY
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>New API Key</Label>
-              <Input
-                value={newApiKey}
-                onChange={(e) => setNewApiKey(e.target.value)}
-                placeholder="Paste your new API key here"
-                className="bg-black/20 border-[#2f3e46]"
-                type="password"
-              />
-            </div>
+          <div className="space-y-4 pt-2">
+            <Input
+              value={newApiKey}
+              onChange={(e) => setNewApiKey(e.target.value)}
+              placeholder="Paste your Gemini API key"
+              className="bg-background border-border font-mono text-xs h-10"
+              type="password"
+            />
             <Button
               onClick={handleUpdateApiKey}
               disabled={isUpdatingKey || !newApiKey}
-              className="w-full bg-[#a9927d] hover:bg-[#8f7a68] text-white"
+              className="w-full bg-charcoal hover:bg-charcoal/80 text-alabaster border border-border font-mono text-xs h-10"
             >
-              {isUpdatingKey ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Update Key & Continue
+              {isUpdatingKey && (
+                <Loader2 className="w-3 h-3 animate-spin mr-2" />
+              )}{" "}
+              UPDATE & CONTINUE
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      >
-        <TabsList className="w-full justify-start bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex overflow-x-auto whitespace-nowrap lg:inline-flex custom-scrollbar touch-pan-x">
-          <TabsTrigger
-            value="overview"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
-          >
-            Overview
-          </TabsTrigger>
-          <TabsTrigger
-            value="sources"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
-          >
-            Sources ({research.sources.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="insights"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
-          >
-            Insights ({research.insights.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="actions"
-            className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
-          >
-            Action Items ({research.actionItems.length})
-          </TabsTrigger>
-          {research.scope === "LEAD_GENERATION" && (
-            <TabsTrigger
-              value="leads"
-              className="data-[state=active]:bg-[#2f3e46] text-gray-400 py-2.5 px-4 md:py-3 md:px-6 text-sm shrink-0"
-            >
-              Leads
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="overview">
-          <ResearchOverview research={research} onRetry={handleRetry} />
-        </TabsContent>
-        <TabsContent value="sources">
-          <ResearchSources
-            sources={research.sources}
-            onStartAnalysis={() => setShowRetryDialog(true)}
-          />
-        </TabsContent>
-        <TabsContent value="insights">
-          <ResearchInsights insights={research.insights} />
-        </TabsContent>
-        <TabsContent value="actions">
-          <ResearchActionItems
-            actionItems={research.actionItems}
-            researchId={research.id}
-          />
-        </TabsContent>
-        {research.scope === "LEAD_GENERATION" && (
-          <TabsContent value="leads">
-            <ResearchLeads researchId={id} />
-          </TabsContent>
-        )}
-      </Tabs>
     </div>
   );
 }

@@ -62,15 +62,15 @@ export function BoardSidebar({
   });
 
   return (
-    <div className="w-64 bg-[#131315] border-r border-white/5 flex flex-col h-full shrink-0">
+    <div className="w-64 bg-[#0a0c10] border-r border-[#2f3e46] flex flex-col h-full shrink-0">
       {/* Header */}
       <div className="px-3 pt-3 pb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+        <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d]">
           Boards
         </h3>
         <button
           onClick={onCreateBoard}
-          className="p-1 rounded-md hover:bg-white/10 text-white/50 hover:text-emerald-400 transition-colors"
+          className="p-1 rounded-md hover:bg-[#1a252f] text-gray-500 hover:text-[#a9927d] transition-colors"
           title="New board"
         >
           <Plus className="w-4 h-4" />
@@ -86,7 +86,7 @@ export function BoardSidebar({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search boards..."
-            className="w-full pl-7 pr-2 py-1.5 text-xs bg-white/5 border border-white/10 rounded-md text-white placeholder:text-white/30 outline-none focus:border-emerald-500/50"
+            className="w-full pl-7 pr-2 py-1.5 text-[10px] font-mono tracking-widest uppercase bg-[#1a252f] border border-[#2f3e46] rounded-md text-white placeholder:text-gray-600 outline-none focus:border-[#a9927d]/50"
           />
         </div>
       </div>
@@ -95,20 +95,20 @@ export function BoardSidebar({
       <div className="px-3 pb-2 flex gap-1">
         <button
           onClick={() => setFilter("all")}
-          className={`text-xs px-2 py-1 rounded-md transition-colors ${
+          className={`text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-md transition-colors ${
             filter === "all"
-              ? "bg-white/10 text-white"
-              : "text-white/40 hover:text-white/60"
+              ? "bg-[#1a252f] text-white"
+              : "text-gray-500 hover:text-gray-300 hover:bg-[#1a252f]/50"
           }`}
         >
           All
         </button>
         <button
           onClick={() => setFilter("favorites")}
-          className={`text-xs px-2 py-1 rounded-md transition-colors flex items-center gap-1 ${
+          className={`text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
             filter === "favorites"
-              ? "bg-white/10 text-white"
-              : "text-white/40 hover:text-white/60"
+              ? "bg-[#1a252f] text-white"
+              : "text-gray-500 hover:text-gray-300 hover:bg-[#1a252f]/50"
           }`}
         >
           <Star className="w-3 h-3" /> Favorites
@@ -137,22 +137,22 @@ export function BoardSidebar({
             {filtered.map((board) => (
               <div
                 key={board.id}
-                className={`relative group px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
+                className={`relative group px-2.5 py-2 rounded-lg cursor-pointer transition-all border ${
                   activeBoardId === board.id
-                    ? "bg-emerald-500/15 text-white"
-                    : "hover:bg-white/5 text-white/70"
+                    ? "bg-[#1a252f] text-white border-[#a9927d]/30"
+                    : "hover:bg-[#1a252f] text-gray-400 hover:text-white border-transparent"
                 }`}
                 onClick={() => onSelectBoard(board.id)}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-base">{board.emoji || "🧠"}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">
+                    <div className="text-[10px] font-mono tracking-widest uppercase truncate font-medium">
                       {board.name}
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5">
                       {board.project && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-blue-400/70">
+                        <span className="flex items-center gap-0.5 text-[9px] font-mono uppercase tracking-widest text-[#a9927d]/70">
                           <FolderOpen className="w-2.5 h-2.5" />
                           <span className="truncate max-w-[60px]">
                             {board.project.name}
@@ -160,7 +160,7 @@ export function BoardSidebar({
                         </span>
                       )}
                       {board.client && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-purple-400/70">
+                        <span className="flex items-center gap-0.5 text-[9px] font-mono uppercase tracking-widest text-purple-400/70">
                           <Users className="w-2.5 h-2.5" />
                           <span className="truncate max-w-[60px]">
                             {board.client.name}
@@ -168,7 +168,7 @@ export function BoardSidebar({
                         </span>
                       )}
                       {!board.project && !board.client && (
-                        <span className="text-[10px] text-white/30 capitalize">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-gray-600">
                           {board.type}
                         </span>
                       )}
@@ -202,19 +202,19 @@ export function BoardSidebar({
 
                 {/* Context menu */}
                 {menuOpen === board.id && (
-                  <div className="absolute right-0 top-full mt-1 bg-[#1e1e22] border border-white/10 rounded-lg shadow-xl z-50 py-1 w-36">
+                  <div className="absolute right-0 top-full mt-1 bg-[#1a252f] border border-[#2f3e46] rounded-lg shadow-xl z-50 py-1 w-36">
                     <button
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-gray-400 hover:bg-[#0a0c10] hover:text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDuplicateBoard(board.id);
                         setMenuOpen(null);
                       }}
                     >
-                      <Copy className="w-3 h-3" /> Duplicate
+                      <Copy className="w-3 h-3 text-[#a9927d]" /> Duplicate
                     </button>
                     <button
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-red-400 hover:bg-red-500/10"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteBoard(board.id);

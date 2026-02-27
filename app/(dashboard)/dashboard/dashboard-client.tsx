@@ -5,7 +5,6 @@ import {
   CheckCircle,
   Clock,
   FolderKanban,
-  Play,
   Timer,
   Target,
   Calendar,
@@ -16,6 +15,14 @@ import {
   Briefcase,
   ArrowRight,
   Activity,
+  Zap,
+  Flame,
+  BarChart3,
+  Sparkles,
+  ChevronRight,
+  Search,
+  FileText,
+  LayoutGrid,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +31,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TaskList } from "@/components/tasks/TaskList";
 import { trpc } from "@/lib/trpc/client";
-import { UrgencyDashboard } from "@/components/dashboard/UrgencyDashboard";
-import { SmartInsight } from "@/components/dashboard/SmartInsight";
-import { StrategyAnalytics } from "@/components/strategy/StrategyAnalytics";
 import { formatDistanceToNow } from "date-fns";
 
 interface DashboardClientProps {
@@ -37,65 +41,60 @@ interface DashboardClientProps {
   };
 }
 
-function StatsCard({
-  title,
+/* ──────────────────────────────────────────────
+   METRICS ROW — Compact stat cards
+   ────────────────────────────────────────────── */
+function MetricPill({
+  label,
   value,
-  subtitle,
+  accent = "text-[#a9927d]",
   icon: Icon,
   loading,
-  accent,
 }: {
-  title: string;
+  label: string;
   value: string | number;
-  subtitle?: string;
+  accent?: string;
   icon: React.ElementType;
   loading?: boolean;
-  accent?: string;
 }) {
   if (loading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-4 rounded" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-8 w-16 mb-1" />
-          <Skeleton className="h-3 w-20" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1a252f] border border-[#2f3e46]">
+        <Skeleton className="h-8 w-8 rounded-lg" />
+        <div className="flex-1">
+          <Skeleton className="h-3 w-16 mb-1.5" />
+          <Skeleton className="h-5 w-10" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="min-w-0 overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6">
-        <CardTitle className="text-sm font-medium truncate mr-2">
-          {title}
-        </CardTitle>
-        <Icon
-          className={`h-4 w-4 shrink-0 ${accent || "text-muted-foreground"}`}
-        />
-      </CardHeader>
-      <CardContent className="px-3 sm:px-6">
-        <div className="text-xl sm:text-2xl font-bold truncate">{value}</div>
-        {subtitle && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-            {subtitle}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+    <div className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1a252f] border border-[#2f3e46] hover:border-[#a9927d]/30 transition-all duration-300 cursor-default">
+      <div className="p-2 rounded-lg bg-[#0a0c10] border border-[#2f3e46] group-hover:border-[#a9927d]/20 transition-colors">
+        <Icon className={`h-4 w-4 ${accent}`} />
+      </div>
+      <div>
+        <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-gray-500">
+          {label}
+        </p>
+        <p className="text-lg font-light text-white leading-none mt-0.5">
+          {value}
+        </p>
+      </div>
+    </div>
   );
 }
 
-function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
+/* ──────────────────────────────────────────────
+   ACTIVE TIMER — Full-width banner
+   ────────────────────────────────────────────── */
+function ActiveTimerBanner({ initialTimer }: { initialTimer: any }) {
   const { data: activeTimer } = trpc.task.getActiveTimer.useQuery(undefined, {
     initialData: initialTimer,
     refetchInterval: 10000,
   });
   const utils = trpc.useUtils();
-
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -103,18 +102,13 @@ function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
       setElapsed(0);
       return;
     }
-
-    const calculateElapsed = () => {
-      const start = new Date(activeTimer.currentTimerStart!).getTime();
-      return Math.floor((Date.now() - start) / 60000);
-    };
-
-    setElapsed(calculateElapsed());
-
-    const interval = setInterval(() => {
-      setElapsed(calculateElapsed());
-    }, 1000);
-
+    const calc = () =>
+      Math.floor(
+        (Date.now() - new Date(activeTimer.currentTimerStart!).getTime()) /
+          1000,
+      );
+    setElapsed(calc());
+    const interval = setInterval(() => setElapsed(calc()), 1000);
     return () => clearInterval(interval);
   }, [activeTimer?.currentTimerStart]);
 
@@ -125,7 +119,7 @@ function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
       utils.task.getActiveTimer.setData(undefined, null);
       return { previous };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _vars, context) => {
       utils.task.getActiveTimer.setData(undefined, context?.previous);
     },
     onSettled: () => {
@@ -136,275 +130,347 @@ function ActiveTimerWidget({ initialTimer }: { initialTimer: any }) {
 
   if (!activeTimer) return null;
 
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+
   return (
-    <Card className="border-primary/50 bg-primary/5 mb-6">
-      <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+    <div className="relative overflow-hidden rounded-xl border border-[#a9927d]/30 bg-gradient-to-r from-[#a9927d]/5 via-[#1a252f] to-[#a9927d]/5 p-4 mb-6 shadow-xl">
+      <div className="absolute inset-0 bg-[#a9927d]/3 animate-pulse" />
+      <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Timer className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse" />
+            <div className="p-3 bg-[#a9927d]/10 rounded-full border border-[#a9927d]/20">
+              <Timer className="h-6 w-6 text-[#a9927d] animate-pulse" />
             </div>
+            <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#a9927d] animate-ping" />
           </div>
           <div>
-            <h3 className="font-semibold text-base sm:text-lg">
+            <h3 className="font-medium text-white text-base">
               {activeTimer.title}
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {activeTimer.project?.name || "No project"} •{" "}
-              <span className="font-medium text-primary">{elapsed}m</span>{" "}
-              elapsed
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                {activeTimer.project?.name || "No project"}
+              </span>
+              <span className="text-[#a9927d] font-mono text-sm font-medium tabular-nums">
+                {mins}:{secs.toString().padStart(2, "0")}
+              </span>
+            </div>
           </div>
         </div>
         <Button
-          variant="secondary"
           size="sm"
-          className="w-full sm:w-auto font-medium"
+          className="bg-[#a9927d] hover:bg-[#d4c4b7] text-[#0a0c10] font-mono tracking-widest uppercase text-[10px] h-9 px-6"
           onClick={() => stopTimer.mutate({ id: activeTimer.id })}
           disabled={stopTimer.isPending}
         >
           Stop Timer
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
+/* ──────────────────────────────────────────────
+   REVENUE CARD — Consistent height
+   ────────────────────────────────────────────── */
 function RevenueCard() {
   const { data, isLoading } = trpc.analytics.getRevenueOverview.useQuery();
-
-  if (isLoading) {
-    return <Skeleton className="h-[160px] w-full rounded-xl" />;
-  }
 
   const formatZAR = (amount: number) =>
     `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 0 })}`;
 
   return (
-    <Card className="min-w-0 overflow-hidden border-none bg-linear-to-br from-emerald-950/40 to-card">
-      <CardHeader className="pb-2 px-4 sm:px-6">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-emerald-500" />
+    <Card className="h-[220px] flex flex-col border-[#2f3e46] bg-[#1a252f] shadow-xl overflow-hidden">
+      <CardHeader className="pb-2 px-5 pt-5 shrink-0">
+        <CardTitle className="text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-500/80 flex items-center gap-2">
+          <DollarSign className="h-3.5 w-3.5" />
           Revenue Overview
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6 space-y-3">
-        {/* Client Revenue (Won) */}
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-emerald-400/80 font-semibold">
-            Client Revenue
-          </p>
-          <p className="text-2xl sm:text-3xl font-bold text-emerald-400">
-            {formatZAR(data?.clientRevenue ?? 0)}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {data?.clientCount ?? 0} closed deals
-          </p>
-        </div>
-
-        <div className="h-px bg-border/50" />
-
-        {/* Pipeline + Leads */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-semibold">
-              Pipeline
-            </p>
-            <p className="text-lg font-bold text-amber-400">
-              {formatZAR(data?.pipelineValue ?? 0)}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              {data?.pipelineCount ?? 0} open deals
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-blue-400/80 font-semibold">
-              Lead Estimates
-            </p>
-            <p className="text-lg font-bold text-blue-400">
-              {formatZAR(data?.leadEstimatedValue ?? 0)}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              {data?.leadCount ?? 0} active leads
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TimeBreakdownCard() {
-  const { data, isLoading } = trpc.analytics.getTimeBreakdown.useQuery();
-
-  if (isLoading) {
-    return <Skeleton className="h-[160px] w-full rounded-xl" />;
-  }
-
-  return (
-    <Card className="min-w-0 overflow-hidden border-none bg-linear-to-br from-indigo-950/40 to-card">
-      <CardHeader className="pb-2 px-4 sm:px-6">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Clock className="h-4 w-4 text-indigo-400" />
-          Time This Week
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 sm:px-6 space-y-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold">
-            {data?.totalHours ?? 0}h
-          </span>
-          <span className="text-xs text-muted-foreground">total</span>
-          {(data?.billableHours ?? 0) > 0 && (
-            <Badge
-              variant="outline"
-              className="text-[10px] h-5 border-emerald-500/30 text-emerald-400"
-            >
-              {data?.billableHours}h billable
-            </Badge>
-          )}
-        </div>
-
-        {data?.categories && data.categories.length > 0 ? (
-          <div className="space-y-1.5">
-            {data.categories.slice(0, 4).map((cat) => (
-              <div
-                key={cat.key}
-                className="flex items-center justify-between text-xs"
-              >
-                <span className="text-muted-foreground truncate mr-2">
-                  {cat.label}
-                </span>
-                <span className="font-medium shrink-0">{cat.hours}h</span>
-              </div>
-            ))}
+      <CardContent className="px-5 flex-1 flex flex-col justify-between pb-5">
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-4 w-24" />
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground italic">
-            No time logged this week
-          </p>
+          <>
+            <div>
+              <p className="text-3xl font-light text-emerald-400 leading-tight">
+                {formatZAR(data?.clientRevenue ?? 0)}
+              </p>
+              <p className="text-[10px] font-mono text-emerald-400/50 mt-1 uppercase tracking-wider">
+                {data?.clientCount ?? 0} closed deals
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#2f3e46]">
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">
+                  Pipeline
+                </p>
+                <p className="text-base font-light text-amber-400">
+                  {formatZAR(data?.pipelineValue ?? 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-gray-500 mb-0.5">
+                  Lead Est.
+                </p>
+                <p className="text-base font-light text-blue-400">
+                  {formatZAR(data?.leadEstimatedValue ?? 0)}
+                </p>
+              </div>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function InactivityAlerts() {
-  const { data, isLoading } = trpc.analytics.getInactivityAlerts.useQuery();
-
-  if (isLoading) {
-    return <Skeleton className="h-[120px] w-full rounded-xl" />;
-  }
-
-  if (!data || data.totalAlerts === 0) {
-    return null;
-  }
+/* ──────────────────────────────────────────────
+   TIME BREAKDOWN CARD — Consistent height
+   ────────────────────────────────────────────── */
+function TimeBreakdownCard() {
+  const { data, isLoading } = trpc.analytics.getTimeBreakdown.useQuery();
 
   return (
-    <Card className="border-warning/30 bg-warning/5 mb-6">
-      <CardHeader className="pb-2 px-4 sm:px-6">
-        <CardTitle className="text-sm font-medium flex items-center gap-2 text-warning">
-          <AlertTriangle className="h-4 w-4" />
-          Needs Your Attention
-          <Badge
-            variant="outline"
-            className="text-[10px] h-5 border-warning/30 text-warning ml-auto"
-          >
-            {data.totalAlerts} alert{data.totalAlerts !== 1 ? "s" : ""}
-          </Badge>
+    <Card className="h-[220px] flex flex-col border-[#2f3e46] bg-[#1a252f] shadow-xl overflow-hidden">
+      <CardHeader className="pb-2 px-5 pt-5 shrink-0">
+        <CardTitle className="text-[10px] font-mono uppercase tracking-[0.2em] text-indigo-400 flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5" />
+          Time This Week
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6 space-y-2">
-        {/* Stale Clients */}
-        {data.staleClients.slice(0, 3).map((client) => (
-          <Link
-            key={client.id}
-            href={`/clients/${client.id}`}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="p-1.5 bg-amber-500/10 rounded-full shrink-0">
-              <Briefcase className="h-3.5 w-3.5 text-amber-500" />
+      <CardContent className="px-5 flex-1 flex flex-col justify-between pb-5">
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-light text-white">
+                {data?.totalHours ?? 0}h
+              </span>
+              {(data?.billableHours ?? 0) > 0 && (
+                <Badge
+                  variant="outline"
+                  className="text-[9px] h-5 border-emerald-500/20 bg-emerald-500/5 text-emerald-400 uppercase tracking-widest"
+                >
+                  {data?.billableHours}h billable
+                </Badge>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                {client.name}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {client.daysSince !== null
-                  ? `No contact for ${client.daysSince} days`
-                  : "Never contacted"}
-              </p>
+            <div className="space-y-2 pt-2">
+              {data?.categories?.slice(0, 3).map((cat) => (
+                <div key={cat.key} className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-[#0a0c10] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-400"
+                      style={{
+                        width: `${Math.min((cat.hours / (data?.totalHours || 1)) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider w-20 text-right truncate">
+                    {cat.label}
+                  </span>
+                  <span className="text-[10px] font-mono text-indigo-400 w-8 text-right">
+                    {cat.hours}h
+                  </span>
+                </div>
+              ))}
+              {(!data?.categories || data.categories.length === 0) && (
+                <p className="text-[10px] font-mono text-gray-500 italic uppercase tracking-widest">
+                  No time logged yet
+                </p>
+              )}
             </div>
-            <Badge
-              variant="outline"
-              className="text-[10px] h-5 border-amber-500/20 text-amber-500 shrink-0"
-            >
-              Client
-            </Badge>
-          </Link>
-        ))}
-
-        {/* Stale Leads */}
-        {data.staleLeads.slice(0, 3).map((lead) => (
-          <Link
-            key={lead.id}
-            href="/crm/leads"
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="p-1.5 bg-blue-500/10 rounded-full shrink-0">
-              <Users className="h-3.5 w-3.5 text-blue-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                {lead.firstName} {lead.lastName}
-                {lead.companyName ? ` · ${lead.companyName}` : ""}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Last engaged {lead.daysSince} days ago
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="text-[10px] h-5 border-blue-500/20 text-blue-500 shrink-0"
-            >
-              Lead
-            </Badge>
-          </Link>
-        ))}
-
-        {/* Stale Projects */}
-        {data.staleProjects.slice(0, 2).map((project) => (
-          <Link
-            key={project.id}
-            href={`/projects/${project.id}`}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="p-1.5 bg-red-500/10 rounded-full shrink-0">
-              <FolderKanban className="h-3.5 w-3.5 text-red-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                {project.name}
-                {project.client ? ` · ${project.client.name}` : ""}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                No progress for {project.daysSince} days ·{" "}
-                {Math.round(project.completionPercentage)}% done
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="text-[10px] h-5 border-red-500/20 text-red-500 shrink-0"
-            >
-              Project
-            </Badge>
-          </Link>
-        ))}
+          </>
+        )}
       </CardContent>
     </Card>
   );
 }
 
+/* ──────────────────────────────────────────────
+   ATTENTION REQUIRED — Always renders
+   ────────────────────────────────────────────── */
+function AttentionRequired() {
+  const { data, isLoading } = trpc.analytics.getInactivityAlerts.useQuery();
+
+  return (
+    <Card className="h-[220px] flex flex-col border-[#2f3e46] bg-[#1a252f] shadow-xl overflow-hidden">
+      <CardHeader className="pb-2 px-5 pt-5 shrink-0">
+        <CardTitle className="text-[10px] font-mono uppercase tracking-[0.2em] flex items-center gap-2 text-red-400">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Needs Attention
+          {data && data.totalAlerts > 0 && (
+            <Badge
+              variant="outline"
+              className="text-[9px] h-5 border-red-500/20 bg-red-500/5 text-red-400 ml-auto"
+            >
+              {data.totalAlerts}
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-5 flex-1 overflow-y-auto pb-4 custom-scrollbar">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : !data || data.totalAlerts === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="p-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
+              <CheckCircle className="h-5 w-5 text-emerald-400" />
+            </div>
+            <p className="text-xs text-emerald-400 font-medium">
+              All caught up!
+            </p>
+            <p className="text-[10px] text-gray-500 mt-1">
+              No stale clients, leads or projects
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {data.staleClients.slice(0, 3).map((client) => (
+              <Link
+                key={client.id}
+                href={`/clients/${client.id}`}
+                className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-[#0a0c10] transition-colors group"
+              >
+                <div className="p-1 bg-amber-500/10 rounded shrink-0">
+                  <Briefcase className="h-3 w-3 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-[#a9927d] transition-colors">
+                    {client.name}
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    {client.daysSince !== null
+                      ? `${client.daysSince}d silent`
+                      : "Never contacted"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+            {data.staleLeads.slice(0, 2).map((lead) => (
+              <Link
+                key={lead.id}
+                href="/crm/leads"
+                className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-[#0a0c10] transition-colors group"
+              >
+                <div className="p-1 bg-blue-500/10 rounded shrink-0">
+                  <Users className="h-3 w-3 text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-[#a9927d] transition-colors">
+                    {lead.firstName} {lead.lastName}
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    {lead.daysSince}d ago
+                  </p>
+                </div>
+              </Link>
+            ))}
+            {data.staleProjects.slice(0, 2).map((project) => (
+              <Link
+                key={project.id}
+                href={`/projects/${project.id}`}
+                className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-[#0a0c10] transition-colors group"
+              >
+                <div className="p-1 bg-red-500/10 rounded shrink-0">
+                  <FolderKanban className="h-3 w-3 text-red-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-[#a9927d] transition-colors">
+                    {project.name}
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    {project.daysSince}d idle ·{" "}
+                    {Math.round(project.completionPercentage)}%
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   SHORTCUT CARDS — Visual quick actions
+   ────────────────────────────────────────────── */
+const shortcuts = [
+  {
+    label: "Tasks",
+    href: "/tasks",
+    icon: CheckCircle,
+    accent: "text-emerald-400",
+    glow: "group-hover:shadow-emerald-500/10",
+  },
+  {
+    label: "Projects",
+    href: "/projects",
+    icon: FolderKanban,
+    accent: "text-blue-400",
+    glow: "group-hover:shadow-blue-500/10",
+  },
+  {
+    label: "Day Plan",
+    href: "/planning/day",
+    icon: Calendar,
+    accent: "text-amber-400",
+    glow: "group-hover:shadow-amber-500/10",
+  },
+  {
+    label: "CRM",
+    href: "/crm",
+    icon: Users,
+    accent: "text-purple-400",
+    glow: "group-hover:shadow-purple-500/10",
+  },
+  {
+    label: "Research",
+    href: "/research",
+    icon: Search,
+    accent: "text-cyan-400",
+    glow: "group-hover:shadow-cyan-500/10",
+  },
+  {
+    label: "Strategy",
+    href: "/strategy",
+    icon: Target,
+    accent: "text-rose-400",
+    glow: "group-hover:shadow-rose-500/10",
+  },
+  {
+    label: "Calendar",
+    href: "/calendar",
+    icon: LayoutGrid,
+    accent: "text-indigo-400",
+    glow: "group-hover:shadow-indigo-500/10",
+  },
+  {
+    label: "Canvas",
+    href: "/canvas",
+    icon: FileText,
+    accent: "text-orange-400",
+    glow: "group-hover:shadow-orange-500/10",
+  },
+];
+
+/* ──────────────────────────────────────────────
+   MAIN DASHBOARD
+   ────────────────────────────────────────────── */
 export function DashboardClient({ initialData }: DashboardClientProps) {
   const { data: stats } = trpc.analytics.getDashboardStats.useQuery(undefined, {
     initialData: initialData.stats,
@@ -412,7 +478,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const { data: todaysTasks } = trpc.task.getTodaysTasks.useQuery(undefined, {
     initialData: initialData.todaysTasks,
   });
-
   const { data: energyStats } = trpc.wellbeing.getEnergyStats.useQuery({
     days: 7,
   });
@@ -421,149 +486,128 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     ? `${energyStats.avgEnergy}/10`
     : "—";
 
-  let energySubtitle = "Stable";
-  if (energyStats?.trend === "improving") energySubtitle = "Trending Up";
-  if (energyStats?.trend === "declining") energySubtitle = "Trending Down";
+  const completedToday = stats?.completedToday ?? 0;
+  const totalToday = stats?.todaysTasks ?? 0;
+  const focusScore =
+    totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden p-4 sm:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
-          Dashboard
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1 text-white-smoke/60">
-          Your productivity at a glance
-        </p>
+    <div className="w-full max-w-full overflow-x-hidden p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-white">
+              Dashboard
+            </h1>
+            <p className="text-[10px] font-mono text-[#a9927d] uppercase tracking-[0.2em] mt-1">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1a252f] border border-[#2f3e46]">
+              <Flame className="h-3.5 w-3.5 text-[#a9927d]" />
+              <span className="text-[10px] font-mono text-white uppercase tracking-wider">
+                Focus {focusScore}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1a252f] border border-[#2f3e46]">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <span className="text-[10px] font-mono text-white uppercase tracking-wider">
+                Energy {energyValue}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Active Timer */}
-      <ActiveTimerWidget initialTimer={initialData.activeTimer} />
+      <ActiveTimerBanner initialTimer={initialData.activeTimer} />
 
-      {/* Inactivity Alerts */}
-      <InactivityAlerts />
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <MetricPill
+          label="Tasks Due"
+          value={stats?.todaysTasks ?? 0}
+          icon={CheckCircle}
+          accent="text-emerald-400"
+        />
+        <MetricPill
+          label="Completed"
+          value={stats?.completedToday ?? 0}
+          icon={TrendingUp}
+          accent="text-[#a9927d]"
+        />
+        <MetricPill
+          label="Projects"
+          value={stats?.activeProjects ?? 0}
+          icon={FolderKanban}
+          accent="text-blue-400"
+        />
+        <MetricPill
+          label="Focus Hours"
+          value={`${stats?.hoursThisWeek ?? 0}h`}
+          icon={Clock}
+          accent="text-indigo-400"
+        />
+      </div>
 
-      {/* Revenue + Time Row */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 mb-6 min-w-0">
+      {/* Main Content: 3-column on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <RevenueCard />
         <TimeBreakdownCard />
+        <AttentionRequired />
       </div>
 
-      {/* Smart Insights & Urgency */}
-      <div className="space-y-6 min-w-0 mb-6">
-        <SmartInsight />
-        <UrgencyDashboard />
-        <StrategyAnalytics />
-      </div>
+      {/* Today's Tasks */}
+      <Card className="border-[#2f3e46] bg-[#1a252f] shadow-xl mb-6 overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between p-5 pb-3 border-b border-[#2f3e46]/50">
+          <CardTitle className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a9927d] flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5" />
+            Today&apos;s Tasks
+          </CardTitle>
+          <Link href="/tasks">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[9px] uppercase font-mono tracking-widest text-gray-500 hover:text-white hover:bg-[#2f3e46] gap-1"
+            >
+              All
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent className="p-5 pt-3">
+          <TaskList
+            tasks={todaysTasks}
+            emptyMessage="No tasks scheduled for today"
+          />
+        </CardContent>
+      </Card>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 min-w-0">
-        <StatsCard
-          title="Tasks Due"
-          value={stats?.todaysTasks ?? 0}
-          subtitle={`${stats?.completedToday ?? 0} done`}
-          icon={CheckCircle}
-          accent="text-emerald-500"
-        />
-        <StatsCard
-          title="Projects"
-          value={stats?.activeProjects ?? 0}
-          subtitle="In progress"
-          icon={FolderKanban}
-          accent="text-blue-500"
-        />
-        <StatsCard
-          title="Focus Hours"
-          value={`${stats?.hoursThisWeek ?? 0}h`}
-          subtitle="This week"
-          icon={Clock}
-          accent="text-indigo-500"
-        />
-        <StatsCard
-          title="Energy"
-          value={energyValue}
-          subtitle={energySubtitle}
-          icon={Play}
-          accent="text-amber-500"
-        />
-      </div>
-
-      {/* Today's Tasks and Quick Actions */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 min-w-0">
-        <Card className="flex flex-col min-w-0 overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-xl truncate">
-              Today&apos;s Tasks
-            </CardTitle>
-            <Link href="/tasks">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs sm:text-sm"
+      {/* Quick Actions Grid */}
+      <div className="mb-2">
+        <h2 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3 px-1">
+          Quick Access
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          {shortcuts.map((s) => (
+            <Link key={s.href} href={s.href}>
+              <div
+                className={`group flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-[#1a252f] border border-[#2f3e46] hover:border-[#a9927d]/30 transition-all duration-300 shadow-lg ${s.glow} cursor-pointer`}
               >
-                View All
-              </Button>
+                <s.icon className={`h-5 w-5 ${s.accent}`} />
+                <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors">
+                  {s.label}
+                </span>
+              </div>
             </Link>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex-1 overflow-hidden">
-            <TaskList
-              tasks={todaysTasks}
-              emptyMessage="No tasks scheduled for today"
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col min-w-0 overflow-hidden">
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-xl">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 grid gap-3 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 flex-1">
-            <Link href="/tasks" className="w-full">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
-              >
-                <CheckCircle className="h-4 w-4 mr-2 text-primary shrink-0" />
-                <span className="truncate">View All Tasks</span>
-              </Button>
-            </Link>
-            <Link href="/projects" className="w-full">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
-              >
-                <FolderKanban className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
-                <span className="truncate">Manage Projects</span>
-              </Button>
-            </Link>
-            <Link href="/planning/day" className="w-full">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
-              >
-                <Calendar className="h-4 w-4 mr-2 text-green-500 shrink-0" />
-                <span className="truncate">Plan Your Day</span>
-              </Button>
-            </Link>
-            <Link href="/crm" className="w-full">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
-              >
-                <Users className="h-4 w-4 mr-2 text-orange-500 shrink-0" />
-                <span className="truncate">CRM Overview</span>
-              </Button>
-            </Link>
-            <Link href="/strategy" className="w-full col-span-full">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-11 sm:h-10 text-sm overflow-hidden"
-              >
-                <Target className="h-4 w-4 mr-2 text-indigo-500 shrink-0" />
-                <span className="truncate">Strategy Hub</span>
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

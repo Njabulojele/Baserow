@@ -248,14 +248,14 @@ export const teamRouter = router({
     }),
 
   // Accept an invite
-  acceptInvite: publicProcedure
+  acceptInvite: protectedProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ input }) => {
-      const { userId } = await auth();
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId;
       if (!userId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
-          message: "You must be signed in to accept an invitation.",
+          message: "User session not found in context.",
         });
       }
 

@@ -92,7 +92,7 @@ export default function ClientsPage() {
     <div className="space-y-4 p-4 md:p-8 pt-6 overflow-hidden">
       <div className="flex flex-col md:flex-row items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Clients</h2>
+          <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">Clients</h2>
           <p className="text-muted-foreground">
             Manage your client relationships and health
           </p>

@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 w-full max-w-full overflow-x-hidden">
       <div className="mb-4">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white-smoke">
+        <h2 className="text-2xl sm:text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
           Analytics
         </h2>
       </div>

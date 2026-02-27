@@ -214,7 +214,7 @@ export function CanvasClient() {
       : "saved";
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0f0f11] text-white">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0a0c10] text-white">
       {/* Board Sidebar */}
       {showSidebar && (
         <BoardSidebar
@@ -232,10 +232,10 @@ export function CanvasClient() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col relative min-w-0">
         {/* Top bar */}
-        <div className="h-12 flex items-center px-3 gap-2 bg-[#161618] border-b border-white/5 shrink-0 z-30">
+        <div className="h-12 flex items-center px-3 gap-2 bg-[#1a252f] border-b border-[#2f3e46] shrink-0 z-30">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-md hover:bg-[#0a0c10] text-gray-400 hover:text-white transition-colors"
             title={showSidebar ? "Hide sidebar" : "Show sidebar"}
           >
             {showSidebar ? (
@@ -247,13 +247,13 @@ export function CanvasClient() {
 
           <Link
             href="/dashboard"
-            className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-md hover:bg-[#0a0c10] text-gray-400 hover:text-white transition-colors"
             title="Back to dashboard"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
 
-          <div className="w-px h-5 bg-white/10 mx-1" />
+          <div className="w-px h-5 bg-[#2f3e46] mx-1" />
 
           {activeBoard && (
             <>
@@ -296,11 +296,13 @@ export function CanvasClient() {
                 </span>
               )}
               {saveStatus === "unsaved" && (
-                <span className="text-white/30">Unsaved changes</span>
+                <span className="text-gray-500 font-mono text-[10px] uppercase tracking-widest">
+                  Unsaved changes
+                </span>
               )}
               <button
                 onClick={handleManualSave}
-                className="p-1.5 rounded hover:bg-white/10"
+                className="p-1.5 rounded hover:bg-[#0a0c10] text-gray-400 hover:text-white transition-colors"
                 title="Save (Ctrl+S)"
               >
                 <Save className="w-3.5 h-3.5" />
@@ -313,24 +315,24 @@ export function CanvasClient() {
         {activeBoardId ? (
           <div className="flex-1 relative">
             <CanvasToolbar onOpenEntityModal={() => setShowEntityModal(true)} />
-            <CanvasViewport />
+            <CanvasViewport boardId={activeBoardId} />
             <CanvasPropertiesPanel />
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center px-8">
+            <div className="text-center px-8 flex flex-col items-center">
               <div className="text-6xl mb-6">🧠</div>
-              <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+              <h2 className="text-sm font-mono tracking-widest uppercase mb-2 text-[#a9927d]">
                 Infinite Canvas
               </h2>
-              <p className="text-white/40 max-w-md mb-6 text-sm leading-relaxed">
+              <p className="text-gray-500 font-mono text-[10px] max-w-md mb-8 text-center uppercase tracking-widest leading-relaxed">
                 Your visual thinking space. Brainstorm, plan projects, map
                 client relationships — with your real data. Select a board or
                 create a new one to get started.
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-semibold text-sm hover:opacity-90 transition-opacity"
+                className="border border-[#a9927d]/50 bg-[#0a0c10] text-[#a9927d] hover:bg-[#a9927d] hover:text-[#0a0c10] text-[10px] font-mono uppercase tracking-widest px-6 py-2.5 rounded-md transition-colors"
               >
                 Create Your First Board
               </button>

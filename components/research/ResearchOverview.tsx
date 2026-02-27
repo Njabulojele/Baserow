@@ -1,20 +1,21 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { ResearchStatus } from "@prisma/client";
 import {
   Search,
   Target,
-  Lightbulb,
   CheckCircle2,
   AlertCircle,
   FileText,
   Clock,
   Maximize2,
   Loader2,
+  Globe,
+  Activity,
+  RefreshCcw,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -24,6 +25,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MarkdownRenderer } from "./MarkdownRenderer";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
 interface ResearchOverviewProps {
@@ -31,379 +35,175 @@ interface ResearchOverviewProps {
   onRetry: () => void;
 }
 
+function StepIndicator({
+  label,
+  description,
+  isComplete,
+  isActive,
+  isFailed,
+}: {
+  label: string;
+  description: string;
+  isComplete: boolean;
+  isActive: boolean;
+  isFailed: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 p-3 rounded-md border transition-all duration-200",
+        isComplete && "border-emerald-500/20 bg-emerald-500/5",
+        isActive && !isFailed && "border-blu/20 bg-blu/5",
+        !isComplete && !isActive && "border-border bg-card/30 opacity-40",
+        isFailed && isActive && "border-red-500/20 bg-red-500/5",
+      )}
+    >
+      <div className="mt-0.5">
+        {isComplete ? (
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+        ) : isActive && !isFailed ? (
+          <Loader2 className="w-3.5 h-3.5 text-blu animate-spin" />
+        ) : (
+          <div className="w-3.5 h-3.5 rounded-full border border-border" />
+        )}
+      </div>
+      <div>
+        <p
+          className={cn(
+            "text-xs font-mono font-medium",
+            isComplete && "text-emerald-400",
+            isActive && !isFailed && "text-blu",
+            !isComplete && !isActive && "text-muted-foreground/40",
+          )}
+        >
+          {label}
+        </p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ResearchOverview({ research, onRetry }: ResearchOverviewProps) {
   const isFailed = research.status === "FAILED";
-  const isInProgress = research.status === "IN_PROGRESS";
-  const isCompleted = research.status === "COMPLETED";
+  const isGrounding = research.searchMethod === "GEMINI_GROUNDING";
+  const fullReportSource = research.sources?.find(
+    (s: any) =>
+      s.url === "google-search-grounding" || s.title.includes("Final Report"),
+  );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Status Card */}
-        <Card className="lg:col-span-2 bg-[#1a252f] border-[#2f3e46] p-6">
-          <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-            <Search className="w-5 h-5 text-[#a9927d]" /> Research Mission
-            Progress
-          </h3>
-
-          <div className="space-y-8">
-            <div className="relative">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-400">Total Completion</span>
-                <span className="text-[#6b9080] font-bold">
-                  {research.progress}%
-                </span>
-              </div>
-              <Progress value={research.progress} className="h-3 bg-black/40" />
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      {/* Scope Info */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center gap-3">
+          <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+            <Target className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+              Scope
+            </p>
+            <p className="text-sm font-medium font-mono uppercase text-white">
+              {research.scope.replace(/_/g, " ")}
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center gap-3">
+          <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+            <Globe className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+              Method
+            </p>
+            <p className="text-sm font-medium font-mono uppercase text-white">
+              {research.searchMethod === "GEMINI_DEEP_RESEARCH"
+                ? "Deep Research"
+                : "Google Search"}
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+              <Activity className="w-4 h-4" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-300 ${
-                    research.progress >= 30
-                      ? "bg-[#6b9080]/20 border-[#6b9080]/30"
-                      : research.progress > 0 &&
-                          research.progress < 30 &&
-                          !isFailed
-                        ? "bg-[#a9927d]/10 border-[#a9927d]/30"
-                        : "bg-black/20 border-transparent opacity-50"
-                  }`}
-                >
-                  <div
-                    className={`mt-1 p-1.5 rounded-full border ${
-                      research.progress >= 30
-                        ? "bg-[#6b9080] border-[#6b9080] text-white"
-                        : research.progress > 0 &&
-                            research.progress < 30 &&
-                            !isFailed
-                          ? "bg-[#a9927d] border-[#a9927d] text-white animate-pulse"
-                          : "bg-transparent border-gray-600 text-gray-500"
-                    }`}
-                  >
-                    {research.progress >= 30 ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    ) : research.progress > 0 &&
-                      research.progress < 30 &&
-                      !isFailed ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <div className="w-3.5 h-3.5 rounded-full" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={`text-sm font-medium ${
-                          research.progress > 0 &&
-                          research.progress < 30 &&
-                          !isFailed
-                            ? "text-[#a9927d]"
-                            : "text-white"
-                        }`}
-                      >
-                        Surface Discovery
-                      </p>
-                      {research.progress > 0 &&
-                        research.progress < 30 &&
-                        !isFailed && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-1.5 h-4 border-[#a9927d] text-[#a9927d]"
-                          >
-                            IN PROGRESS
-                          </Badge>
-                        )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Identifying key sources and trends
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-300 ${
-                    research.progress >= 70
-                      ? "bg-[#6b9080]/20 border-[#6b9080]/30"
-                      : research.progress >= 30 &&
-                          research.progress < 70 &&
-                          !isFailed
-                        ? "bg-[#a9927d]/10 border-[#a9927d]/30"
-                        : "bg-black/20 border-transparent opacity-50"
-                  }`}
-                >
-                  <div
-                    className={`mt-1 p-1.5 rounded-full border ${
-                      research.progress >= 70
-                        ? "bg-[#6b9080] border-[#6b9080] text-white"
-                        : research.progress >= 30 &&
-                            research.progress < 70 &&
-                            !isFailed
-                          ? "bg-[#a9927d] border-[#a9927d] text-white animate-pulse"
-                          : "bg-transparent border-gray-600 text-gray-500"
-                    }`}
-                  >
-                    {research.progress >= 70 ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    ) : research.progress >= 30 &&
-                      research.progress < 70 &&
-                      !isFailed ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <div className="w-3.5 h-3.5 rounded-full" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={`text-sm font-medium ${
-                          research.progress >= 30 &&
-                          research.progress < 70 &&
-                          !isFailed
-                            ? "text-[#a9927d]"
-                            : "text-white"
-                        }`}
-                      >
-                        Deep Analysis
-                      </p>
-                      {research.progress >= 30 &&
-                        research.progress < 70 &&
-                        !isFailed && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-1.5 h-4 border-[#a9927d] text-[#a9927d]"
-                          >
-                            IN PROGRESS
-                          </Badge>
-                        )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      AI synthesis and insight extraction
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-300 ${
-                    research.progress >= 100
-                      ? "bg-[#6b9080]/20 border-[#6b9080]/30"
-                      : research.progress >= 70 &&
-                          research.progress < 100 &&
-                          !isFailed
-                        ? "bg-[#a9927d]/10 border-[#a9927d]/30"
-                        : "bg-black/20 border-transparent opacity-50"
-                  }`}
-                >
-                  <div
-                    className={`mt-1 p-1.5 rounded-full border ${
-                      research.progress >= 100
-                        ? "bg-[#6b9080] border-[#6b9080] text-white"
-                        : research.progress >= 70 &&
-                            research.progress < 100 &&
-                            !isFailed
-                          ? "bg-[#a9927d] border-[#a9927d] text-white animate-pulse"
-                          : "bg-transparent border-gray-600 text-gray-500"
-                    }`}
-                  >
-                    {research.progress >= 100 ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    ) : research.progress >= 70 &&
-                      research.progress < 100 &&
-                      !isFailed ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <div className="w-3.5 h-3.5 rounded-full" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={`text-sm font-medium ${
-                          research.progress >= 70 &&
-                          research.progress < 100 &&
-                          !isFailed
-                            ? "text-[#a9927d]"
-                            : "text-white"
-                        }`}
-                      >
-                        Strategy Formulation
-                      </p>
-                      {research.progress >= 70 &&
-                        research.progress < 100 &&
-                        !isFailed && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-1.5 h-4 border-[#a9927d] text-[#a9927d]"
-                          >
-                            IN PROGRESS
-                          </Badge>
-                        )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Generating actionable items and leads
-                    </p>
-                  </div>
-                </div>
-
-                {isFailed && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-red-500">
-                        Mission Obstructed
-                      </p>
-                      <p className="text-xs text-red-400/80">
-                        {research.errorMessage ||
-                          "An unknown error occurred during analysis."}
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={onRetry}
-                        className="h-auto p-0 text-red-500 font-bold mt-1"
-                      >
-                        Retry Mission
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div>
+              <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+                Status
+              </p>
+              <p className="text-sm font-medium font-mono uppercase text-white">
+                {research.status}
+              </p>
             </div>
           </div>
-        </Card>
-
-        {/* Executive Summary */}
-        {research.rawData?.summary && (
-          <Card className="lg:col-span-2 bg-[#1a252f] border-[#2f3e46] p-6 animate-in fade-in duration-700 delay-200">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#6b9080]" /> Executive Summary
-            </h3>
-            <div className="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed overflow-x-auto">
-              <ReactMarkdown>{research.rawData.summary}</ReactMarkdown>
-            </div>
-          </Card>
-        )}
-
-        {/* Sidebar Info */}
-        <div className="space-y-6">
-          <Card className="bg-[#1a252f] border-[#2f3e46] p-6">
-            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Metadata
-            </h4>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <Target className="w-4 h-4 text-[#a9927d]" /> Scope
-                </div>
-                <Badge
-                  variant="outline"
-                  className="border-[#6b9080] text-[#6b9080]"
-                >
-                  {research.scope.replace(/_/g, " ")}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <Clock className="w-4 h-4 text-[#a9927d]" /> Started
-                </div>
-                <span className="text-xs text-gray-400">
-                  {formatDistanceToNow(new Date(research.createdAt))} ago
-                </span>
-              </div>
-              {research.completedAt && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-[#6b9080]" />{" "}
-                    Completed
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {formatDistanceToNow(new Date(research.completedAt))} ago
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          <Card className="bg-[#1a252f] border-[#2f3e46] p-6">
-            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Quick Stats
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-black/20 rounded-xl">
-                <p className="text-xs text-muted-foreground mb-1">Insights</p>
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-amber-400" />
-                  <span className="text-xl font-bold font-mono">
-                    {research.insights.length}
-                  </span>
-                </div>
-              </div>
-              <div className="p-3 bg-black/20 rounded-xl">
-                <p className="text-xs text-muted-foreground mb-1">Sources</p>
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-400" />
-                  <span className="text-xl font-bold font-mono">
-                    {research.sources.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Key Trends */}
-          {research.rawData?.trends && research.rawData.trends.length > 0 && (
-            <Card className="bg-[#1a252f] border-[#2f3e46] p-6">
-              <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-                Key Trends
-              </h4>
-              <ul className="space-y-3">
-                {research.rawData.trends.map((trend: string, i: number) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2 text-sm text-gray-300"
-                  >
-                    <span className="text-[#a9927d] font-bold mt-0.5">•</span>
-                    {trend}
-                  </li>
-                ))}
-              </ul>
-            </Card>
+          {isFailed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              className="h-8 text-[10px] font-mono text-muted-foreground hover:text-white"
+            >
+              <RefreshCcw className="w-3 h-3 mr-1" /> Retry
+            </Button>
           )}
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+                Timeline
+              </p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase">
+                Started{" "}
+                {formatDistanceToNow(new Date(research.createdAt), {
+                  addSuffix: true,
+                })}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Raw Mission Text */}
-      <Card className="bg-black/20 border-dashed border-[#2f3e46] p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold text-[#a9927d] uppercase tracking-widest">
-            Original Objective
-          </h4>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs text-muted-foreground hover:text-white"
-              >
-                <Maximize2 className="w-3 h-3 mr-1" /> Expand
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl bg-[#1a252f] border-[#2f3e46] text-white">
-              <DialogHeader>
-                <DialogTitle>Research Objective</DialogTitle>
-              </DialogHeader>
-              <div className="mt-4 max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none">
-                <ReactMarkdown>{research.originalPrompt}</ReactMarkdown>
+      {research.status === "COMPLETED" && (
+        <div className="bg-[#0a0c10] border border-[#2f3e46] rounded-xl overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-[#2f3e46] flex flex-col sm:flex-row sm:items-center justify-between sticky top-0 bg-[#0a0c10]/95 backdrop-blur z-10 gap-2">
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#a9927d] flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              {isGrounding
+                ? "Grounded Research Report"
+                : "Deep Research Analysis"}
+            </h2>
+          </div>
+
+          <div className="p-6 md:p-8 relative">
+            {(isGrounding && fullReportSource) ||
+            (!isGrounding && fullReportSource) ? (
+              <div className="prose prose-invert prose-p:leading-relaxed prose-pre:bg-[#1a252f] prose-pre:border prose-pre:border-[#2f3e46] prose-a:text-blu hover:prose-a:text-blu/80 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-table:border-collapse prose-th:border prose-th:border-[#2f3e46] prose-th:bg-[#1a252f] prose-th:p-3 prose-td:border prose-td:border-[#2f3e46] prose-td:p-3 prose-ul:my-6 prose-li:my-2 prose-p:my-6 max-w-none text-gray-300">
+                <MarkdownRenderer content={fullReportSource.content} />
               </div>
-            </DialogContent>
-          </Dialog>
+            ) : research.rawData?.summary ? (
+              <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-gray-300">
+                <MarkdownRenderer content={research.rawData.summary} />
+              </div>
+            ) : (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <EmptyState
+                  title="No Report Available"
+                  description="This research task did not generate a unified text report."
+                  icon={Search}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        <div className="text-gray-400 text-sm leading-relaxed italic line-clamp-3">
-          <ReactMarkdown>{research.originalPrompt}</ReactMarkdown>
-        </div>
-      </Card>
+      )}
     </div>
   );
 }

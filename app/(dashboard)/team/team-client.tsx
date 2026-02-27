@@ -28,14 +28,14 @@ export function TeamClient() {
   if (!org) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-          <Users className="w-8 h-8 text-emerald-400" />
+        <div className="w-16 h-16 rounded-full bg-[#1a252f] border border-[#2f3e46] flex items-center justify-center">
+          <Users className="w-8 h-8 text-[#a9927d]" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <h2 className="text-sm font-mono tracking-widest uppercase mb-2 text-[#a9927d]">
             Create a Team Hub
           </h2>
-          <p className="text-white/50">
+          <p className="text-gray-500 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
             Collaborate in real-time, share resources, and see what your team is
             working on right now.
           </p>
@@ -62,7 +62,7 @@ export function TeamClient() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex gap-4 items-center">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 shadow-lg border border-white/10 flex items-center justify-center font-bold text-2xl">
+          <div className="w-16 h-16 rounded-xl bg-[#1a252f] shadow-xl border border-[#2f3e46] flex items-center justify-center font-bold text-2xl text-[#a9927d]">
             {org.logo ? (
               <img
                 src={org.logo}
@@ -75,12 +75,14 @@ export function TeamClient() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
-              <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs font-mono text-white/60">
+              <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-[#a9927d]">
+                {org.name}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full bg-[#1a252f] text-[10px] border border-[#2f3e46] font-mono tracking-widest text-gray-400">
                 {org.plan.toUpperCase()}
               </span>
             </div>
-            <p className="text-white/50 text-sm">
+            <p className="text-gray-500 font-mono text-[10px] uppercase tracking-widest mt-1">
               Team Hub • {org.members.length} member
               {org.members.length !== 1 && "s"}
             </p>
@@ -100,16 +102,16 @@ export function TeamClient() {
         {/* Left Column: Stats & Members */}
         <div className="lg:col-span-2 space-y-8">
           <section>
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <LayoutTemplate className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-[10px] font-mono tracking-widest uppercase flex items-center gap-2 mb-4 text-[#a9927d]">
+              <LayoutTemplate className="w-4 h-4 text-[#a9927d]" />
               Team Performance
             </h2>
             <TeamStats orgId={org.id} />
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <Users className="w-5 h-5 text-blue-400" />
+            <h2 className="text-[10px] font-mono tracking-widest uppercase flex items-center gap-2 mb-4 text-[#a9927d]">
+              <Users className="w-4 h-4 text-[#a9927d]" />
               Members
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -126,11 +128,11 @@ export function TeamClient() {
 
         {/* Right Column: Live Activity Feed */}
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-orange-400" />
+          <h2 className="text-[10px] font-mono tracking-widest uppercase flex items-center gap-2 mb-4 text-[#a9927d]">
+            <Activity className="w-4 h-4 text-[#a9927d]" />
             Live Activity
           </h2>
-          <div className="bg-[#1a1a1e] border border-white/5 rounded-xl h-[600px] overflow-hidden flex flex-col shadow-xl">
+          <div className="bg-[#0a0c10] border border-[#2f3e46] rounded-xl h-[600px] overflow-hidden flex flex-col shadow-xl">
             <ActivityFeed orgId={org.id} />
           </div>
         </div>
@@ -164,10 +166,12 @@ function CreateOrgModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-[#1a1a1e] border border-white/10 rounded-xl p-6 w-[400px] space-y-4 shadow-2xl">
-        <h3 className="text-lg font-semibold">Create Organization</h3>
+      <div className="bg-[#0a0c10] border border-[#2f3e46] rounded-xl p-6 w-[400px] space-y-4 shadow-2xl">
+        <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d]">
+          Create Organization
+        </h3>
         <div>
-          <label className="text-sm text-white/50 mb-1 block">
+          <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
             Organization Name
           </label>
           <input
@@ -176,7 +180,7 @@ function CreateOrgModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Acme Corp"
-            className="w-full bg-[#0f0f11] border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-emerald-500/50"
+            className="w-full bg-[#1a252f] border border-[#2f3e46] rounded-lg px-3 py-2 text-[10px] font-mono tracking-widest uppercase text-white outline-none focus:border-[#a9927d]/50"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
@@ -191,7 +195,7 @@ function CreateOrgModal({
               })
             }
             disabled={!name || createMutation.isPending}
-            className="bg-white text-black hover:bg-white/90"
+            className="border border-[#a9927d]/50 bg-[#0a0c10] text-[#a9927d] hover:bg-[#a9927d] hover:text-[#0a0c10] text-[10px] font-mono tracking-widest uppercase"
           >
             {createMutation.isPending ? "Creating..." : "Create"}
           </Button>
@@ -203,23 +207,23 @@ function CreateOrgModal({
 
 function TeamSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="space-y-8 animate-pulse p-4">
       <div className="flex justify-between items-start">
         <div className="flex gap-4 items-center">
-          <Skeleton className="w-16 h-16 rounded-xl bg-[#2a2a30]" />
+          <Skeleton className="w-16 h-16 rounded-xl bg-[#1a252f]" />
           <div className="space-y-2">
-            <Skeleton className="h-8 w-48 bg-[#2a2a30]" />
-            <Skeleton className="h-4 w-32 bg-[#2a2a30]" />
+            <Skeleton className="h-4 w-48 bg-[#1a252f]" />
+            <Skeleton className="h-3 w-32 bg-[#1a252f]" />
           </div>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <Skeleton className="h-[200px] w-full rounded-xl bg-[#1a1a1e]" />
-          <Skeleton className="h-[400px] w-full rounded-xl bg-[#1a1a1e]" />
+          <Skeleton className="h-[100px] w-full rounded-xl bg-[#0a0c10]" />
+          <Skeleton className="h-[400px] w-full rounded-xl bg-[#0a0c10]" />
         </div>
         <div className="space-y-6">
-          <Skeleton className="h-[600px] w-full rounded-xl bg-[#1a1a1e]" />
+          <Skeleton className="h-[600px] w-full rounded-xl bg-[#0a0c10]" />
         </div>
       </div>
     </div>

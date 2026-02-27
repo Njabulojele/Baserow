@@ -66,8 +66,8 @@ export function CanvasPropertiesPanel() {
   const isMulti = selectedNodes.length > 1;
 
   return (
-    <div className="absolute right-3 top-16 z-20 w-52 bg-[#1a1a1e]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl p-3 space-y-3 max-h-[calc(100vh-120px)] overflow-y-auto">
-      <div className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">
+    <div className="absolute right-3 top-16 z-20 w-52 bg-[#0a0c10]/95 backdrop-blur-md border border-[#2f3e46] rounded-xl shadow-xl p-3 space-y-3 max-h-[calc(100vh-120px)] overflow-y-auto">
+      <div className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono">
         {isMulti ? `${selectedNodes.length} selected` : node.type}
       </div>
 
@@ -75,21 +75,21 @@ export function CanvasPropertiesPanel() {
       <div className="flex gap-1 flex-wrap">
         <button
           onClick={duplicateSelectedNodes}
-          className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          className="p-1.5 rounded hover:bg-[#1a252f] text-gray-500 hover:text-white"
           title="Duplicate"
         >
           <Copy className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => bringToFront(node.id)}
-          className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          className="p-1.5 rounded hover:bg-[#1a252f] text-gray-500 hover:text-white"
           title="Bring to front"
         >
           <ArrowUpToLine className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => sendToBack(node.id)}
-          className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          className="p-1.5 rounded hover:bg-[#1a252f] text-gray-500 hover:text-white"
           title="Send to back"
         >
           <ArrowDownToLine className="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ export function CanvasPropertiesPanel() {
           onClick={() =>
             node.locked ? unlockNode(node.id) : lockNode(node.id)
           }
-          className={`p-1.5 rounded hover:bg-white/10 ${node.locked ? "text-amber-400" : "text-white/50"}`}
+          className={`p-1.5 rounded hover:bg-[#1a252f] transition-colors ${node.locked ? "text-amber-500 bg-[#1a252f]/50" : "text-gray-500 hover:text-white"}`}
           title={node.locked ? "Unlock" : "Lock"}
         >
           {node.locked ? (
@@ -109,7 +109,7 @@ export function CanvasPropertiesPanel() {
         </button>
         <button
           onClick={deleteSelectedNodes}
-          className="p-1.5 rounded hover:bg-red-500/20 text-white/50 hover:text-red-400"
+          className="p-1.5 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
           title="Delete"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export function CanvasPropertiesPanel() {
         !isMulti && (
           <>
             <div>
-              <label className="text-[10px] text-white/40 mb-1 block">
+              <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
                 Font
               </label>
               <select
@@ -131,7 +131,7 @@ export function CanvasPropertiesPanel() {
                 onChange={(e) =>
                   updateNode(node.id, { fontFamily: e.target.value })
                 }
-                className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-white outline-none"
+                className="w-full px-2 py-1.5 bg-[#1a252f] border border-[#2f3e46] rounded text-[10px] font-mono tracking-widest text-gray-300 outline-none"
               >
                 {FONT_FAMILIES.map((f) => (
                   <option key={f} value={f}>
@@ -142,7 +142,7 @@ export function CanvasPropertiesPanel() {
             </div>
 
             <div>
-              <label className="text-[10px] text-white/40 mb-1 block">
+              <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
                 Size
               </label>
               <select
@@ -150,7 +150,7 @@ export function CanvasPropertiesPanel() {
                 onChange={(e) =>
                   updateNode(node.id, { fontSize: Number(e.target.value) })
                 }
-                className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-white outline-none"
+                className="w-full px-2 py-1.5 bg-[#1a252f] border border-[#2f3e46] rounded text-[10px] font-mono tracking-widest text-gray-300 outline-none"
               >
                 {FONT_SIZES.map((s) => (
                   <option key={s} value={s}>
@@ -167,7 +167,7 @@ export function CanvasPropertiesPanel() {
                     fontWeight: node.fontWeight === "bold" ? "normal" : "bold",
                   })
                 }
-                className={`p-1.5 rounded transition-colors ${node.fontWeight === "bold" ? "bg-white/15 text-white" : "text-white/40 hover:bg-white/10"}`}
+                className={`p-1.5 rounded transition-colors ${node.fontWeight === "bold" ? "bg-[#1a252f] text-[#a9927d]" : "text-gray-500 hover:bg-[#1a252f] hover:text-white"}`}
               >
                 <Bold className="w-3.5 h-3.5" />
               </button>
@@ -178,7 +178,7 @@ export function CanvasPropertiesPanel() {
                       node.fontStyle === "italic" ? "normal" : "italic",
                   })
                 }
-                className={`p-1.5 rounded transition-colors ${node.fontStyle === "italic" ? "bg-white/15 text-white" : "text-white/40 hover:bg-white/10"}`}
+                className={`p-1.5 rounded transition-colors ${node.fontStyle === "italic" ? "bg-[#1a252f] text-[#a9927d]" : "text-gray-500 hover:bg-[#1a252f] hover:text-white"}`}
               >
                 <Italic className="w-3.5 h-3.5" />
               </button>
@@ -191,7 +191,7 @@ export function CanvasPropertiesPanel() {
                         : "underline",
                   })
                 }
-                className={`p-1.5 rounded transition-colors ${node.textDecoration === "underline" ? "bg-white/15 text-white" : "text-white/40 hover:bg-white/10"}`}
+                className={`p-1.5 rounded transition-colors ${node.textDecoration === "underline" ? "bg-[#1a252f] text-[#a9927d]" : "text-gray-500 hover:bg-[#1a252f] hover:text-white"}`}
               >
                 <Underline className="w-3.5 h-3.5" />
               </button>
@@ -202,7 +202,7 @@ export function CanvasPropertiesPanel() {
       {/* Background color */}
       {node.type !== "entity" && !isMulti && (
         <div>
-          <label className="text-[10px] text-white/40 mb-1 block">
+          <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
             Background
           </label>
           <div className="flex flex-wrap gap-1">
@@ -221,7 +221,7 @@ export function CanvasPropertiesPanel() {
       {/* Text color */}
       {(node.type === "text" || node.type === "sticky") && !isMulti && (
         <div>
-          <label className="text-[10px] text-white/40 mb-1 block">
+          <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
             Text Color
           </label>
           <div className="flex flex-wrap gap-1">
@@ -240,7 +240,9 @@ export function CanvasPropertiesPanel() {
       {/* Border */}
       {!isMulti && node.type !== "numberBadge" && (
         <div>
-          <label className="text-[10px] text-white/40 mb-1 block">Border</label>
+          <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
+            Border
+          </label>
           <div className="flex gap-1 items-center">
             <input
               type="range"
@@ -250,9 +252,9 @@ export function CanvasPropertiesPanel() {
               onChange={(e) =>
                 updateNode(node.id, { borderWidth: Number(e.target.value) })
               }
-              className="flex-1 h-1 accent-emerald-400 bg-white/10 rounded-full appearance-none"
+              className="flex-1 h-1 accent-[#a9927d] bg-[#1a252f] border border-[#2f3e46] rounded-full appearance-none"
             />
-            <span className="text-[10px] text-white/30 w-5 text-right">
+            <span className="text-[10px] font-mono text-gray-500 w-5 text-right">
               {node.borderWidth || 0}
             </span>
           </div>
@@ -262,7 +264,7 @@ export function CanvasPropertiesPanel() {
       {/* Opacity */}
       {!isMulti && (
         <div>
-          <label className="text-[10px] text-white/40 mb-1 block">
+          <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">
             Opacity
           </label>
           <div className="flex gap-1 items-center">
@@ -274,9 +276,9 @@ export function CanvasPropertiesPanel() {
               onChange={(e) =>
                 updateNode(node.id, { opacity: Number(e.target.value) / 100 })
               }
-              className="flex-1 h-1 accent-emerald-400 bg-white/10 rounded-full appearance-none"
+              className="flex-1 h-1 accent-[#a9927d] bg-[#1a252f] border border-[#2f3e46] rounded-full appearance-none"
             />
-            <span className="text-[10px] text-white/30 w-8 text-right">
+            <span className="text-[10px] font-mono text-gray-500 w-8 text-right">
               {Math.round((node.opacity ?? 1) * 100)}%
             </span>
           </div>

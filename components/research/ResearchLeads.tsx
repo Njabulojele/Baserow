@@ -1,22 +1,11 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  Linkedin,
-  Mail,
-  UserPlus,
-  Loader2,
-  Plus,
-  Sparkles,
-  Check,
-} from "lucide-react";
+import { Users, Mail, Loader2, Plus, Globe, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 
 interface ResearchLeadsProps {
   researchId: string;
@@ -25,14 +14,13 @@ interface ResearchLeadsProps {
 export function ResearchLeads({ researchId }: ResearchLeadsProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const utils = trpc.useContext();
-
   const { data: crmLeads, isLoading } = trpc.crmLead.getByResearchId.useQuery({
     researchId,
   });
 
   const generateLeads = trpc.research.generateLeads.useMutation({
     onSuccess: () => {
-      toast.success("Leads generated successfully!");
+      toast.success("Leads generated");
       utils.research.getById.invalidate({ id: researchId });
       utils.crmLead.getByResearchId.invalidate({ researchId });
       setIsGenerating(false);
@@ -47,227 +35,147 @@ export function ResearchLeads({ researchId }: ResearchLeadsProps) {
     setIsGenerating(true);
     generateLeads.mutate({ researchId });
   };
-
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied!`);
+    toast.success(`${label} copied`);
   };
 
   if (isLoading) {
     return (
-      <div className="py-20 text-center bg-[#1a252f] rounded-xl border border-[#2f3e46]">
-        <Loader2 className="w-8 h-8 mx-auto text-gray-500 animate-spin mb-4" />
-        <p className="text-gray-400">Loading leads...</p>
+      <div className="py-16 text-center border border-border/50 border-dashed rounded-md">
+        <Loader2 className="w-5 h-5 mx-auto text-muted-foreground/40 animate-spin mb-3" />
+        <p className="text-xs font-mono text-muted-foreground">LOADING LEADS</p>
       </div>
     );
   }
 
   if (!crmLeads || crmLeads.length === 0) {
     return (
-      <div className="py-20 text-center bg-[#1a252f] rounded-xl border border-[#2f3e46]">
-        <Users className="w-16 h-16 mx-auto text-gray-700 mb-4" />
-        <h3 className="text-xl font-semibold text-white mb-2">
-          Lead Miner is Idle
-        </h3>
-        <p className="text-gray-400 max-w-sm mx-auto mb-6">
-          No business leads were identified yet. You can use the AI to extract
-          potential leads from your research findings.
+      <div className="py-16 text-center border border-border/50 border-dashed rounded-md">
+        <Users className="w-5 h-5 mx-auto text-muted-foreground/30 mb-3" />
+        <p className="text-xs font-mono text-muted-foreground mb-1">
+          NO LEADS IDENTIFIED
+        </p>
+        <p className="text-[10px] text-muted-foreground/60 max-w-xs mx-auto mb-4">
+          Extract potential leads from research findings
         </p>
         <Button
           onClick={handleGenerateLeads}
           disabled={isGenerating}
-          className="bg-[#a9927d] hover:bg-[#8f7a68] text-white"
+          size="sm"
+          className="h-7 bg-blu/10 hover:bg-blu/20 text-blu text-[10px] font-mono border border-blu/20 rounded px-3"
         >
           {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
           ) : (
-            <Sparkles className="w-4 h-4 mr-2" />
+            <Plus className="w-3 h-3 mr-1.5" />
           )}
-          Generate Leads
+          GENERATE LEADS
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">Identified Leads</h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-border/50">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+          {crmLeads.length} Leads Identified
+        </span>
         <Button
           onClick={handleGenerateLeads}
           disabled={isGenerating}
-          variant="outline"
-          className="border-[#a9927d] text-[#a9927d] hover:bg-[#a9927d]/10"
+          size="sm"
+          className="h-6 bg-charcoal hover:bg-charcoal/80 text-muted-foreground text-[10px] font-mono border border-border rounded px-2.5"
         >
           {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            <Loader2 className="w-3 h-3 animate-spin mr-1" />
           ) : (
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-3 h-3 mr-1" />
           )}
-          Find More Leads
+          MORE
         </Button>
       </div>
-
-      {/* Lead Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-[#1a252f] border-[#2f3e46] p-4 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-            Total Extracted
-          </p>
-          <p className="text-2xl font-bold text-white">{crmLeads.length}</p>
-        </Card>
-      </div>
-
-      {/* Leads List */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {crmLeads.map((lead) => (
-          <Card
+          <div
             key={lead.id}
-            className="bg-[#1a252f] border-[#2f3e46] overflow-hidden group"
+            className="border border-border rounded-md bg-card/50 hover:border-charcoal transition-all"
           >
-            <div className="flex flex-col lg:flex-row">
-              {/* Profile Bar */}
-              <div className="p-6 flex-1 border-b lg:border-b-0 lg:border-r border-[#2f3e46]">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-[#a9927d] flex items-center justify-center text-white font-bold text-xl uppercase shrink-0">
-                    {lead.firstName?.charAt(0) || "U"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-lg font-bold text-white truncate">
-                        {lead.firstName} {lead.lastName}
-                      </h4>
-                      {lead.status !== "NEW" && (
-                        <Badge className="bg-[#6b9080] text-[10px]">
-                          {lead.status}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-[#6b9080] font-medium truncate mb-1">
-                      {lead.title || "Decision Maker"} @ {lead.companyName}
-                    </p>
-                    {lead.industry && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        🏢 {lead.industry}
-                      </p>
-                    )}
-
-                    {/* Contact Details Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
-                      {lead.email && (
-                        <div
-                          className="flex items-center gap-1.5 text-gray-400 hover:text-white cursor-pointer"
-                          onClick={() => copyToClipboard(lead.email, "Email")}
-                        >
-                          <Mail className="w-3 h-3 text-blue-400" />
-                          <span className="truncate">{lead.email}</span>
-                        </div>
-                      )}
-                      {lead.phone && (
-                        <div
-                          className="flex items-center gap-1.5 text-gray-400 hover:text-white cursor-pointer"
-                          onClick={() =>
-                            copyToClipboard(lead.phone || "", "Phone")
-                          }
-                        >
-                          <span>📞</span>
-                          <span>{lead.phone}</span>
-                        </div>
-                      )}
-                      {lead.companyWebsite && (
-                        <a
-                          href={
-                            lead.companyWebsite.startsWith("http")
-                              ? lead.companyWebsite
-                              : `https://${lead.companyWebsite}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-gray-400 hover:text-[#6b9080]"
-                        >
-                          <span>🌐</span>
-                          <span className="truncate">
-                            {lead.companyWebsite.replace(/^https?:\/\//, "")}
-                          </span>
-                        </a>
-                      )}
-                      {lead.customFields && (
-                        <div className="flex items-center gap-1.5 text-gray-400">
-                          <span>📍</span>
-                          <span>{(lead.customFields as any)?.location}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-md bg-charcoal flex items-center justify-center text-muted-foreground text-xs font-mono font-bold uppercase shrink-0">
+                  {lead.firstName?.charAt(0) || "?"}
                 </div>
-
-                {/* Pain Points Chips */}
-                {lead.painPoints && lead.painPoints.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
-                      Pain Points
-                    </p>
-                    <div className="flex flex-wrap gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h4 className="text-sm font-mono font-medium text-alabaster truncate">
+                      {lead.firstName} {lead.lastName}
+                    </h4>
+                    {lead.status !== "NEW" && (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] h-4 px-1.5 font-mono border-border text-muted-foreground"
+                      >
+                        {lead.status}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-blu/60 font-mono truncate">
+                    {lead.title || "Decision Maker"} · {lead.companyName}
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-2">
+                    {lead.email && (
+                      <button
+                        onClick={() => copyToClipboard(lead.email, "Email")}
+                        className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-alabaster transition-colors"
+                      >
+                        <Mail className="w-3 h-3" /> {lead.email}
+                      </button>
+                    )}
+                    {lead.companyWebsite && (
+                      <a
+                        href={
+                          lead.companyWebsite.startsWith("http")
+                            ? lead.companyWebsite
+                            : `https://${lead.companyWebsite}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-blu transition-colors"
+                      >
+                        <Globe className="w-3 h-3" />
+                        {lead.companyWebsite.replace(/^https?:\/\//, "")}
+                      </a>
+                    )}
+                  </div>
+                  {lead.painPoints && lead.painPoints.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2.5">
                       {lead.painPoints.map((pp: string, i: number) => (
                         <Badge
                           key={i}
                           variant="outline"
-                          className="text-[10px] border-[#2f3e46] bg-black/20 text-gray-400"
+                          className="text-[9px] h-4 px-1.5 font-mono border-border/60 text-muted-foreground/60 bg-transparent"
                         >
                           {pp}
                         </Badge>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Outreach Bar */}
-              <div className="p-6 bg-black/20 lg:w-80 flex flex-col justify-center gap-3">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                  Quick Actions
-                </p>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-[#1a252f] border-[#2f3e46] text-xs h-9 justify-start"
-                    onClick={() => copyToClipboard(lead.email || "", "Email")}
-                  >
-                    <Mail className="w-3 h-3 mr-2 text-blue-400" /> Copy Email
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-[#1a252f] border-[#2f3e46] text-xs h-9 justify-start"
-                    onClick={() => copyToClipboard(lead.phone || "", "Phone")}
-                    disabled={!lead.phone}
-                  >
-                    <span className="mr-2">📞</span> Copy Phone
-                  </Button>
+                  )}
                 </div>
-
-                {lead.companyWebsite && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-[#1a252f] border-[#2f3e46] text-xs h-9 justify-start w-full"
-                    onClick={() =>
-                      window.open(
-                        (lead.companyWebsite || "").startsWith("http")
-                          ? lead.companyWebsite || ""
-                          : `https://${lead.companyWebsite}`,
-                        "_blank",
-                      )
-                    }
-                  >
-                    <span className="mr-2">🌐</span> Visit Website
-                  </Button>
-                )}
+                <div className="flex gap-1 shrink-0">
+                  {lead.email && (
+                    <button
+                      onClick={() => copyToClipboard(lead.email, "Email")}
+                      className="p-1.5 text-muted-foreground/40 hover:text-blu transition-colors rounded hover:bg-charcoal/50"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     </div>

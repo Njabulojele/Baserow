@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engineering Review v4 — OpenInfi Phases 4–5 (Revised)</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600;700&display=swap");
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #faf9f7;
+        --surface: #f3f1ed;
+        --surface2: #eceae4;
+        --ink: #18170f;
+        --ink-soft: #4a4840;
+        --ink-muted: #8a8778;
+        --border: #dddad2;
+        --border-soft: #e8e5de;
+
+        --signal: #c84b0a;
+        --signal-dim: rgba(200, 75, 10, 0.06);
+        --signal-border: rgba(200, 75, 10, 0.18);
+
+        --go: #1a7f52;
+        --go-dim: rgba(26, 127, 82, 0.06);
+        --go-border: rgba(26, 127, 82, 0.2);
+
+        --caution: #9a6b00;
+        --caution-dim: rgba(154, 107, 0, 0.06);
+        --caution-border: rgba(154, 107, 0, 0.2);
+
+        --ink-blue: #1e3a8a;
+        --ink-blue-dim: rgba(30, 58, 138, 0.05);
+        --ink-blue-border: rgba(30, 58, 138, 0.15);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Geist", sans-serif;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      /* Subtle paper texture via repeating gradient */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23faf9f7'/%3E%3Crect width='1' height='1' fill='%23f0ede6' opacity='0.4'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.5;
+      }
+
+      header {
+        background: var(--ink);
+        padding: 64px 80px 56px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Subtle ruled lines in header */
+      header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 31px,
+          rgba(255, 255, 255, 0.025) 31px,
+          rgba(255, 255, 255, 0.025) 32px
+        );
+        pointer-events: none;
+      }
+
+      .round-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Geist Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(250, 249, 247, 0.45);
+        border: 1px solid rgba(250, 249, 247, 0.12);
+        padding: 5px 14px;
+        margin-bottom: 28px;
+        position: relative;
+      }
+
+      .round-badge .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #c8f55a;
+        animation: pulse 2.5s ease infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      h1 {
+        font-family: "Instrument Serif", serif;
+        font-size: clamp(42px, 6vw, 76px);
+        font-weight: 400;
+        line-height: 0.92;
+        letter-spacing: -0.025em;
+        color: #faf9f7;
+        margin-bottom: 18px;
+        position: relative;
+      }
+
+      h1 em {
+        font-style: italic;
+        color: #c8f55a;
+      }
+
+      .h-sub {
+        font-size: 14px;
+        color: rgba(250, 249, 247, 0.45);
+        max-width: 580px;
+        line-height: 1.65;
+        position: relative;
+      }
+
+      .delta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        margin-top: 40px;
+        max-width: 840px;
+        position: relative;
+      }
+
+      .dc {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 20px 22px;
+        text-align: center;
+        transition: background 0.2s;
+      }
+
+      .dc:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .dc-label {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(250, 249, 247, 0.35);
+        margin-bottom: 8px;
+      }
+
+      .dc-val {
+        font-family: "Instrument Serif", serif;
+        font-size: 38px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .dc-note {
+        font-family: "Geist Mono", monospace;
+        font-size: 10px;
+        margin-top: 4px;
+        opacity: 0.3;
+      }
+
+      .lime {
+        color: #c8f55a;
+      }
+      .amber {
+        color: #f0c060;
+      }
+      .coral {
+        color: #f07060;
+      }
+      .seafoam {
+        color: #60d0b0;
+      }
+      .lavender {
+        color: #b090f0;
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(24, 23, 15, 0.95);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 80px;
+      }
+
+      nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nt {
+        font-family: "Geist Mono", monospace;
+        font-size: 11px;
+        color: rgba(250, 249, 247, 0.35);
+        padding: 14px 20px;
+        text-decoration: none;
+        white-space: nowrap;
+        border-bottom: 1px solid transparent;
+        margin-bottom: -1px;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+        letter-spacing: 0.05em;
+      }
+
+      .nt:hover {
+        color: rgba(250, 249, 247, 0.8);
+      }
+      .nt.active {
+        color: #c8f55a;
+        border-bottom-color: #c8f55a;
+      }
+
+      main {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 0 80px 120px;
+        position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 700px) {
+        main,
+        header,
+        nav {
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+        .grid-2 {
+          grid-template-columns: 1fr !important;
+        }
+      }
+
+      .section {
+        padding-top: 76px;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .en {
+        font-family: "Geist Mono", monospace;
+        font-size: 11px;
+        color: var(--border);
+      }
+
+      .et {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        border: 1px solid var(--border);
+        padding: 3px 9px;
+      }
+
+      h2 {
+        font-family: "Instrument Serif", serif;
+        font-size: clamp(26px, 3.5vw, 38px);
+        font-weight: 400;
+        line-height: 1.1;
+        letter-spacing: -0.015em;
+        color: var(--ink);
+        margin-bottom: 18px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      p {
+        color: var(--ink-soft);
+        margin-bottom: 14px;
+        font-size: 14px;
+        line-height: 1.72;
+      }
+
+      /* ── VERDICT ─────────────────────────── */
+      .verdict {
+        background: var(--ink);
+        color: #faf9f7;
+        padding: 28px 32px;
+        margin: 28px 0;
+        display: grid;
+        grid-template-columns: 2px 1fr;
+        gap: 0 24px;
+      }
+
+      .verdict-stripe {
+        background: #c8f55a;
+      }
+
+      .verdict-inner {
+      }
+
+      .vl {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(200, 245, 90, 0.7);
+        margin-bottom: 10px;
+      }
+
+      .vt {
+        font-family: "Instrument Serif", serif;
+        font-size: 18px;
+        font-style: italic;
+        line-height: 1.5;
+        color: rgba(250, 249, 247, 0.9);
+      }
+
+      /* ── CARDS ───────────────────────────── */
+      .cards {
+        display: grid;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        background: white;
+        overflow: hidden;
+        transition: box-shadow 0.15s;
+      }
+
+      .card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      }
+
+      .card-bar {
+        height: 2px;
+      }
+      .c-signal .card-bar {
+        background: var(--signal);
+      }
+      .c-go .card-bar {
+        background: var(--go);
+      }
+      .c-caution .card-bar {
+        background: var(--caution);
+      }
+      .c-blue .card-bar {
+        background: var(--ink-blue);
+      }
+
+      .card-inner {
+        padding: 22px 26px;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .ctag {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .ctag-signal {
+        background: var(--signal-dim);
+        color: var(--signal);
+        border: 1px solid var(--signal-border);
+      }
+      .ctag-go {
+        background: var(--go-dim);
+        color: var(--go);
+        border: 1px solid var(--go-border);
+      }
+      .ctag-caution {
+        background: var(--caution-dim);
+        color: var(--caution);
+        border: 1px solid var(--caution-border);
+      }
+      .ctag-blue {
+        background: var(--ink-blue-dim);
+        color: var(--ink-blue);
+        border: 1px solid var(--ink-blue-border);
+      }
+
+      .card-title {
+        font-family: "Geist", sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--ink);
+        flex: 1;
+      }
+
+      .card-text {
+        font-size: 13px;
+        color: var(--ink-soft);
+        line-height: 1.75;
+      }
+      .card-text strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .card-text code {
+        font-family: "Geist Mono", monospace;
+        font-size: 12px;
+        background: var(--surface);
+        padding: 1px 5px;
+      }
+
+      .fix {
+        margin-top: 14px;
+        padding: 12px 16px;
+        background: var(--surface);
+        border-left: 2px solid var(--go);
+        font-family: "Geist Mono", monospace;
+        font-size: 12px;
+        color: var(--ink-soft);
+        line-height: 1.65;
+      }
+
+      .fix strong {
+        color: var(--go);
+      }
+
+      /* ── DELTA TABLE ─────────────────────── */
+      .delta-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid var(--border);
+        font-size: 13px;
+        margin: 20px 0;
+      }
+
+      .delta-table thead {
+        background: var(--surface2);
+      }
+
+      .delta-table th {
+        padding: 10px 14px;
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-weight: 400;
+      }
+
+      .delta-table td {
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--border-soft);
+        color: var(--ink-soft);
+        vertical-align: top;
+      }
+
+      .delta-table tr:last-child td {
+        border-bottom: none;
+      }
+      .delta-table tr:hover td {
+        background: var(--surface);
+      }
+
+      .pill {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        display: inline-block;
+      }
+
+      .pill-signal {
+        background: var(--signal-dim);
+        color: var(--signal);
+        border: 1px solid var(--signal-border);
+      }
+      .pill-caution {
+        background: var(--caution-dim);
+        color: var(--caution);
+        border: 1px solid var(--caution-border);
+      }
+      .pill-go {
+        background: var(--go-dim);
+        color: var(--go);
+        border: 1px solid var(--go-border);
+      }
+      .pill-blue {
+        background: var(--ink-blue-dim);
+        color: var(--ink-blue);
+        border: 1px solid var(--ink-blue-border);
+      }
+
+      /* ── COMPARE ──────────────────────────── */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 20px 0;
+      }
+
+      .compare-col {
+        border: 1px solid var(--border);
+        background: white;
+      }
+      .compare-col.was {
+        border-top: 2px solid var(--signal);
+      }
+      .compare-col.now {
+        border-top: 2px solid var(--go);
+      }
+
+      .compare-head {
+        padding: 10px 18px;
+        font-family: "Geist Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-soft);
+      }
+
+      .was .compare-head {
+        color: var(--signal);
+        background: var(--signal-dim);
+      }
+      .now .compare-head {
+        color: var(--go);
+        background: var(--go-dim);
+      }
+
+      .compare-list {
+        list-style: none;
+        padding: 14px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+
+      .compare-list li {
+        padding-left: 20px;
+        position: relative;
+      }
+      .was .compare-list li::before {
+        content: "x";
+        position: absolute;
+        left: 0;
+        color: var(--signal);
+        font-weight: 700;
+        font-family: "Geist Mono", monospace;
+      }
+      .now .compare-list li::before {
+        content: "+";
+        position: absolute;
+        left: 0;
+        color: var(--go);
+        font-weight: 700;
+        font-family: "Geist Mono", monospace;
+      }
+
+      /* ── CALLOUT ─────────────────────────── */
+      .callout {
+        padding: 22px 26px;
+        margin: 20px 0;
+        display: grid;
+        grid-template-columns: 3px 1fr;
+        gap: 0 20px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .callout-bar {
+        border-radius: 2px;
+      }
+      .callout-signal .callout-bar {
+        background: var(--signal);
+      }
+      .callout-go .callout-bar {
+        background: var(--go);
+      }
+      .callout-caution .callout-bar {
+        background: var(--caution);
+      }
+
+      .callout-label {
+        font-family: "Geist Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .callout-signal .callout-label {
+        color: var(--signal);
+      }
+      .callout-go .callout-label {
+        color: var(--go);
+      }
+      .callout-caution .callout-label {
+        color: var(--caution);
+      }
+
+      .callout-text {
+        font-family: "Instrument Serif", serif;
+        font-size: 16px;
+        font-style: italic;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+
+      blockquote {
+        padding: 32px 0;
+        margin: 40px 0;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      blockquote p {
+        font-family: "Instrument Serif", serif;
+        font-size: 22px;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--ink);
+        line-height: 1.45;
+        margin-bottom: 12px;
+      }
+
+      blockquote footer {
+        font-family: "Geist Mono", monospace;
+        font-size: 11px;
+        color: var(--ink-muted);
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 48px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="round-badge">
+        <span class="dot"></span> Review Round 4 · Phases 4–5 Revised
+      </div>
+      <h1>Focused.<br /><em>Now Execute</em><br />On It.</h1>
+      <p class="h-sub">
+        The sprawl is gone. The revised Phases 4–5 doc is tighter, more
+        coherent, and tells a clearer product story. This review identifies
+        what's genuinely improved, what still needs work, and what the next 60
+        days should look like.
+      </p>
+
+      <div class="delta-grid">
+        <div class="dc">
+          <div class="dc-label">vs. Last Doc</div>
+          <div class="dc-val lime">↑↑</div>
+          <div class="dc-note">Feature coherence</div>
+        </div>
+        <div class="dc">
+          <div class="dc-label">Research Engine</div>
+          <div class="dc-val amber">7.5</div>
+          <div class="dc-note">SDK upgrade + grounding</div>
+        </div>
+        <div class="dc">
+          <div class="dc-label">Auth Security</div>
+          <div class="dc-val coral">5.5</div>
+          <div class="dc-note">Still unaddressed</div>
+        </div>
+        <div class="dc">
+          <div class="dc-label">Product Clarity</div>
+          <div class="dc-val lime">8</div>
+          <div class="dc-note">Best version yet</div>
+        </div>
+        <div class="dc">
+          <div class="dc-label">Remaining P0s</div>
+          <div class="dc-val coral">3</div>
+          <div class="dc-note">Same as before</div>
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="#delta" class="nt">What Changed</a>
+      <a href="#research" class="nt">Research Engine</a>
+      <a href="#auth" class="nt">Auth</a>
+      <a href="#multitenancy" class="nt">Multi-Tenancy</a>
+      <a href="#design" class="nt">UI/UX</a>
+      <a href="#remaining" class="nt">Still Missing</a>
+      <a href="#roadmap" class="nt">Next 60 Days</a>
+    </nav>
+
+    <main>
+      <!-- ── WHAT CHANGED ────────────────────── -->
+      <div id="delta" class="section">
+        <div class="eyebrow">
+          <span class="en">01</span><span class="et">Comparison</span>
+        </div>
+        <h2>The Revised Doc is a Product Maturity Signal</h2>
+
+        <p>
+          The previous version of this document included CSS gradient
+          generators, JWT decoders, book sales funnels, an events RSVP engine,
+          and affiliate tracking systems. All of that is gone. What remains is a
+          focused, coherent three-part story: smarter AI research, better
+          planning UX, and tighter multi-tenant security. That's the right
+          product story.
+        </p>
+
+        <div class="verdict">
+          <div class="verdict-stripe"></div>
+          <div class="verdict-inner">
+            <div class="vl">Verdict · Round 4</div>
+            <div class="vt">
+              "The act of removing those features from this document — whether
+              they were cut from the product or just removed from the spec — is
+              itself a maturity signal. Knowing what not to build is harder than
+              knowing what to build. This version of your platform story is
+              fundable. The previous one wasn't."
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="compare-col was">
+            <div class="compare-head">Phases 4–5 v1 (Previous)</div>
+            <ul class="compare-list">
+              <li>CSS gradient generator, JWT decoder</li>
+              <li>Book sales funnels</li>
+              <li>Events RSVP engine with Live Event Walls</li>
+              <li>Affiliate / referral tracking cookies</li>
+              <li>Custom bespoke auth UI (custom forms)</li>
+              <li>7 distinct feature areas, unclear narrative</li>
+            </ul>
+          </div>
+          <div class="compare-col now">
+            <div class="compare-head">Phases 4–5 v2 (This Doc)</div>
+            <ul class="compare-list">
+              <li>Google GenAI SDK upgrade + search grounding</li>
+              <li>Dedicated source viewer for deep reading</li>
+              <li>Full dark-mode premium UI overhaul</li>
+              <li>Agenda vs. Backlog day planning redesign</li>
+              <li>Org content scoping + team visibility</li>
+              <li>3 focused areas, one coherent story</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RESEARCH ENGINE ───────────────────── -->
+      <div id="research" class="section">
+        <div class="eyebrow">
+          <span class="en">02</span><span class="et">Research Engine</span>
+        </div>
+        <h2>The @google/genai Migration is the Right Infrastructure Move</h2>
+
+        <p>
+          Migrating from the legacy SDK to the new
+          <code>@google/genai</code> Interactions API is not just a library
+          upgrade — it unlocks native streaming reliability, improved function
+          calling, and access to Gemini's latest capabilities. This is the
+          correct foundation for where you need to take the research engine
+          next.
+        </p>
+
+        <div class="cards">
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Strength</span>
+                <span class="card-title"
+                  >Search Grounding is a Fundamental Quality Upgrade</span
+                >
+              </div>
+              <div class="card-text">
+                Integrating Google Search retrieval directly into the AI agent —
+                rather than using Puppeteer as the only data source — is a
+                significant architectural improvement.
+                <strong
+                  >This gives the agent access to indexed, ranked, up-to-date
+                  web content without the fragility of headless browser
+                  navigation.</strong
+                >
+                Grounded generation means the model cites real sources rather
+                than hallucinating plausible-sounding ones. The combination of
+                Puppeteer for deep arbitrary-page reading AND Google Search for
+                broad indexed retrieval is actually a stronger architecture than
+                either alone.
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Strength</span>
+                <span class="card-title"
+                  >Full-Page Source Viewer is the Right UX for Trust</span
+                >
+              </div>
+              <div class="card-text">
+                Replacing modals with a full-page, markdown-rich source viewer
+                is a product maturity decision.
+                <strong
+                  >Users need to be able to verify what the AI read before they
+                  act on the research.</strong
+                >
+                This is the difference between a tool that creates dependency
+                and one that builds trust. It's also the feature that makes the
+                product credible to skeptical enterprise buyers who want to
+                audit outputs before sharing them with clients.
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">P1 · Architecture</span>
+                <span class="card-title"
+                  >Grounding + Better Streaming ≠ Multi-Agent Research</span
+                >
+              </div>
+              <div class="card-text">
+                The SDK migration and search grounding improve the quality and
+                reliability of what the agent produces. But
+                <strong
+                  >the agent is still one LLM call doing everything
+                  serially.</strong
+                >
+                Grounded generation with a single context window still hits the
+                same fundamental bottleneck: the more thorough the research, the
+                longer the user waits. Google's own deep research implementation
+                uses parallel subagents specifically to solve this. You've
+                upgraded the engine — you still need to upgrade the
+                architecture.
+                <div class="fix">
+                  <strong>Next step →</strong> The search grounding integration
+                  you've built is actually the subagent output layer. The
+                  missing piece above it is an Orchestrator that: (1) decomposes
+                  the query into sub-questions, (2) spawns parallel Gemini calls
+                  with search grounding for each sub-question, (3) aggregates
+                  and synthesises the results. This tripling of architecture
+                  gives you reports in one-third the time with three times the
+                  depth.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">P1 · Quality</span>
+                <span class="card-title"
+                  >Source Citation Without Credibility Scoring is Half a
+                  Solution</span
+                >
+              </div>
+              <div class="card-text">
+                The agent now cites real sources from Google Search — which is
+                meaningfully better than uncited outputs. But
+                <strong
+                  >all cited sources are currently treated with equal
+                  weight.</strong
+                >
+                A Wikipedia edit from yesterday and a peer-reviewed market study
+                from a reputable research firm will both appear as citations
+                with identical visual weight. For enterprise users making
+                business decisions from research reports, this is a trust
+                problem: they can't tell good intelligence from noise.
+                <div class="fix">
+                  <strong>Next step →</strong> Add a
+                  <code>credibility_score</code> (1–10) to each citation
+                  computed from: domain authority tier (academic/government >
+                  industry publication > news > aggregator > forum), publication
+                  date recency, and cross-source corroboration count. Surface
+                  the score as a small indicator next to each citation in the
+                  report. Flag any report with a low average credibility score.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AUTH ──────────────────────────────── -->
+      <div id="auth" class="section">
+        <div class="eyebrow">
+          <span class="en">03</span><span class="et">Authentication</span>
+        </div>
+        <h2>Custom Auth: Still Carrying the Same Three Security Debts</h2>
+
+        <p>
+          The previous critique flagged three specific security issues
+          introduced by replacing Clerk's hosted UI with custom auth forms. None
+          of these appear to have been addressed in this revision. They remain
+          P0 — the kind of issue that, if exploited, ends a company's trust
+          relationship with its customers overnight.
+        </p>
+
+        <div class="callout callout-signal">
+          <div class="callout-bar"></div>
+          <div>
+            <div class="callout-label">P0 Not Yet Addressed</div>
+            <div class="callout-text">
+              Custom auth forms running on your origin + no Content Security
+              Policy + no explicit rate limiting on auth routes = three open
+              doors. These are not hypothetical — credential stuffing attacks
+              run continuously against every web application on the internet.
+              The question isn't if, it's when.
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card c-signal">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-signal">P0 · Unresolved</span>
+                <span class="card-title"
+                  >XSS on Your Origin = Credential Theft. Add CSP Headers.</span
+                >
+              </div>
+              <div class="card-text">
+                Clerk's hosted UI ran on <code>accounts.clerk.com</code> — a
+                separate origin. Any XSS on your Next.js app could not reach it.
+                Your custom form runs on your domain.
+                <strong
+                  >Any stored XSS anywhere on your platform is now also a login
+                  credential harvesting vector.</strong
+                >
+                This is the attack pattern used against Twilio, Okta, and
+                multiple SaaS platforms in the last 3 years.
+                <div class="fix">
+                  <strong>Fix today →</strong> Add
+                  <code
+                    >Content-Security-Policy: script-src 'self'; object-src
+                    'none'</code
+                  >
+                  to your Next.js headers config. This blocks inline script
+                  injection. Then do a one-day XSS sweep of every rich text
+                  input, embed field, and user-facing content area in the
+                  platform. The HMAC webhook hardening you've already done
+                  proves you can implement this — apply the same rigour here.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-signal">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-signal">P0 · Unresolved</span>
+                <span class="card-title">No Rate Limiting on Auth Routes</span>
+              </div>
+              <div class="card-text">
+                Clerk's hosted UI rate-limited login attempts server-side, on
+                their infrastructure. Your custom form's underlying Clerk API
+                calls go through your application layer first.
+                <strong
+                  >Without explicit rate limiting on your auth routes, a
+                  credential stuffing script can attempt thousands of logins per
+                  minute against your application.</strong
+                >
+                Your Redis stack is already in place for this. It's a two-hour
+                fix.
+                <div class="fix">
+                  <strong>Fix today →</strong> Use Upstash Redis's built-in rate
+                  limiter: 5 failed auth attempts per IP per 15 minutes, then a
+                  15-minute block. Add Cloudflare Turnstile (free CAPTCHA) that
+                  activates after 3 failed attempts. These two controls stop 99%
+                  of automated attacks. Upstash provides a code example for this
+                  exact use case in their docs.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Confirmed Strength</span>
+                <span class="card-title"
+                  >HMAC Webhook Hardening is Properly Done</span
+                >
+              </div>
+              <div class="card-text">
+                Strict HMAC verification on Clerk sync webhooks with resilient
+                custom redirect logic — this is correctly implemented and worth
+                calling out explicitly.
+                <strong
+                  >Most developers either skip HMAC entirely or verify it
+                  incorrectly (comparing strings without constant-time
+                  comparison, which opens timing oracle attacks).</strong
+                >
+                Your implementation demonstrates the security-first thinking
+                that the auth forms need applied to them.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MULTI-TENANCY ─────────────────────── -->
+      <div id="multitenancy" class="section">
+        <div class="eyebrow">
+          <span class="en">04</span><span class="et">Multi-Tenancy</span>
+        </div>
+        <h2>Org Content Scoping: The Right Change, One Refinement Needed</h2>
+
+        <div class="cards">
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Strength</span>
+                <span class="card-title"
+                  >New Members Instantly Seeing Team Projects is Table-Stakes
+                  Done Right</span
+                >
+              </div>
+              <div class="card-text">
+                Refactoring tRPC routers to scope by
+                <code>organizationId</code> so new team members inherit shared
+                pipeline visibility on day one solves one of the most common B2B
+                SaaS onboarding failures — the empty state problem where a new
+                employee logs in and sees nothing.
+                <strong
+                  >This single change dramatically improves the activation rate
+                  for team seats.</strong
+                >
+                Combined with the existing org presence engine and live activity
+                feed, new members can immediately see what their team is working
+                on. This is a product quality upgrade, not just an
+                infrastructure one.
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">P1 · Data Model</span>
+                <span class="card-title"
+                  >Day Plans Must Default to Private, Not Org-Scoped</span
+                >
+              </div>
+              <div class="card-text">
+                The org-scoping refactor covers task and project data — which is
+                correct, these are team-owned objects. But if the same scoping
+                logic reaches <code>DayPlan</code> records, it creates a
+                significant product problem.
+                <strong>A daily agenda is a deeply personal document.</strong>
+                If a team member's day plan is visible to their manager by
+                default, they will stop using it honestly — or stop using it at
+                all. The energy tracking (<code>Sleep Quality</code>,
+                <code>Stress</code>, <code>Mood</code>) would be especially
+                damaging to expose at the org level.
+                <div class="fix">
+                  <strong>Verify →</strong> Confirm that DayPlan, EnergyLog, and
+                  WellbeingEntry records are scoped by <code>userId</code> only,
+                  not <code>organizationId</code>. If they've been caught in the
+                  org-scoping refactor, add a
+                  <code>visibility: PRIVATE | SHARED | ORG</code> enum field
+                  with <code>PRIVATE</code> as the default. Personal
+                  productivity data must never be org-visible without explicit
+                  user consent.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── UI/UX ──────────────────────────────── -->
+      <div id="design" class="section">
+        <div class="eyebrow">
+          <span class="en">05</span><span class="et">UI/UX</span>
+        </div>
+        <h2>The Design Investment is Paying Off. One Warning.</h2>
+
+        <div class="cards">
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Strength</span>
+                <span class="card-title"
+                  >Unified Dark-Mode Premium Aesthetic is a Competitive
+                  Signal</span
+                >
+              </div>
+              <div class="card-text">
+                Overhauling Dashboard, Strategy, Canvas, Calendar, and Tasks to
+                a unified high-end dark-mode aesthetic is not just cosmetic —
+                <strong
+                  >it is a brand statement that positions you above Notion,
+                  ClickUp, and Monday.com in the premium segment.</strong
+                >
+                Linear built an entire company identity around this exact
+                principle. Vercel did the same. When a product looks like it was
+                built by people who care about craft, it attracts users who also
+                care about craft. That is your target customer. Design quality
+                is a retention strategy.
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-go">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-go">Strength</span>
+                <span class="card-title"
+                  >Task Sync Across All Dashboard Views is a Felt-Quality
+                  Win</span
+                >
+              </div>
+              <div class="card-text">
+                Ensuring task status changes (start, complete, pause) sync
+                instantly across global dashboard views solves a subtle but
+                significant trust problem.
+                <strong
+                  >When a user completes a task in one view and sees it still
+                  showing as incomplete in another, they lose confidence in the
+                  data.</strong
+                >
+                This is the kind of "obviously it should work this way" bug that
+                causes quiet churn — users don't complain, they just open Linear
+                instead. Getting this right is more important than most new
+                features.
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">P2 · UX Debt</span>
+                <span class="card-title"
+                  >The Agenda/Backlog Layout Still Needs an Onboarding
+                  Moment</span
+                >
+              </div>
+              <div class="card-text">
+                The Agenda vs. Backlog split-pane is the right UX decision —
+                confirmed by how Sunsama, Morgen, and Linear approach daily
+                planning. But
+                <strong
+                  >this paradigm is unfamiliar to most users coming from task
+                  lists or kanban boards.</strong
+                >
+                Without a brief contextual explanation of what Agenda (committed
+                today) vs. Backlog (available) means, first-time users will
+                populate both the same way and lose the productivity benefit the
+                layout was designed to create.
+                <div class="fix">
+                  <strong>Fix →</strong> Add a 3-line tooltip on first use:
+                  "Agenda = what you're committed to doing today. Backlog =
+                  everything available to pull in." Consider an empty-state
+                  illustration that shows a half-full Agenda and a longer
+                  Backlog — it communicates the intended behaviour at a glance
+                  without any text at all.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STILL MISSING ─────────────────────── -->
+      <div id="remaining" class="section">
+        <div class="eyebrow">
+          <span class="en">06</span><span class="et">Persistent Gaps</span>
+        </div>
+        <h2>Four Things That Have Now Appeared in All Four Reviews</h2>
+
+        <p>
+          Some items were flagged in Round 1 and remain unfixed through Round 4.
+          At this point they are not oversights — they are prioritisation
+          decisions. Here's why each one should move to the top of the queue.
+        </p>
+
+        <div class="cards">
+          <div class="card c-signal">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-signal">4 Reviews. Still Missing.</span>
+                <span class="card-title"
+                  >Optimistic UI — The Single Biggest Felt-Quality Gap</span
+                >
+              </div>
+              <div class="card-text">
+                Every mutation — completing a task, moving a deal stage,
+                updating a project status — waits for a server round trip before
+                the UI reflects the change. On a standard connection this is
+                150–400ms of visible lag.
+                <strong
+                  >Linear, Notion, and every top-tier productivity tool
+                  eliminate this with optimistic updates.</strong
+                >
+                The user action is reflected immediately in the UI; the server
+                confirms in the background; rollback happens on error. The
+                result is a product that feels native and instant vs. one that
+                feels like a web form.
+                <div class="fix">
+                  <strong>Fix →</strong> TanStack Query (already in your stack
+                  via tRPC) has <code>onMutate</code> for optimistic cache
+                  updates and <code>onError</code> for rollback. Start with the
+                  two highest-frequency mutations: task completion and deal
+                  stage change. One afternoon. The felt-quality improvement is
+                  disproportionate to the effort.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-signal">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-signal">4 Reviews. Still Missing.</span>
+                <span class="card-title"
+                  >Multi-Agent Orchestration on the Research Engine</span
+                >
+              </div>
+              <div class="card-text">
+                You now have the best research UX in the market (Bloomberg
+                terminal + streaming + grounded citations + full-page viewer).
+                <strong
+                  >The architecture underneath it is still a single sequential
+                  agent.</strong
+                >
+                The gap between what users see and what the engine actually does
+                will close when a competitor copies your UI. The architecture
+                gap is your real moat. It's also the single largest determinant
+                of report quality and speed.
+                <div class="fix">
+                  <strong>Fix →</strong> Add an Orchestrator Inngest step before
+                  the research job. It calls Gemini with the query and returns a
+                  JSON research plan (3–6 sub-questions). Each sub-question
+                  becomes a parallel Inngest job using the existing
+                  search-grounded Gemini agent you've already built. Each
+                  returns structured findings. The Lead agent synthesises. Your
+                  existing streaming infrastructure handles real-time updates
+                  from all parallel jobs simultaneously.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">2 Reviews. Still Missing.</span>
+                <span class="card-title"
+                  >No Mobile / PWA for Daily Planning</span
+                >
+              </div>
+              <div class="card-text">
+                Day planning and wellbeing logging — the two highest-frequency
+                personal use cases — are things users want to do on their phone
+                before the day starts.
+                <strong
+                  >Without a mobile experience, your platform competes with
+                  Linear and Notion in a browser tab at a desk, which is their
+                  strongest context.</strong
+                >
+                On mobile, at 7am before the workday, there's no direct
+                competition. This is retention-critical for the planning and
+                wellbeing features.
+                <div class="fix">
+                  <strong>Fix →</strong> Add a Next.js PWA manifest and service
+                  worker. Build a mobile-optimised version of
+                  <code>/planning/day</code> — large touch targets,
+                  swipe-to-complete tasks, one-tap energy logging. The data
+                  model is already correct. This is purely a responsive layout
+                  and PWA config task. 3–5 days of focused work closes this gap
+                  entirely.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card c-caution">
+            <div class="card-bar"></div>
+            <div class="card-inner">
+              <div class="card-head">
+                <span class="ctag ctag-caution">2 Reviews. Still Missing.</span>
+                <span class="card-title"
+                  >Collaborative Canvas Cursors — Your Demo is 80% Built</span
+                >
+              </div>
+              <div class="card-text">
+                You have WebSocket presence, a canvas, org rooms, and user
+                identity. Collaborative cursor rendering is approximately 40
+                lines of code away.
+                <strong
+                  >The reason this matters is not the engineering — it's the
+                  sales demo.</strong
+                >
+                In an enterprise trial, the moment a prospect sees another
+                cursor move on their canvas, the trial converts to a seat
+                expansion conversation. Figma, Miro, and Linear all attribute
+                significant activation to this single feature. You have every
+                dependency in place.
+                <div class="fix">
+                  <strong>Fix →</strong> On <code>mousemove</code> in the
+                  canvas, throttle to 50ms and emit
+                  <code>{"{"}userId, name, color, x, y{"}"}</code> to the org
+                  WebSocket room. Render incoming cursors as floating name tags
+                  positioned via the same CSS transform matrix as the canvas
+                  nodes. The quadtree handles culling. Total implementation:
+                  half a day.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ROADMAP ─────────────────────────────── -->
+      <div id="roadmap" class="section">
+        <div class="eyebrow">
+          <span class="en">07</span><span class="et">Execution</span>
+        </div>
+        <h2>Next 60 Days — By Actual Priority</h2>
+
+        <table class="delta-table">
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Item</th>
+              <th>Effort</th>
+              <th>Why This Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill pill-signal">P0</span></td>
+              <td>CSP headers + XSS sweep on custom auth origin</td>
+              <td>1 day</td>
+              <td>Every day without this is an open door</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-signal">P0</span></td>
+              <td>Rate limiting + CAPTCHA on auth routes via Upstash</td>
+              <td>2–3 hrs</td>
+              <td>
+                Automated attacks run 24/7; Redis is already in your stack
+              </td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-caution">P1</span></td>
+              <td>Optimistic UI on task complete + deal stage change</td>
+              <td>1 afternoon</td>
+              <td>Highest felt-quality ROI per hour in the entire codebase</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-caution">P1</span></td>
+              <td>
+                Verify DayPlan / EnergyLog not caught in org-scoping refactor
+              </td>
+              <td>1 hr</td>
+              <td>Personal data must never be org-visible by default</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-caution">P1</span></td>
+              <td>Source credibility scoring on research citations</td>
+              <td>2 days</td>
+              <td>Grounded but unscored citations mislead enterprise users</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-caution">P1</span></td>
+              <td>Collaborative canvas cursors</td>
+              <td>4–6 hrs</td>
+              <td>Your best enterprise demo moment is half a day away</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-blue">P2</span></td>
+              <td>Orchestrator + parallel subagents on research engine</td>
+              <td>3–5 days</td>
+              <td>
+                Architecture moat; grounding is step 1, parallelism is step 2
+              </td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-blue">P2</span></td>
+              <td>Agenda/Backlog first-use tooltip / empty state</td>
+              <td>2–3 hrs</td>
+              <td>The paradigm shift needs a 10-second explanation</td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-blue">P2</span></td>
+              <td>Mobile-optimised /planning/day + PWA manifest</td>
+              <td>3–5 days</td>
+              <td>
+                Closes the habit loop; competes in a context where there's no
+                competition
+              </td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-go">Strategic</span></td>
+              <td>UserAIContext persistent memory layer across AI calls</td>
+              <td>2 days</td>
+              <td>
+                Transforms AI from generic to indispensable; single biggest
+                retention driver
+              </td>
+            </tr>
+            <tr>
+              <td><span class="pill pill-go">Strategic</span></td>
+              <td>Research Engine public API + credit billing tier</td>
+              <td>1 week</td>
+              <td>
+                Standalone revenue stream; developer market 10x your current TAM
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <hr />
+
+        <blockquote>
+          <p>
+            "Four rounds of review. The platform went from 'impressive
+            prototype' to 'fundable product.' The foundation is solid, the UX is
+            premium, the product story is clear. What's left is a focused list
+            of mostly-small fixes and one or two architectural upgrades. That's
+            a good place to be."
+          </p>
+          <footer>— Simulated Principal Engineer, four rounds in</footer>
+        </blockquote>
+      </div>
+    </main>
+
+    <script>
+      const sections = document.querySelectorAll("[id]");
+      const tabs = document.querySelectorAll(".nt");
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              tabs.forEach((t) => t.classList.remove("active"));
+              const a = document.querySelector(`.nt[href="#${e.target.id}"]`);
+              if (a) a.classList.add("active");
+            }
+          });
+        },
+        { rootMargin: "-30% 0px -65% 0px" },
+      );
+      sections.forEach((s) => obs.observe(s));
+    </script>
+  </body>
+</html>

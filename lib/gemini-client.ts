@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { decryptApiKey } from "./encryption";
 
 export interface ResearchInsight {
@@ -34,17 +34,28 @@ export interface InteractionContent {
 
 export interface Interaction {
   id: string;
-  status: "processing" | "completed" | "failed" | "requires_action";
+  status:
+    | "in_progress"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "requires_action";
   outputs?: InteractionContent[];
+  usage?: {
+    total_tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+  };
   error?: {
+    code?: number;
     message: string;
   };
 }
 
 export class GeminiClient {
-  private genAI: GoogleGenerativeAI;
-  public model: GenerativeModel;
+  private client: GoogleGenAI;
   private apiKey: string;
+  private modelName: string;
 
   constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-pro") {
     const apiKey = decryptApiKey(encryptedApiKey);
@@ -52,15 +63,55 @@ export class GeminiClient {
       throw new Error("Invalid or missing API key after decryption");
     }
     this.apiKey = apiKey;
-    // Initialize with v1 API for better stability across models
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    // Using user-selected model
-    this.model = this.genAI.getGenerativeModel({ model: modelName });
+    this.modelName = modelName;
+    this.client = new GoogleGenAI({ apiKey });
   }
 
   /**
-   * Starts a Deep Research task using the Interactions API
+   * Performs a grounded web search using the Interactions API with google_search tool.
    */
+  async groundingSearch(prompt: string): Promise<{
+    text: string;
+    sources: { url: string; title: string }[];
+    searchQueries: string[];
+  }> {
+    return this.retryWithBackoff(async () => {
+      const interaction = await this.client.interactions.create({
+        model: "gemini-2.5-flash", // Grounding requires gemini-2.0-flash at minimum, though 2.5 flash is better
+        input: `Search the web and provide comprehensive, well-cited information about: ${prompt}. Include specific facts, data points, and statistics. Cite your sources.`,
+        tools: [{ type: "google_search" }],
+      });
+
+      // Find the text output
+      const outputs = interaction.outputs as any[];
+      const textOutput = outputs?.find((o: any) => o.type === "text");
+      const text = textOutput?.text || "";
+
+      // Extract sources from google_search_result outputs
+      const searchOutput = outputs?.find(
+        (o: any) => o.type === "google_search_result",
+      );
+      const sources: { url: string; title: string }[] = [];
+      const searchQueries: string[] = [];
+
+      if (searchOutput && (searchOutput as any).search_results) {
+        for (const result of (searchOutput as any).search_results) {
+          if (result.url) {
+            sources.push({
+              url: result.url,
+              title: result.title || result.url,
+            });
+          }
+          if (result.search_query) {
+            searchQueries.push(result.search_query);
+          }
+        }
+      }
+
+      return { text, sources, searchQueries };
+    });
+  }
+
   /**
    * Starts a Deep Research task using the Interactions API
    */
@@ -123,15 +174,60 @@ export class GeminiClient {
   }
 
   /**
+   * Creates an interaction with streaming — returns an async iterable of chunks.
+   * Use this for real-time analysis output.
+   */
+  async createStreamingInteraction(
+    prompt: string,
+    onDelta?: (text: string) => void,
+  ): Promise<string> {
+    const stream = await this.client.interactions.create({
+      model: this.modelName,
+      input: prompt,
+      stream: true,
+    });
+
+    let fullText = "";
+
+    for await (const chunk of stream as any) {
+      if (chunk.event_type === "content.delta" && chunk.delta) {
+        const anyDelta = chunk.delta as any;
+        if (anyDelta.text) {
+          fullText += anyDelta.text;
+          if (onDelta) onDelta(anyDelta.text);
+        }
+      } else if (chunk.event_type === "interaction.complete") {
+        break;
+      }
+    }
+
+    return fullText;
+  }
+
+  /**
+   * Creates a standard (non-streaming) interaction for text generation.
+   */
+  async generateContent(prompt: string): Promise<string> {
+    return this.retryWithBackoff(async () => {
+      const interaction = await this.client.interactions.create({
+        model: this.modelName,
+        input: prompt,
+      });
+
+      const outputs = interaction.outputs as any[];
+      const textOutput = outputs?.find((o: any) => o.type === "text");
+      return textOutput?.text || "";
+    });
+  }
+
+  /**
    * Cleans and extracts JSON from AI string response
    */
-  private extractJson<T>(text: string): T {
+  public extractJson<T>(text: string): T {
     try {
-      // 1. Try to find JSON within markdown triple backticks
       const markdownJsonMatch = text.match(/```(?:json)?\n?([\s\S]*?)```/);
       let jsonStr = markdownJsonMatch ? markdownJsonMatch[1] : text;
 
-      // 2. If no markdown, try to find the first '{' and last '}'
       if (!markdownJsonMatch) {
         const firstBrace = text.indexOf("{");
         const lastBrace = text.lastIndexOf("}");
@@ -140,14 +236,11 @@ export class GeminiClient {
         }
       }
 
-      // 3. Clean the string of problematic characters
-      // Remove horizontal tabs, newlines, and carriage returns that are often naked in AI responses
-      // but also handle escaped characters correctly.
       const cleaned = jsonStr
         .trim()
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
-        .replace(/\\n/g, "\\n") // Keep valid escaped newlines
-        .replace(/\\"/g, '\\"'); // Keep valid escaped quotes
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+        .replace(/\\n/g, "\\n")
+        .replace(/\\"/g, '\\"');
 
       return JSON.parse(cleaned) as T;
     } catch (error) {
@@ -182,11 +275,8 @@ export class GeminiClient {
     `;
 
     try {
-      const result = await this.retryWithBackoff(() =>
-        this.model.generateContent(prompt),
-      );
-      const response = await result.response;
-      return response.text().trim();
+      const text = await this.generateContent(prompt);
+      return text.trim();
     } catch (error: any) {
       console.error("Error refining prompt:", error);
       if (error.status === 429) {
@@ -194,7 +284,7 @@ export class GeminiClient {
           "API quota exceeded. Please wait a minute or try a different Gemini API key. Free tier limits: 15 requests/minute.",
         );
       }
-      return originalPrompt; // Fallback to original
+      return originalPrompt;
     }
   }
 
@@ -214,12 +304,10 @@ export class GeminiClient {
       } catch (error: any) {
         lastError = error;
 
-        // Only retry on 429 errors
         if (error.status !== 429) {
           throw error;
         }
 
-        // Extract retry delay from error if available
         const retryAfter = error.errorDetails?.find((d: any) =>
           d["@type"]?.includes("RetryInfo"),
         )?.retryDelay;
@@ -228,7 +316,6 @@ export class GeminiClient {
           ? parseInt(retryAfter.replace("s", "")) * 1000
           : baseDelayMs * Math.pow(2, attempt);
 
-        // If API returns 0s delay for a 429, enforce a minimum backoff
         if (delayMs < 1000) {
           delayMs = baseDelayMs * Math.pow(2, attempt);
         }
@@ -257,29 +344,6 @@ export class GeminiClient {
           `Source [${i + 1}] (${s.url}):\n${s.content.substring(0, 5000)}`,
       )
       .join("\n\n---\n\n");
-
-    // const prompt = `
-    //   You are a Deep Research Analyst. Based on the following sources, provide a comprehensive analysis for the goal: "${researchGoal}"
-
-    //   SOURCES:
-    //   ${sourceText}
-
-    //   Return the analysis in VALID JSON format with this exact structure:
-    //   {
-    //     "insights": [
-    //       {
-    //         "title": "Specific finding title",
-    //         "content": "Detailed explanation of the finding",
-    //         "category": "Market/Competitor/Technology/etc",
-    //         "confidence": 0.0 to 1.0
-    //       }
-    //     ],
-    //     "summary": "High-level executive summary of all findings",
-    //     "trends": ["Trend 1", "Trend 2"]
-    //   }
-
-    //   Ensure the JSON is properly escaped and valid. Wrap the JSON in triple backticks: \`\`\`json ... \`\`\`
-    // `;
 
     const prompt = `You are a Senior Strategic intelligence Analyst generating actionable B2B intelligence for a Lead Generation Agency.
 
@@ -339,12 +403,7 @@ VALIDATION CHECKLIST:
 Begin your analysis now:`;
 
     try {
-      const result = await this.retryWithBackoff(() =>
-        this.model.generateContent(prompt),
-      );
-      const response = await result.response;
-      const text = response.text();
-
+      const text = await this.generateContent(prompt);
       return this.extractJson<AnalysisResult>(text);
     } catch (error) {
       console.error("Error analyzing sources:", error);
@@ -403,12 +462,7 @@ Begin your analysis now:`;
     `;
 
     try {
-      const result = await this.retryWithBackoff(() =>
-        this.model.generateContent(prompt),
-      );
-      const response = await result.response;
-      const text = response.text();
-
+      const text = await this.generateContent(prompt);
       return this.extractJson<{
         dm: string;
         email: string;

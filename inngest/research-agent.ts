@@ -8,6 +8,41 @@ import { getLLMClientWithFallback } from "@/lib/llm-provider";
 import { ResearchStatus, ActionPriority, SearchMethod } from "@prisma/client";
 import { emitResearchLog } from "@/lib/log-emitter";
 
+function calculateCredibility(url: string): number {
+  try {
+    if (url.startsWith("interaction://")) return 0.8;
+    if (url === "final-synthesis" || url === "gemini-grounding") return 0.85;
+    const hostname = new URL(url).hostname.toLowerCase();
+    if (hostname.endsWith(".edu") || hostname.endsWith(".gov")) return 0.95;
+    if (
+      hostname.includes("wikipedia.org") ||
+      hostname.includes("nature.com") ||
+      hostname.includes("sciencedirect.com") ||
+      hostname.includes("pubmed")
+    )
+      return 0.9;
+    if (hostname.endsWith(".org")) return 0.75;
+    if (
+      hostname.includes("reddit.com") ||
+      hostname.includes("quora.com") ||
+      hostname.includes("news.ycombinator.com") ||
+      hostname.includes("stackexchange.com") ||
+      hostname.includes("stackoverflow.com")
+    )
+      return 0.6;
+    if (
+      hostname.includes("twitter.com") ||
+      hostname.includes("x.com") ||
+      hostname.includes("facebook.com") ||
+      hostname.includes("tiktok.com")
+    )
+      return 0.3;
+    return 0.5;
+  } catch {
+    return 0.5;
+  }
+}
+
 export const researchAgent = inngest.createFunction(
   {
     id: "research-agent",
@@ -194,6 +229,7 @@ export const researchAgent = inngest.createFunction(
             content: s.content || "",
             excerpt:
               s.excerpt || (s.content ? s.content.substring(0, 500) : ""),
+            credibility: calculateCredibility(s.url),
           })),
           skipDuplicates: true,
         });
@@ -446,38 +482,20 @@ export const researchAgent = inngest.createFunction(
               "gemini-2.0-flash",
             );
 
-            const groundingResult = await geminiClient.retryWithBackoff(() =>
-              geminiClient.model.generateContent({
-                contents: [
-                  {
-                    role: "user",
-                    parts: [
-                      {
-                        text: `Search the web and provide comprehensive information about: ${research.refinedPrompt}. Include specific facts, data, and cite your sources with URLs.`,
-                      },
-                    ],
-                  },
-                ],
-                tools: [{ googleSearchRetrieval: {} } as any],
-              }),
+            const groundingResult = await geminiClient.groundingSearch(
+              research.refinedPrompt || research.title,
             );
 
-            const groundingResponse = await groundingResult.response;
-            const groundingText = groundingResponse.text();
-
-            const groundingMetadata =
-              groundingResponse.candidates?.[0]?.groundingMetadata;
-            const groundingChunks = groundingMetadata?.groundingChunks || [];
-
-            scrapedData = groundingChunks.map((chunk: any, index: number) => ({
-              url: chunk.web?.uri || `grounding-${index}`,
-              title: chunk.web?.title || `Grounding Source ${index + 1}`,
+            scrapedData = groundingResult.sources.map((source, index) => ({
+              url: source.url,
+              title: source.title,
               content:
-                // Google Search chunks often don't have full content, so we use the relevant snippet
-                // or fallback to the main text if it's referenced
-                groundingText || "Content extracted via Gemini Grounding",
-              excerpt: groundingText.substring(0, 500),
+                groundingResult.text ||
+                "Content extracted via Gemini Grounding",
+              excerpt: groundingResult.text.substring(0, 500),
             }));
+
+            const groundingText = groundingResult.text;
 
             if (scrapedData.length === 0) {
               scrapedData = [
@@ -504,6 +522,7 @@ export const researchAgent = inngest.createFunction(
                 content: s.content || s.excerpt || "",
                 excerpt:
                   s.excerpt || (s.content ? s.content.substring(0, 500) : ""),
+                credibility: calculateCredibility(s.url),
               })),
               skipDuplicates: true,
             });
@@ -575,8 +594,41 @@ export const researchAgent = inngest.createFunction(
         "Analyzing gathered content and generating insights...",
       );
 
+      // Fetch user's AI context for personalized analysis
+      const aiContext = await prisma.userAIContext.findUnique({
+        where: { userId },
+      });
+
+      let contextPrefix = "";
+      if (aiContext) {
+        const parts: string[] = [];
+        if (aiContext.researchStyle)
+          parts.push(`Research style preference: ${aiContext.researchStyle}`);
+        if (aiContext.communicationPref)
+          parts.push(
+            `Communication preference: ${aiContext.communicationPref}`,
+          );
+        if (aiContext.industryFocus?.length)
+          parts.push(`Industry focus: ${aiContext.industryFocus.join(", ")}`);
+        if (aiContext.customInstructions)
+          parts.push(`Custom instructions: ${aiContext.customInstructions}`);
+        if (aiContext.previousFindings) {
+          const findings = aiContext.previousFindings as any[];
+          if (findings.length > 0) {
+            const recent = findings
+              .slice(-5)
+              .map((f: any) => f.title)
+              .join(", ");
+            parts.push(`Recent research topics (for continuity): ${recent}`);
+          }
+        }
+        if (parts.length > 0) {
+          contextPrefix = `\n\n[USER CONTEXT — Tailor your analysis accordingly]\n${parts.join("\n")}\n\n`;
+        }
+      }
+
       const result = await llmClient.analyzeContent(
-        research.refinedPrompt,
+        research.refinedPrompt + contextPrefix,
         sources
           .map((s: any) => `Source: ${s.title} (${s.url})\n${s.content}`)
           .join("\n\n---\n\n"),
@@ -807,6 +859,58 @@ export const researchAgent = inngest.createFunction(
           completedAt: new Date(),
         },
       });
+
+      // Auto-save findings to UserAIContext for cross-session memory
+      try {
+        const insights = await prisma.researchInsight.findMany({
+          where: { researchId },
+          take: 3,
+          orderBy: { confidence: "desc" },
+        });
+
+        const topicKeywords = insights
+          .flatMap((i) => [
+            i.category,
+            ...i.title.split(" ").filter((w) => w.length > 4),
+          ])
+          .filter(Boolean)
+          .slice(0, 5);
+
+        const existing = await prisma.userAIContext.findUnique({
+          where: { userId },
+        });
+
+        const previousFindings: any[] =
+          (existing?.previousFindings as any[]) || [];
+        const newEntry = {
+          researchId,
+          title: research.title,
+          summary: analysis.summary?.substring(0, 500) || "Research completed",
+          topics: topicKeywords,
+          date: new Date().toISOString(),
+        };
+        const updatedFindings = [...previousFindings, newEntry].slice(-20);
+
+        const existingTopics = existing?.preferredTopics || [];
+        const mergedTopics = Array.from(
+          new Set([...existingTopics, ...topicKeywords]),
+        ).slice(-50);
+
+        await prisma.userAIContext.upsert({
+          where: { userId },
+          create: {
+            userId,
+            previousFindings: updatedFindings,
+            preferredTopics: mergedTopics,
+          },
+          update: {
+            previousFindings: updatedFindings,
+            preferredTopics: mergedTopics,
+          },
+        });
+      } catch (ctxErr) {
+        console.warn("[ResearchAgent] Failed to save AI context:", ctxErr);
+      }
     });
 
     return { success: true };

@@ -16,7 +16,14 @@ const prismaClientSingleton = () => {
   const baseClient = new PrismaClient({
     adapter: new PrismaPg({
       connectionString: process.env.DATABASE_URL!,
+      max: 5, // Neon free-tier-friendly pool size
+      idleTimeoutMillis: 30000, // Close idle connections after 30s
+      connectionTimeoutMillis: 15000, // Wait up to 15s for a connection (Neon cold start)
     }),
+    transactionOptions: {
+      maxWait: 15000, // Wait up to 15s to acquire a connection for transactions
+      timeout: 30000, // Allow transactions up to 30s to complete
+    },
   });
 
   return baseClient.$extends({

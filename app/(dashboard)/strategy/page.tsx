@@ -56,7 +56,7 @@ export default function StrategyPage() {
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-8 pt-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
           Strategy Hub
         </h2>
       </div>

@@ -1,5 +1,11 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 
+/** Hard timeout for page navigation — prevents hung pages from leaking resources */
+const NAV_TIMEOUT_MS = 30_000;
+
+/** Timeout for browser.close() before force-killing the Chrome process */
+const BROWSER_CLOSE_TIMEOUT_MS = 5_000;
+
 export interface ScrapedSource {
   url: string;
   title: string;
@@ -35,7 +41,8 @@ export class WebScraper {
   }
 
   /**
-   * Scrapes a single page and returns cleaned content
+   * Scrapes a single page and returns cleaned content.
+   * Page is always closed in the finally block even on errors.
    */
   async scrapePage(url: string): Promise<ScrapedSource | null> {
     if (!this.browser) await this.initialize();
@@ -44,17 +51,16 @@ export class WebScraper {
     try {
       page = await this.browser!.newPage();
 
-      // Set a realistic user agent
       await page.setUserAgent(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
       );
 
-      // Set timeout
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: NAV_TIMEOUT_MS,
+      });
 
-      // Clean up the page and extract content
       const data = await page.evaluate(() => {
-        // Remove noise
         const selectorsToRemove = [
           "script",
           "style",
@@ -77,14 +83,12 @@ export class WebScraper {
           document.querySelector("h1")?.textContent ||
           "Untitled Source";
 
-        // Extract main text content
         const mainContent =
           document.querySelector("main") ||
           document.querySelector("article") ||
           document.querySelector("#content") ||
           document.body;
 
-        // Get text and clean up whitespace
         const content =
           mainContent?.innerText || mainContent?.textContent || "";
         const cleanContent = content.replace(/\s+/g, " ").trim();
@@ -105,12 +109,17 @@ export class WebScraper {
       console.error(`Error scraping ${url}:`, error);
       return null;
     } finally {
-      if (page) await page.close();
+      try {
+        if (page) await page.close();
+      } catch {
+        // Page may already be closed if browser crashed
+      }
     }
   }
 
   /**
-   * Scrapes multiple URLs in parallel (with limit)
+   * Scrapes multiple URLs in parallel (with limit).
+   * If the browser crashes mid-scrape, it is force-closed.
    */
   async scrapeMultiple(
     urls: string[],
@@ -118,28 +127,80 @@ export class WebScraper {
   ): Promise<ScrapedSource[]> {
     const results: ScrapedSource[] = [];
 
-    // Process in chunks to avoid overwhelming the system
-    for (let i = 0; i < urls.length; i += limit) {
-      const chunk = urls.slice(i, i + limit);
-      const chunkResults = await Promise.all(
-        chunk.map((url) => this.scrapePage(url)),
-      );
+    try {
+      for (let i = 0; i < urls.length; i += limit) {
+        const chunk = urls.slice(i, i + limit);
+        const chunkResults = await Promise.all(
+          chunk.map((url) => this.scrapePage(url)),
+        );
 
-      chunkResults.forEach((res) => {
-        if (res) results.push(res);
-      });
+        chunkResults.forEach((res) => {
+          if (res) results.push(res);
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[WebScraper] Unrecoverable error during scrapeMultiple:",
+        error,
+      );
+      await this.safeClose();
+      throw error;
     }
 
     return results;
   }
 
   /**
-   * Closes the browser instance
+   * Gracefully closes the browser instance.
    */
   async close() {
     if (this.browser) {
-      await this.browser.close();
+      try {
+        await this.browser.close();
+      } catch (error) {
+        console.error("[WebScraper] Error during browser.close():", error);
+        await this.forceKillBrowser();
+      }
       this.browser = null;
+    }
+  }
+
+  /**
+   * Safe close with timeout: if browser.close() hangs beyond BROWSER_CLOSE_TIMEOUT_MS,
+   * force-kill the Chrome child process to prevent zombie accumulation.
+   */
+  async safeClose() {
+    if (!this.browser) return;
+
+    const closePromise = this.browser
+      .close()
+      .catch((err) =>
+        console.error("[WebScraper] Error during safeClose:", err),
+      );
+    const timeoutPromise = new Promise<void>((resolve) =>
+      setTimeout(resolve, BROWSER_CLOSE_TIMEOUT_MS),
+    );
+
+    await Promise.race([closePromise, timeoutPromise]);
+    await this.forceKillBrowser();
+    this.browser = null;
+  }
+
+  /**
+   * Force-kill the Chrome child process if browser.close() is stuck.
+   */
+  private async forceKillBrowser() {
+    if (!this.browser) return;
+    try {
+      const proc = this.browser.process();
+      if (proc && proc.pid) {
+        console.warn(
+          `[WebScraper] Force-killing Chrome process PID=${proc.pid}`,
+        );
+        proc.kill("SIGKILL");
+      }
+    } catch (err) {
+      console.error("[WebScraper] Failed to force-kill Chrome:", err);
     }
   }
 
@@ -153,7 +214,6 @@ export class WebScraper {
   ): Promise<ScrapedSource[]> {
     console.log(`[WebScraper] Searching for: "${query}"`);
 
-    // Get search results from Serper
     const searchResults = await serperClient.search(query, maxResults);
     console.log(`[WebScraper] Found ${searchResults.length} search results`);
 
@@ -161,7 +221,6 @@ export class WebScraper {
       return [];
     }
 
-    // Extract URLs and scrape content
     const urls = searchResults.map((r) => r.url);
     const scraped = await this.scrapeMultiple(urls, 5);
 

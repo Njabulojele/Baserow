@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { decryptApiKey } from "./encryption";
 
 export interface ResearchInsight {
@@ -34,35 +34,95 @@ export interface InteractionContent {
 
 export interface Interaction {
   id: string;
-  status: "processing" | "completed" | "failed" | "requires_action";
+  status:
+    | "in_progress"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "requires_action";
   outputs?: InteractionContent[];
+  usage?: {
+    total_tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+  };
   error?: {
+    code?: number;
     message: string;
   };
 }
 
 export class GeminiClient {
-  private genAI: GoogleGenerativeAI;
-  public model: GenerativeModel;
+  private client: GoogleGenAI;
   private apiKey: string;
+  private modelName: string;
 
-  constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-flash") {
+  constructor(encryptedApiKey: string, modelName: string = "gemini-2.5-flash") {
     const apiKey = decryptApiKey(encryptedApiKey);
     if (!apiKey) {
       throw new Error("Invalid or missing API key after decryption");
     }
     this.apiKey = apiKey;
-    // Initialize with v1 API for better stability across models
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    // Using user-selected model
-    this.model = this.genAI.getGenerativeModel({ model: modelName });
+    this.modelName = modelName;
+    this.client = new GoogleGenAI({ apiKey });
   }
 
   /**
-   * Starts a Deep Research task using the Interactions API
+   * Performs a grounded web search using the Interactions API with google_search tool.
    */
+  async groundingSearch(prompt: string): Promise<{
+    text: string;
+    sources: { url: string; title: string }[];
+    searchQueries: string[];
+  }> {
+    return this.retryWithBackoff(async () => {
+      const interaction = await this.client.interactions.create({
+        model: this.modelName,
+        input: `Search the web and provide comprehensive, well-cited information about: ${prompt}. 
+        
+        CRITICAL FORMATTING INSTRUCTIONS:
+        1. Format your entire response in clear, standard Markdown.
+        2. Use multiple paragraphs separated by blank lines (double line breaks) for readability. DO NOT return a single clustered block of text.
+        3. Use lists (bulleted or numbered) where appropriate.
+        4. If your response includes comparisons, specifications, or structured data, you MUST use Markdown tables.
+        5. Include specific facts, data points, and statistics.
+        6. Cite your sources clearly within the text.`,
+        tools: [{ type: "google_search" }],
+      });
+
+      // Find the text output
+      const textOutput = (interaction.outputs as any[])?.find(
+        (o: any) => o.type === "text",
+      );
+      const text = (textOutput as any)?.text || "";
+
+      // Extract sources from google_search_result outputs
+      const searchOutput = interaction.outputs?.find(
+        (o: any) => o.type === "google_search_result",
+      );
+      const sources: { url: string; title: string }[] = [];
+      const searchQueries: string[] = [];
+
+      if (searchOutput && (searchOutput as any).search_results) {
+        for (const result of (searchOutput as any).search_results) {
+          if (result.url) {
+            sources.push({
+              url: result.url,
+              title: result.title || result.url,
+            });
+          }
+          if (result.search_query) {
+            searchQueries.push(result.search_query);
+          }
+        }
+      }
+
+      return { text, sources, searchQueries };
+    });
+  }
+
   /**
-   * Starts a Deep Research task using the Interactions API
+   * Starts a Deep Research task using the Interactions API with the deep-research agent
    */
   async createDeepResearchTask(prompt: string): Promise<Interaction> {
     return this.retryWithBackoff(async () => {
@@ -123,9 +183,56 @@ export class GeminiClient {
   }
 
   /**
+   * Creates an interaction with streaming — returns an async iterable of chunks.
+   * Use this for real-time analysis output.
+   */
+  async createStreamingInteraction(
+    prompt: string,
+    onDelta?: (text: string) => void,
+  ): Promise<string> {
+    const stream = await this.client.interactions.create({
+      model: this.modelName,
+      input: prompt,
+      stream: true,
+    });
+
+    let fullText = "";
+
+    for await (const chunk of stream as any) {
+      if (chunk.event_type === "content.delta") {
+        if (chunk.delta?.type === "text" && chunk.delta.text) {
+          fullText += chunk.delta.text;
+          if (onDelta) onDelta(chunk.delta.text);
+        }
+      } else if (chunk.event_type === "interaction.complete") {
+        // Stream finished
+        break;
+      }
+    }
+
+    return fullText;
+  }
+
+  /**
+   * Creates a standard (non-streaming) interaction for text generation.
+   */
+  async generateContent(prompt: string): Promise<string> {
+    return this.retryWithBackoff(async () => {
+      const interaction = await this.client.interactions.create({
+        model: this.modelName,
+        input: prompt,
+      });
+
+      const outputs = interaction.outputs as any[];
+      const textOutput = outputs?.find((o: any) => o.type === "text");
+      return (textOutput as any)?.text || "";
+    });
+  }
+
+  /**
    * Cleans and extracts JSON from AI string response
    */
-  private extractJson<T>(text: string): T {
+  public extractJson<T>(text: string): T {
     try {
       // 1. Try to find JSON within markdown triple backticks
       const markdownJsonMatch = text.match(/```(?:json)?\n?([\s\S]*?)```/);
@@ -141,13 +248,11 @@ export class GeminiClient {
       }
 
       // 3. Clean the string of problematic characters
-      // Remove horizontal tabs, newlines, and carriage returns that are often naked in AI responses
-      // but also handle escaped characters correctly.
       const cleaned = jsonStr
         .trim()
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
-        .replace(/\\n/g, "\\n") // Keep valid escaped newlines
-        .replace(/\\"/g, '\\"'); // Keep valid escaped quotes
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+        .replace(/\\n/g, "\\n")
+        .replace(/\\"/g, '\\"');
 
       return JSON.parse(cleaned) as T;
     } catch (error) {
@@ -183,10 +288,9 @@ export class GeminiClient {
 
     try {
       const result = await this.retryWithBackoff(() =>
-        this.model.generateContent(prompt),
+        this.generateContent(prompt),
       );
-      const response = await result.response;
-      return response.text().trim();
+      return result.trim();
     } catch (error: any) {
       console.error("Error refining prompt:", error);
       if (error.status === 429) {
@@ -258,7 +362,7 @@ export class GeminiClient {
       )
       .join("\n\n---\n\n");
 
-    const prompt = `You are a Deep Research Analyst tasked with analyzing sources and extracting actionable insights.
+    const prompt = `You are a ruthless business intelligence analyst. Your job is to extract findings that would change how a CEO runs their business TOMORROW. You are NOT a textbook. You are NOT writing a glossary.
 
 RESEARCH GOAL:
 ${researchGoal}
@@ -266,57 +370,61 @@ ${researchGoal}
 SOURCES TO ANALYZE:
 ${sourceText}
 
-INSTRUCTIONS:
-1. Analyze all provided sources thoroughly
-2. Extract key insights, patterns, and trends
-3. Categorize findings appropriately (e.g., Market, Competitor, Technology, Customer, Risk, Opportunity)
-4. Assign confidence scores based on source quality and corroboration
-5. Provide an executive summary that synthesizes all findings
+════════════════════════════════════════
+ABSOLUTE RULES — VIOLATING THESE = FAILURE:
+════════════════════════════════════════
 
-CRITICAL REQUIREMENTS:
-- Return ONLY valid JSON - no additional text before or after
-- Use proper JSON escaping for quotes, newlines, and special characters
-- Ensure all strings are properly quoted
-- Do not use trailing commas
-- Confidence must be a number between 0.0 and 1.0
-- All arrays must contain at least one element (use empty string if needed)
+1. NEVER define a concept. If you write "X is a strategy that..." you have FAILED. The user already knows what things are. They need to know WHAT IS HAPPENING, WHO IS DOING IT, and HOW MUCH IT COSTS/EARNS.
 
-REQUIRED OUTPUT FORMAT:
+2. Every insight MUST contain at least ONE of these:
+   - A specific number, percentage, or dollar figure from the sources
+   - A named company, person, or product doing something specific
+   - A concrete date, timeline, or deadline
+   - A direct quote from a credible source
+   If an insight has NONE of these, DELETE IT.
+
+3. Confidence scoring rules:
+   - 0.9-1.0: Multiple sources confirm, hard data present (revenue figures, published stats)
+   - 0.7-0.89: Single credible source with specific data
+   - 0.5-0.69: Inference from patterns across sources, no hard numbers
+   - Below 0.5: Speculation or thin evidence — still include if the implication is significant, but FLAG IT
+
+4. Categories must be business-action oriented:
+   - "Revenue Impact" (things that directly affect the top/bottom line)
+   - "Competitive Threat" (what competitors are doing that could hurt)
+   - "Untapped Opportunity" (gaps no one is filling yet)
+   - "Execution Risk" (things that could go wrong if action is taken)
+   - "Timing Signal" (windows opening or closing)
+   - "Customer Behavior Shift" (how buyers are changing)
+
+5. The summary must START with: "The single most important finding is..." followed by 2-3 paragraphs that read like a C-suite briefing. End with specific recommendations, not platitudes.
+
+6. Trends must be OBSERVABLE MOVEMENTS, not concepts. Bad: "AI is transforming marketing." Good: "3 of 5 analyzed competitors launched AI-powered pricing tools in Q4 2024, suggesting $X market."
+
+REQUIRED OUTPUT FORMAT (RETURN ONLY THIS JSON, NO OTHER TEXT):
 \`\`\`json
 {
   "insights": [
     {
-      "title": "Brief, specific title of the finding",
-      "content": "Detailed explanation with supporting evidence from sources",
-      "category": "Market|Competitor|Technology|Customer|Risk|Opportunity|Other",
+      "title": "Specific finding — WHO is doing WHAT with WHAT RESULT",
+      "content": "Detailed finding with specific data points, names, and numbers extracted from sources. Include the source reference [Source N] for each claim. End with a one-sentence 'So what?' explaining the business implication.",
+      "category": "Revenue Impact|Competitive Threat|Untapped Opportunity|Execution Risk|Timing Signal|Customer Behavior Shift",
       "confidence": 0.85
     }
   ],
-  "summary": "2-3 paragraph executive summary synthesizing all key findings and their implications",
+  "summary": "C-suite briefing starting with the most important finding. What should we DO about this?",
   "trends": [
-    "Specific trend observation 1",
-    "Specific trend observation 2"
+    "Observable movement with specific evidence and timeframe"
   ]
 }
 \`\`\`
 
-VALIDATION CHECKLIST:
-- [ ] JSON is properly formatted and parseable
-- [ ] All required fields are present
-- [ ] insights array has at least 1 item
-- [ ] Each insight has title, content, category, and confidence
-- [ ] confidence values are numbers between 0 and 1
-- [ ] trends array has at least 1 item
-- [ ] summary is substantive (not just "No findings")
-- [ ] Content is wrapped in triple backticks with json language identifier
+Generate 6-10 insights. Quality over quantity — 6 killer insights beats 15 generic ones.
 
 Begin your analysis now:`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
+      const text = await this.generateContent(prompt);
       return this.extractJson<AnalysisResult>(text);
     } catch (error) {
       console.error("Error analyzing sources:", error);
@@ -324,7 +432,7 @@ Begin your analysis now:`;
         throw error;
       }
       throw new Error(
-        "Analyis mission failed: " +
+        "Analysis mission failed: " +
           (error instanceof Error ? error.message : String(error)),
       );
     }
@@ -375,10 +483,7 @@ Begin your analysis now:`;
     `;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
+      const text = await this.generateContent(prompt);
       return this.extractJson<{
         dm: string;
         email: string;

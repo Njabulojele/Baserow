@@ -28,23 +28,28 @@ function DraggableTask({ task }: { task: any }) {
       style={style}
       {...listeners}
       {...attributes}
-      className="p-3 bg-card border rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors group touch-none"
+      className="p-3 bg-[#1a252f] border border-[#2f3e46] rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-[#a9927d]/50 transition-colors group touch-none"
     >
       <div className="flex justify-between items-start mb-2">
-        <span className="text-sm font-medium line-clamp-2">{task.title}</span>
-        <Badge variant="outline" className="text-[10px] h-5">
+        <span className="text-[10px] font-mono uppercase tracking-widest text-white line-clamp-2">
+          {task.title}
+        </span>
+        <Badge
+          variant="outline"
+          className="text-[10px] h-5 border-[#2f3e46] font-mono text-gray-500"
+        >
           {task.estimatedMinutes || 30}m
         </Badge>
       </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className={task.priority === "critical" ? "text-red-500" : ""}>
+      <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+        <span className={task.priority === "critical" ? "text-red-400" : ""}>
           {task.priority}
         </span>
         {task.project && <span>• {task.project.name}</span>}
         {task.scheduledDate && (
           <Badge
-            variant="secondary"
-            className="text-[9px] h-4 py-0 px-1 ml-auto"
+            variant="outline"
+            className="text-[9px] font-mono tracking-widest uppercase h-4 py-0 px-1 ml-auto border-[#2f3e46] text-[#a9927d]"
           >
             Scheduled
           </Badge>
@@ -71,13 +76,13 @@ export function UnscheduledSidebar() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
-        <h3 className="font-semibold flex items-center gap-2">
-          <LayoutGrid className="h-4 w-4" />
+    <div className="h-full flex flex-col bg-[#0a0c10]">
+      <div className="p-4 border-b border-[#2f3e46]">
+        <h3 className="font-mono text-[10px] uppercase tracking-widest text-white flex items-center gap-2">
+          <LayoutGrid className="h-3 w-3 text-[#a9927d]" />
           Unscheduled Tasks
         </h3>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-[10px] font-mono text-gray-500 mt-1">
           Drag tasks to the calendar to schedule them.
         </p>
       </div>
@@ -93,7 +98,7 @@ export function UnscheduledSidebar() {
           )}
 
           {(!tasks || tasks.length === 0) && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
+            <div className="text-center py-8 text-[10px] uppercase tracking-widest font-mono text-gray-600">
               No unscheduled tasks found.
             </div>
           )}

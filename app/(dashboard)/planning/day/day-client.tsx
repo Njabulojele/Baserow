@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Play,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -36,21 +37,13 @@ import { toast } from "sonner";
 // import { toast } from "sonner";
 import { EveningReview } from "@/components/dashboard/EveningReview";
 import { NoteEditor } from "@/components/notes/NoteEditor";
+import { DayPlanOnboarding } from "@/components/planning/DayPlanOnboarding";
 
 interface DayPlanningClientProps {
   initialData: any;
 }
 
-// Priority matrix quadrant helper
-function getQuadrant(priority: string, dueDate: Date | null, today: Date) {
-  const isUrgent = dueDate && dueDate <= today;
-  const isImportant = priority === "critical" || priority === "high";
-
-  if (isUrgent && isImportant) return "do";
-  if (!isUrgent && isImportant) return "schedule";
-  if (isUrgent && !isImportant) return "delegate";
-  return "eliminate";
-}
+// Removed priority matrix quadrant helper
 
 export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -103,47 +96,14 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
   // Focus score based on completion rate (0-100)
   const focusScore = completionRate;
 
-  // Organize tasks by priority matrix quadrants
-  const quadrants = useMemo(() => {
-    const tasks = dayPlan?.tasks || [];
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
+  // Get tasks from our new endpoints for the specific date
+  // We use the 'dayPlan' data which already has the tasks for 'currentDate'
+  const todaysTasks = dayPlan?.tasks || [];
 
-    return {
-      do: tasks.filter(
-        (t: any) =>
-          getQuadrant(
-            t.priority,
-            t.dueDate ? new Date(t.dueDate) : null,
-            today,
-          ) === "do",
-      ),
-      schedule: tasks.filter(
-        (t: any) =>
-          getQuadrant(
-            t.priority,
-            t.dueDate ? new Date(t.dueDate) : null,
-            today,
-          ) === "schedule",
-      ),
-      delegate: tasks.filter(
-        (t: any) =>
-          getQuadrant(
-            t.priority,
-            t.dueDate ? new Date(t.dueDate) : null,
-            today,
-          ) === "delegate",
-      ),
-      eliminate: tasks.filter(
-        (t: any) =>
-          getQuadrant(
-            t.priority,
-            t.dueDate ? new Date(t.dueDate) : null,
-            today,
-          ) === "eliminate",
-      ),
-    };
-  }, [dayPlan?.tasks]);
+  // We also want backlog tasks to populate the right column
+  const { data: backlogTasks } = trpc.task.getBacklogTasks.useQuery(undefined, {
+    staleTime: 1000 * 60 * 5,
+  });
 
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +121,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
       {/* Header with Quick Actions */}
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Day Navigation
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
@@ -172,13 +132,13 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
           <Link href="/planning/review" className="w-full sm:w-auto">
             <Button
               size="sm"
-              className="w-full bg-linear-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-lg"
+              className="w-full bg-[#1a252f] border border-[#a9927d]/50 text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] transition-all font-mono tracking-widest uppercase text-[10px] shadow-xl"
             >
-              <Heart className="size-4 mr-2" />
+              <Heart className="size-3 mr-2" />
               Daily Review
             </Button>
           </Link>
-          <div className="flex items-center justify-between sm:justify-start gap-1 border rounded-lg p-1 bg-card">
+          <div className="flex items-center justify-between sm:justify-start gap-1 border border-[#2f3e46] rounded-lg p-1 bg-[#0a0c10]">
             <Button
               variant="ghost"
               size="icon"
@@ -190,7 +150,7 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="px-3 text-xs sm:text-sm"
+              className="px-3 text-[10px] font-mono uppercase tracking-widest text-gray-400 hover:text-white hover:bg-[#1a252f]"
               onClick={() => setCurrentDate(new Date())}
             >
               Today
@@ -209,10 +169,10 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
             format(new Date(), "yyyy-MM-dd") && (
             <Button
               variant="outline"
-              className="w-full sm:w-auto border-indigo-500/30 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+              className="w-full sm:w-auto border-[#2f3e46] bg-[#0a0c10] text-gray-300 hover:text-white hover:border-[#a9927d] font-mono tracking-widest uppercase text-[10px]"
               onClick={() => setIsReviewOpen(true)}
             >
-              <Moon className="size-4 mr-2" />
+              <Moon className="size-3 mr-2" />
               Evening Review
             </Button>
           )}
@@ -237,28 +197,31 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
             placeholder="Quick add task..."
             value={quickTask}
             onChange={(e) => setQuickTask(e.target.value)}
-            className="pl-10 h-11 sm:h-10"
+            className="pl-10 h-11 sm:h-10 bg-[#0a0c10] border-[#2f3e46] text-white focus-visible:ring-[#a9927d] font-light placeholder:text-gray-600"
           />
         </div>
         <Button
           type="submit"
           disabled={createTaskMutation.isPending}
-          className="h-11 sm:h-10"
+          className="h-11 sm:h-10 bg-[#1a252f] border border-[#2f3e46] text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] transition-all font-mono tracking-widest uppercase text-[10px]"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-3 w-3 mr-2" />
           Add Task
         </Button>
       </form>
+
+      {/* First-use onboarding */}
+      <DayPlanOnboarding />
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Metrics & Focus */}
         <div className="lg:col-span-3 space-y-6">
           {/* Today's Metrics */}
-          <Card className="bg-linear-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-indigo-500" />
+          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
+            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-4">
+              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
+                <TrendingUp className="h-4 w-4 text-[#a9927d]" />
                 Today's Score
               </CardTitle>
             </CardHeader>
@@ -294,8 +257,8 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                         x2="100%"
                         y2="0%"
                       >
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#a855f7" />
+                        <stop offset="0%" stopColor="#a9927d" />
+                        <stop offset="100%" stopColor="#d4c4b7" />
                       </linearGradient>
                     </defs>
                   </svg>
@@ -310,27 +273,31 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-center p-3 rounded-lg bg-green-500/10">
-                  <div className="text-2xl font-bold text-green-600">
+                <div className="text-center p-3 rounded-lg bg-[#0a0c10] border border-[#2f3e46] shadow-inner">
+                  <div className="text-2xl font-light text-white">
                     {completedTasks}
                   </div>
-                  <div className="text-xs text-muted-foreground">Completed</div>
+                  <div className="text-[10px] uppercase font-mono tracking-widest text-[#a9927d] mt-1">
+                    Completed
+                  </div>
                 </div>
-                <div className="text-center p-3 rounded-lg bg-amber-500/10">
-                  <div className="text-2xl font-bold text-amber-600">
+                <div className="text-center p-3 rounded-lg bg-[#0a0c10] border border-[#2f3e46] shadow-inner">
+                  <div className="text-2xl font-light text-white">
                     {totalTasks - completedTasks}
                   </div>
-                  <div className="text-xs text-muted-foreground">Remaining</div>
+                  <div className="text-[10px] uppercase font-mono tracking-widest text-gray-500 mt-1">
+                    Remaining
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Goal Progress - Shows goals linked to today's tasks */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="h-5 w-5 text-indigo-500" />
+          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
+            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-3">
+              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
+                <Target className="h-4 w-4 text-[#a9927d]" />
                 Today's Goal Progress
               </CardTitle>
             </CardHeader>
@@ -354,15 +321,15 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
           </Card>
 
           {/* Daily Win */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="h-5 w-5 text-emerald-500" />
+          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
+            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-3">
+              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
+                <Trophy className="h-4 w-4 text-[#a9927d]" />
                 Daily Win
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 italic text-sm">
+              <div className="p-4 rounded-lg bg-[#0a0c10] border border-[#a9927d]/30 italic text-sm text-gray-300 font-serif">
                 {dayPlan?.dayPlan?.dailyWin ||
                   todayWellbeing?.dailyWin ||
                   "What's your one big win for today?"}
@@ -371,177 +338,57 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
           </Card>
         </div>
 
-        {/* Center Column: Priority Matrix & Tasks */}
-        <div className="lg:col-span-9 space-y-6">
-          {/* Priority Matrix */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Flag className="h-5 w-5 text-rose-500" />
-                Priority Matrix
-              </CardTitle>
-              <CardDescription>Eisenhower Decision Matrix</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Do First */}
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-h-[100px] sm:min-h-[120px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                    <span className="text-xs font-semibold text-red-600 uppercase">
-                      Do First
-                    </span>
-                    <Badge
-                      variant="destructive"
-                      className="ml-auto text-[10px]"
-                    >
-                      {quadrants.do.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    {quadrants.do.slice(0, 3).map((task: any) => (
-                      <div
-                        key={task.id}
-                        className="text-xs truncate text-muted-foreground"
-                      >
-                        • {task.title}
-                      </div>
-                    ))}
-                    {quadrants.do.length > 3 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{quadrants.do.length - 3} more
-                      </div>
-                    )}
-                    {quadrants.do.length === 0 && (
-                      <div className="text-[10px] italic text-muted-foreground opacity-50">
-                        No critical tasks
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Schedule */}
-                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-h-[100px] sm:min-h-[120px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-blue-500" />
-                    <span className="text-xs font-semibold text-blue-600 uppercase">
-                      Schedule
-                    </span>
-                    <Badge className="ml-auto text-[10px] bg-blue-500">
-                      {quadrants.schedule.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    {quadrants.schedule.slice(0, 3).map((task: any) => (
-                      <div
-                        key={task.id}
-                        className="text-xs truncate text-muted-foreground"
-                      >
-                        • {task.title}
-                      </div>
-                    ))}
-                    {quadrants.schedule.length > 3 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{quadrants.schedule.length - 3} more
-                      </div>
-                    )}
-                    {quadrants.schedule.length === 0 && (
-                      <div className="text-[10px] italic text-muted-foreground opacity-50">
-                        Nothing scheduled
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Delegate */}
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 min-h-[100px] sm:min-h-[120px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Play className="h-4 w-4 text-amber-500" />
-                    <span className="text-xs font-semibold text-amber-600 uppercase">
-                      Delegate
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="ml-auto text-[10px] border-amber-500 text-amber-600"
-                    >
-                      {quadrants.delegate.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    {quadrants.delegate.slice(0, 3).map((task: any) => (
-                      <div
-                        key={task.id}
-                        className="text-xs truncate text-muted-foreground"
-                      >
-                        • {task.title}
-                      </div>
-                    ))}
-                    {quadrants.delegate.length > 3 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{quadrants.delegate.length - 3} more
-                      </div>
-                    )}
-                    {quadrants.delegate.length === 0 && (
-                      <div className="text-[10px] italic text-muted-foreground opacity-50">
-                        Nothing at risk
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Eliminate */}
-                <div className="p-3 rounded-lg bg-gray-500/10 border border-gray-500/20 min-h-[100px] sm:min-h-[120px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Circle className="h-4 w-4 text-gray-500" />
-                    <span className="text-xs font-semibold text-gray-600 uppercase">
-                      Later
-                    </span>
-                    <Badge variant="outline" className="ml-auto text-[10px]">
-                      {quadrants.eliminate.length}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    {quadrants.eliminate.slice(0, 3).map((task: any) => (
-                      <div
-                        key={task.id}
-                        className="text-xs truncate text-muted-foreground"
-                      >
-                        • {task.title}
-                      </div>
-                    ))}
-                    {quadrants.eliminate.length > 3 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{quadrants.eliminate.length - 3} more
-                      </div>
-                    )}
-                    {quadrants.eliminate.length === 0 && (
-                      <div className="text-[10px] italic text-muted-foreground opacity-50">
-                        Inbox is clear
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* All Tasks */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        {/* Center Column: Today's Agenda */}
+        <div className="lg:col-span-5 space-y-6">
+          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl flex flex-col h-[500px] lg:h-[calc(100vh-220px)]">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#2f3e46]/50 mb-4 shrink-0">
               <div>
-                <CardTitle className="text-lg">Today's Tasks</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-xs font-mono uppercase tracking-widest text-white flex items-center gap-2">
+                  <Flag className="h-4 w-4 text-[#a9927d]" />
+                  Today's Agenda
+                </CardTitle>
+                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
                   {completedTasks} of {totalTasks} completed ({completionRate}%)
                 </CardDescription>
               </div>
-              <Button size="sm" variant="outline" asChild>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              <TaskList
+                tasks={todaysTasks}
+                emptyMessage="No tasks scheduled for today. Add one above or pull from the backlog!"
+                variant="agenda"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Backlog */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl flex flex-col h-[500px] lg:h-[calc(100vh-220px)] opacity-90">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#2f3e46]/50 mb-4 shrink-0">
+              <div>
+                <CardTitle className="text-xs font-mono uppercase tracking-widest text-white flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-gray-400" />
+                  Backlog & Overdue
+                </CardTitle>
+                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
+                  Unscheduled Tasks
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                asChild
+                className="h-7 text-[10px] font-mono border-[#2f3e46] bg-transparent text-gray-400 hover:text-white pb-0"
+              >
                 <Link href="/tasks">View All</Link>
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
               <TaskList
-                tasks={dayPlan?.tasks}
-                emptyMessage="No tasks scheduled for today. Add one above!"
+                tasks={backlogTasks}
+                emptyMessage="Inbox is zero. Excellent work!"
+                variant="backlog"
               />
             </CardContent>
           </Card>

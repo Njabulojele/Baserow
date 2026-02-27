@@ -35,10 +35,17 @@ export const planningRouter = router({
         },
       });
 
-      // Get tasks scheduled for this week
+      // Get tasks scheduled for this week (scoped by tenant if applicable)
       const tasks = await ctx.prisma.task.findMany({
         where: {
-          userId: ctx.userId,
+          ...(ctx.organizationId
+            ? {
+                OR: [
+                  { organizationId: ctx.organizationId },
+                  { userId: ctx.userId, organizationId: null },
+                ],
+              }
+            : { userId: ctx.userId, organizationId: null }),
           scheduledDate: {
             gte: weekStart,
             lte: weekEnd,
@@ -115,10 +122,17 @@ export const planningRouter = router({
         },
       });
 
-      // Get ALL tasks for this user (simpler, matches getTasks approach)
+      // Get ALL tasks for this user (or organization)
       const allTasks = await ctx.prisma.task.findMany({
         where: {
-          userId: ctx.userId,
+          ...(ctx.organizationId
+            ? {
+                OR: [
+                  { organizationId: ctx.organizationId },
+                  { userId: ctx.userId, organizationId: null },
+                ],
+              }
+            : { userId: ctx.userId, organizationId: null }),
         },
         include: {
           project: { select: { id: true, name: true, color: true } },
@@ -222,10 +236,17 @@ export const planningRouter = router({
       const dayEnd = new Date(date);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
-      // Get tasks for this day
+      // Get tasks for this day (scoped by tenant if applicable)
       const tasks = await ctx.prisma.task.findMany({
         where: {
-          userId: ctx.userId,
+          ...(ctx.organizationId
+            ? {
+                OR: [
+                  { organizationId: ctx.organizationId },
+                  { userId: ctx.userId, organizationId: null },
+                ],
+              }
+            : { userId: ctx.userId, organizationId: null }),
           OR: [
             { scheduledDate: { gte: dayStart, lte: dayEnd } },
             { dueDate: { gte: dayStart, lte: dayEnd } },

@@ -14,7 +14,7 @@ export default function SSOSettingsPage() {
           <ShieldCheck className="w-8 h-8 text-blue-400" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Security & SSO
           </h1>
           <p className="text-gray-400 mt-1">

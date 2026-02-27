@@ -43,6 +43,14 @@
     - [11.1 Soft Deletes \& Optimistic Concurrency](#111-soft-deletes--optimistic-concurrency)
     - [11.2 Error Tracking \& Middlewares](#112-error-tracking--middlewares)
   - [12. Integrations \& Subsystems](#12-integrations--subsystems)
+  - [13. Recent Enterprise Architecture Upgrades (Phase 1-3)](#13-recent-enterprise-architecture-upgrades-phase-1-3)
+    - [13.1 Phase 1: Foundation Security \& Scale](#131-phase-1-foundation-security--scale)
+    - [13.2 Phase 2: Engagement \& UX](#132-phase-2-engagement--ux)
+    - [13.3 Phase 3: Enterprise Platform \& Type Safety](#133-phase-3-enterprise-platform--type-safety)
+  - [14. Recent Advanced Feature Additions (Phases 4-5)](#14-recent-advanced-feature-additions-phases-4-5)
+    - [14.1 Grounded AI Research \& Framework Upgrade](#141-grounded-ai-research--framework-upgrade)
+    - [14.2 Dashboard \& Planning Redesign](#142-dashboard--planning-redesign)
+    - [14.3 Multi-Tenant Visibility \& Security](#143-multi-tenant-visibility--security)
 
 ---
 
@@ -254,6 +262,26 @@ The platform recently underwent a massive structural and type-safety upgrade to 
 - **Canvas Viewport Virtualization:** Solved infinite canvas DOM lag by writing a native Quadtree Spatial Partitioning data structure for sub-millisecond frustum culling, unmounting out-of-bounds nodes entirely.
 - **SAML/SCIM Enterprise SSO:** Seamless active directory mapping injected directly into the `/settings/sso` dashboard via Clerk's `<OrganizationProfile />` B2B components.
 - **Universal Type-Safety Hardening:** Full cleanup of deprecated tRPC `v10` signatures (`setQueryData` -> `setData`, `isLoading` -> `isPending`) ensuring `@trpc/react-query` `v11` compatibility, with 100% clean `tsc` validation across both Express and Next.js layers.
+
+## 14. Recent Advanced Feature Additions (Phases 4-5)
+
+### 14.1 Grounded AI Research & Framework Upgrade
+
+- **Google GenAI Migration:** Upgraded the core AI agent to the new `@google/genai` SDK and Interactions API for enhanced streaming reliability.
+- **Search Grounding & Extraction:** Integrated Google Search retrieval directly into the engine, allowing the AI to cross-reference real-time data and cite sources in its reports.
+- **Dedicated Source Viewer:** Replaced constrained modals with a full-page, markdown-rich viewer for deep reading of generated AI research.
+
+### 14.2 Dashboard & Planning Redesign
+
+- **Premium Interface Overhaul:** Redesigned the entire suite of productivity pages (Dashboard, Strategy, Canvas, Calendar, Tasks) with a unified, high-end dark-mode aesthetic.
+- **Agile Day Navigation:** Deprecated the Eisenhower Matrix in favor of a highly tactical, split-pane "Agenda vs. Backlog" layout, featuring internal scrolling for improved daily focus.
+- **Task Synchronization:** Engine upgrades to ensure task status changes (start, complete, pause) sync instantly across all global dashboard views.
+
+### 14.3 Multi-Tenant Visibility & Security
+
+- **Organization Content Scoping:** Deeply refactored tRPC routers to fetch and scope task/project data by `organizationId`. New team members instantly inherit visibility of shared organizational pipelines.
+- **Custom Branded Authentication:** Stripped out external Clerk hosted components, building bespoke, fully integrated sign-in and sign-up flows for a seamless brand experience.
+- **Webhook Hardening:** Secured cross-service user synchronization with strict HMAC signature verification and resilient custom redirect logic.
 
 ---
 

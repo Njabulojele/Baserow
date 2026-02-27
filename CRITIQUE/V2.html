@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engineering Review v2 — OpenInfi BaseRow</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Fira+Code:wght@300;400;500&display=swap");
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #f5f2eb;
+        --surface: #ede9e0;
+        --ink: #1a1714;
+        --ink-soft: #4a4540;
+        --ink-muted: #8a8178;
+        --accent: #c0392b;
+        --accent2: #2471a3;
+        --gold: #b7860b;
+        --green: #1e7e34;
+        --border: #ccc6ba;
+        --red-bg: rgba(192, 57, 43, 0.06);
+        --blue-bg: rgba(36, 113, 163, 0.06);
+        --gold-bg: rgba(183, 134, 11, 0.07);
+        --green-bg: rgba(30, 126, 52, 0.06);
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background-image: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 27px,
+          rgba(0, 0, 0, 0.025) 27px,
+          rgba(0, 0, 0, 0.025) 28px
+        );
+      }
+      header {
+        background: var(--ink);
+        color: var(--bg);
+        padding: 56px 72px 48px;
+        position: relative;
+        overflow: hidden;
+      }
+      header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 8px,
+          rgba(255, 255, 255, 0.015) 8px,
+          rgba(255, 255, 255, 0.015) 9px
+        );
+      }
+      .version-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--accent);
+        color: white;
+        font-family: "Fira Code", monospace;
+        font-size: 11px;
+        padding: 5px 12px;
+        margin-bottom: 24px;
+        position: relative;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      h1 {
+        font-family: "Playfair Display", serif;
+        font-size: clamp(36px, 5vw, 68px);
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: var(--bg);
+        margin-bottom: 8px;
+        position: relative;
+      }
+      h1 .line2 {
+        color: rgba(245, 242, 235, 0.4);
+        font-style: italic;
+        font-weight: 700;
+      }
+      .header-sub {
+        font-size: 14px;
+        color: rgba(245, 242, 235, 0.55);
+        max-width: 560px;
+        margin-top: 16px;
+        line-height: 1.6;
+        position: relative;
+      }
+      .delta-banner {
+        margin-top: 32px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-width: 800px;
+        position: relative;
+      }
+      .delta-cell {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 16px 20px;
+        text-align: center;
+      }
+      .delta-label {
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(245, 242, 235, 0.4);
+        margin-bottom: 6px;
+      }
+      .delta-value {
+        font-family: "Playfair Display", serif;
+        font-size: 30px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .v-red {
+        color: #e74c3c;
+      }
+      .v-yellow {
+        color: #f1c40f;
+      }
+      .v-green {
+        color: #2ecc71;
+      }
+      .v-blue {
+        color: #5dade2;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--ink);
+        border-bottom: 2px solid var(--accent);
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 72px;
+      }
+      nav::-webkit-scrollbar {
+        display: none;
+      }
+      .nav-tab {
+        font-family: "Fira Code", monospace;
+        font-size: 11px;
+        color: rgba(245, 242, 235, 0.45);
+        padding: 14px 18px;
+        text-decoration: none;
+        white-space: nowrap;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+      }
+      .nav-tab:hover {
+        color: var(--bg);
+      }
+      .nav-tab.active {
+        color: var(--bg);
+        border-bottom-color: var(--accent);
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 72px 96px;
+      }
+      @media (max-width: 700px) {
+        main,
+        header,
+        nav {
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+        .persona-grid,
+        .comparison-strip {
+          grid-template-columns: 1fr !important;
+        }
+      }
+      .section {
+        padding-top: 64px;
+      }
+      .section-eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .eyebrow-num {
+        font-family: "Fira Code", monospace;
+        font-size: 11px;
+        color: var(--ink-muted);
+      }
+      .eyebrow-tag {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        background: var(--ink);
+        color: var(--bg);
+      }
+      h2 {
+        font-family: "Playfair Display", serif;
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--ink);
+        margin-bottom: 16px;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 16px;
+      }
+      p {
+        color: var(--ink-soft);
+        margin-bottom: 16px;
+      }
+      .verdict {
+        background: var(--ink);
+        color: var(--bg);
+        padding: 32px 36px;
+        margin: 32px 0;
+        border-left: 4px solid var(--accent);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .verdict-icon {
+        font-size: 36px;
+      }
+      .verdict-title {
+        font-family: "Playfair Display", serif;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--bg);
+        margin-bottom: 8px;
+      }
+      .verdict-body {
+        font-size: 14px;
+        color: rgba(245, 242, 235, 0.7);
+        line-height: 1.7;
+      }
+      .comparison-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .comp-card {
+        padding: 24px;
+        border: 1px solid var(--border);
+      }
+      .comp-card.then {
+        background: var(--red-bg);
+        border-color: rgba(192, 57, 43, 0.2);
+      }
+      .comp-card.now {
+        background: var(--green-bg);
+        border-color: rgba(30, 126, 52, 0.2);
+      }
+      .comp-heading {
+        font-family: "Fira Code", monospace;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .then .comp-heading {
+        color: var(--accent);
+      }
+      .now .comp-heading {
+        color: var(--green);
+      }
+      .comp-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+      .comp-list li::before {
+        margin-right: 8px;
+        font-weight: 700;
+      }
+      .then .comp-list li::before {
+        content: "x";
+        color: var(--accent);
+      }
+      .now .comp-list li::before {
+        content: "v";
+        color: var(--green);
+      }
+      .critique-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      .card-stripe {
+        height: 3px;
+      }
+      .card.critical .card-stripe {
+        background: var(--accent);
+      }
+      .card.warning .card-stripe {
+        background: var(--gold);
+      }
+      .card.opportunity .card-stripe {
+        background: var(--accent2);
+      }
+      .card.shipped .card-stripe {
+        background: var(--green);
+      }
+      .card-inner {
+        padding: 22px 26px;
+      }
+      .card.critical .card-inner {
+        background: var(--red-bg);
+      }
+      .card.warning .card-inner {
+        background: var(--gold-bg);
+      }
+      .card.opportunity .card-inner {
+        background: var(--blue-bg);
+      }
+      .card.shipped .card-inner {
+        background: var(--green-bg);
+      }
+      .card-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font-family: "Fira Code", monospace;
+        font-size: 9px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+      }
+      .chip-red {
+        background: var(--accent);
+        color: white;
+      }
+      .chip-gold {
+        background: var(--gold);
+        color: white;
+      }
+      .chip-blue {
+        background: var(--accent2);
+        color: white;
+      }
+      .chip-green {
+        background: var(--green);
+        color: white;
+      }
+      .card-title {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ink);
+        flex: 1;
+      }
+      .card-body {
+        font-size: 13px;
+        color: var(--ink-soft);
+        line-height: 1.75;
+      }
+      .card-body strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .fix {
+        margin-top: 14px;
+        padding: 12px 14px;
+        background: white;
+        border-left: 3px solid var(--ink);
+        font-family: "Fira Code", monospace;
+        font-size: 12px;
+        color: var(--ink-soft);
+        line-height: 1.6;
+      }
+      .fix strong {
+        color: var(--ink);
+      }
+      .persona-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .persona {
+        border: 1px solid var(--border);
+        background: white;
+        padding: 24px;
+      }
+      .persona-emoji {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+      .persona-role {
+        font-family: "Fira Code", monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin-bottom: 4px;
+      }
+      .persona-name {
+        font-family: "Playfair Display", serif;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 14px;
+        color: var(--ink);
+      }
+      .persona-wants {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+      .persona-wants li {
+        padding-left: 16px;
+        position: relative;
+      }
+      .persona-wants li::before {
+        content: "->";
+        position: absolute;
+        left: 0;
+        color: var(--accent2);
+        font-weight: 700;
+      }
+      .roadmap-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid var(--border);
+        margin-top: 24px;
+        font-size: 13px;
+      }
+      .roadmap-table thead {
+        background: var(--ink);
+        color: var(--bg);
+      }
+      .roadmap-table th {
+        padding: 12px 16px;
+        font-family: "Fira Code", monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-align: left;
+        font-weight: 500;
+      }
+      .roadmap-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      .roadmap-table tr:last-child td {
+        border-bottom: none;
+      }
+      .roadmap-table tr:nth-child(even) td {
+        background: var(--surface);
+      }
+      .impact-bar {
+        display: flex;
+        gap: 3px;
+        align-items: center;
+      }
+      .impact-pip {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--border);
+      }
+      .impact-pip.filled {
+        background: var(--accent2);
+      }
+      blockquote {
+        border-top: 2px solid var(--ink);
+        border-bottom: 2px solid var(--ink);
+        padding: 28px 0;
+        margin: 40px 0;
+      }
+      blockquote p {
+        font-family: "Playfair Display", serif;
+        font-size: 20px;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--ink);
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      blockquote footer {
+        font-family: "Fira Code", monospace;
+        font-size: 11px;
+        color: var(--ink-muted);
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 40px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="version-pill">
+        <span class="dot"></span> Review Round 2 · Phase 3 Audit
+      </div>
+      <h1>You Shipped.<br /><span class="line2">Now What?</span></h1>
+      <p class="header-sub">
+        A second-pass principal engineering review post-enterprise upgrades. The
+        foundation is now legitimately solid. This review focuses on what
+        separates "enterprise-ready" from "enterprise-preferred."
+      </p>
+      <div class="delta-banner">
+        <div class="delta-cell">
+          <div class="delta-label">Architecture</div>
+          <div class="delta-value v-green">8.5 ↑</div>
+        </div>
+        <div class="delta-cell">
+          <div class="delta-label">Scalability</div>
+          <div class="delta-value v-green">8 ↑↑</div>
+        </div>
+        <div class="delta-cell">
+          <div class="delta-label">Observability</div>
+          <div class="delta-value v-yellow">7 ↑↑</div>
+        </div>
+        <div class="delta-cell">
+          <div class="delta-label">DX Quality</div>
+          <div class="delta-value v-green">9 ↑</div>
+        </div>
+        <div class="delta-cell">
+          <div class="delta-label">Prod Readiness</div>
+          <div class="delta-value v-yellow">7.5 ↑↑</div>
+        </div>
+        <div class="delta-cell">
+          <div class="delta-label">Enterprise Sales</div>
+          <div class="delta-value v-blue">7 new</div>
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="#delta" class="nav-tab">What Changed</a>
+      <a href="#remaining" class="nav-tab">Remaining Gaps</a>
+      <a href="#nextlevel" class="nav-tab">Next Level</a>
+      <a href="#personas" class="nav-tab">User Needs</a>
+      <a href="#moat" class="nav-tab">Your Moat</a>
+      <a href="#roadmap" class="nav-tab">Roadmap</a>
+    </nav>
+
+    <main>
+      <div id="delta" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">01</span
+          ><span class="eyebrow-tag">Honest Assessment</span>
+        </div>
+        <h2>What You Actually Shipped</h2>
+        <div class="verdict">
+          <div class="verdict-icon">📈</div>
+          <div>
+            <div class="verdict-title">
+              From "Ambitious Demo" to "Legitimate Platform"
+            </div>
+            <div class="verdict-body">
+              The v1 review flagged existential architectural risks. You
+              addressed the critical ones. RLS, Redis queues, Sentry, audit
+              logs, SAML, webhooks, quadtree canvas, Cmd+K — that's 6-8 weeks of
+              serious engineering. This is no longer a prototype. It can sell to
+              mid-market companies today.
+            </div>
+          </div>
+        </div>
+        <div class="comparison-strip">
+          <div class="comp-card then">
+            <div class="comp-heading">Version 1 — Then</div>
+            <ul class="comp-list">
+              <li>App-layer org isolation — one bug leaks all data</li>
+              <li>Express server crashes silently, no recovery</li>
+              <li>No Sentry — blind in production</li>
+              <li>Socket.io rooms die on server restart</li>
+              <li>Canvas DOM crawls past 200 nodes</li>
+              <li>No audit trail — unsellable to enterprise</li>
+              <li>Zero public extensibility</li>
+            </ul>
+          </div>
+          <div class="comp-card now">
+            <div class="comp-heading">Version 2 — Now</div>
+            <ul class="comp-list">
+              <li>PostgreSQL RLS — database-enforced tenant isolation</li>
+              <li>Redis queues + concurrency limits + PM2</li>
+              <li>Sentry on edge, server, and client layers</li>
+              <li>Redis adapter — horizontally scalable sockets</li>
+              <li>Quadtree frustum culling — sub-ms canvas</li>
+              <li>Full AuditLog middleware on all mutations</li>
+              <li>HMAC-signed webhooks + SAML/SCIM SSO</li>
+            </ul>
+          </div>
+        </div>
+        <blockquote>
+          <p>
+            "Most startups spend 18 months discovering they need RLS and SAML.
+            You built them proactively. That's not common — that's Linear-level
+            architectural maturity for a v2."
+          </p>
+          <footer>— Simulated Staff Engineer, Enterprise Platform</footer>
+        </blockquote>
+      </div>
+
+      <div id="remaining" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">02</span
+          ><span class="eyebrow-tag">Critical Review</span>
+        </div>
+        <h2>What Still Concerns Top-5 Engineers</h2>
+        <p style="color: var(--ink-muted)">
+          The foundation is solid. These are next-tier concerns — the ones that
+          surface during Series A due diligence and enterprise security audits.
+        </p>
+        <div class="critique-grid">
+          <div class="card critical">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-red">P0 · Security</span
+                ><span class="card-title"
+                  >WebSocket Auth is the New Attack Surface</span
+                >
+              </div>
+              <div class="card-body">
+                RLS secures your Prisma layer beautifully. But
+                <strong
+                  >your Express/Socket.io server is a separate process with its
+                  own auth model.</strong
+                >
+                How does it verify that the user connecting to
+                <code>org-[id]</code> actually belongs to that org? If it trusts
+                a client-supplied org ID, that's a room-hopping vulnerability —
+                any user could subscribe to any org's live activity feed.
+                <div class="fix">
+                  <strong>FIX:</strong> On socket connection, validate a
+                  short-lived JWT from Clerk — not a session cookie. The Express
+                  server must independently verify the token and extract orgId
+                  before allowing room subscription. Never trust client-supplied
+                  room names.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card critical">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-red">P0 · Reliability</span
+                ><span class="card-title"
+                  >Puppeteer is a Memory Leak Waiting to Happen</span
+                >
+              </div>
+              <div class="card-body">
+                Redis queues and concurrency limits help. But
+                <strong
+                  >Puppeteer browser instances that crash mid-scrape often don't
+                  clean up their child processes.</strong
+                >
+                Zombie Chrome processes accumulate over days of moderate usage.
+                A single hung page navigation can leak a browser instance
+                indefinitely with no timeout enforcement.
+                <div class="fix">
+                  <strong>FIX:</strong> Wrap every Puppeteer browser in
+                  try/finally calling <code>browser.close()</code>. Set a 30s
+                  hard navigation timeout per page. Add a cron every 15min that
+                  kills Chrome processes over the concurrency limit. Instrument
+                  memory to Sentry as a custom metric.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card warning">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-gold">P1 · Compliance</span
+                ><span class="card-title"
+                  >Soft Deletes Need a Retention Policy</span
+                >
+              </div>
+              <div class="card-body">
+                Soft deletes preserve data history — but without a retention
+                policy,
+                <strong>deleted data accumulates forever.</strong> GDPR's right
+                to erasure requires you to fully purge user data on request,
+                which contradicts an infinite soft-delete store. Your DB will
+                also balloon silently over 12-18 months and slow all queries.
+                <div class="fix">
+                  <strong>FIX:</strong> Add an Inngest scheduled job that
+                  hard-deletes records where
+                  <code>deletedAt &lt; 90 days ago</code>. Add a
+                  <code>DELETE /api/user/me</code> endpoint for GDPR erasure
+                  requests. Log both to AuditLog with a system actor.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card warning">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-gold">P1 · Security</span
+                ><span class="card-title"
+                  >The tRPC Error Boundary May Leak Stack Traces</span
+                >
+              </div>
+              <div class="card-body">
+                Forwarding to Sentry is excellent. But ensure the
+                <strong
+                  >normalized TRPCError returned to the UI does not include
+                  internal Prisma error details in production.</strong
+                >
+                Prisma errors are verbose — they can expose raw SQL, table
+                names, and column values, which is a serious information
+                disclosure vector in a multi-tenant system.
+                <div class="fix">
+                  <strong>FIX:</strong> In your tRPC error formatter, map all
+                  internal errors to generic messages when
+                  <code>NODE_ENV === 'production'</code>. Send full context to
+                  Sentry server-side only. Never let a raw
+                  PrismaClientKnownRequestError reach the browser response body.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card warning">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-gold">P1 · Observability</span
+                ><span class="card-title"
+                  >Sentry Without Alert Rules Is Just a Filing Cabinet</span
+                >
+              </div>
+              <div class="card-body">
+                Sentry captures errors — but
+                <strong>do you have alert thresholds that page you?</strong> If
+                your error rate triples at 2 AM, do you know within 5 minutes?
+                Without alert rules, you'll review errors weekly after customers
+                complain, not before they do.
+                <div class="fix">
+                  <strong>FIX:</strong> Set Sentry alerts for: spike above 10
+                  new errors/minute, any unhandled rejections from Express, P95
+                  latency above 2s on core tRPC routes. Route to a Slack
+                  channel. Takes 20 minutes. Transforms Sentry from passive to
+                  active.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card warning">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-gold">P1 · UX Quality</span
+                ><span class="card-title"
+                  >Still No Optimistic UI — The Biggest Felt Gap</span
+                >
+              </div>
+              <div class="card-body">
+                Even with 100% type-safety and tRPC v11,
+                <strong
+                  >every mutation still waits for a network round trip before
+                  the UI reflects the change.</strong
+                >
+                On a 200ms+ connection, checking off a task feels sluggish
+                compared to Linear, which responds instantly. This is the single
+                biggest quality gap between good and great products.
+                <div class="fix">
+                  <strong>FIX:</strong> Use TanStack Query's
+                  <code>onMutate</code> to apply changes to local cache
+                  immediately, with <code>onError</code> rollback. Start with
+                  task completion and deal stage moves. One afternoon of work —
+                  transformative in feel.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="nextlevel" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">03</span
+          ><span class="eyebrow-tag">Growth Engineering</span>
+        </div>
+        <h2>What Top-5 Engineers Build Next</h2>
+        <p style="color: var(--ink-muted)">
+          These aren't bug fixes — they're the features that convert good
+          products into category leaders.
+        </p>
+        <div class="critique-grid">
+          <div class="card opportunity">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-blue">Strategic</span
+                ><span class="card-title"
+                  >The Research Engine Deserves Its Own API Product</span
+                >
+              </div>
+              <div class="card-body">
+                You have something genuinely novel: autonomous AI research with
+                real-time terminal streaming that pipes directly into a CRM
+                pipeline.
+                <strong>This is a $50-100/month standalone product.</strong>
+                Clay.com charges $800/month for less sophisticated enrichment.
+                Your moat is deeper — you just haven't monetized it separately.
+                <div class="fix">
+                  <strong>OPPORTUNITY:</strong> Expose it as a REST API (<code
+                    >POST /api/v1/research</code
+                  >) with webhook callback on completion. Sell research credits.
+                  Build a minimal Node.js SDK. This unlocks a developer market
+                  10x the size of your current target.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card opportunity">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-blue">Retention</span
+                ><span class="card-title">No Mobile = No Daily Habit Loop</span>
+              </div>
+              <div class="card-body">
+                Daily planning, energy tracking, and task completion are
+                highest-frequency interactions — and the ones users want to do
+                <strong>from their phone before the day starts.</strong> Without
+                mobile, usage will spike Mon-Fri 9-5 and flatline otherwise.
+                Without habit formation, you get churn.
+                <div class="fix">
+                  <strong>OPPORTUNITY:</strong> Add a service worker for offline
+                  task caching. Build a mobile-optimized
+                  <code>/planning/day</code> layout with large touch targets and
+                  swipe-to-complete. Enable Web Push. 70% of mobile gains come
+                  from making just this one route excellent.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card opportunity">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-blue">Demo Impact</span
+                ><span class="card-title"
+                  >Collaborative Cursors Are 80% Already Built</span
+                >
+              </div>
+              <div class="card-body">
+                You have WebSocket presence, a canvas, and Socket.io.
+                <strong>Collaborative cursors are almost free</strong> —
+                broadcast mouse coordinates through the org room and render
+                named cursors on other clients' canvases. Figma's most memorable
+                enterprise sales moment is watching another cursor move in
+                real-time.
+                <div class="fix">
+                  <strong>OPPORTUNITY:</strong> On <code>mousemove</code> in the
+                  canvas, throttle to 50ms and emit user position to the org
+                  room. Render incoming cursors as floating name labels over the
+                  canvas. The quadtree already handles scale — cursors are just
+                  another overlay layer.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card opportunity">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-blue">AI Depth</span
+                ><span class="card-title"
+                  >AI Needs Persistent Memory — Right Now It's Stateless</span
+                >
+              </div>
+              <div class="card-body">
+                Gemini and Groq are woven throughout — but
+                <strong>every call starts from zero context.</strong> The AI
+                doesn't know this user has worked in SaaS for 3 years, has a
+                deal closing with Acme Corp, or prefers bullet-point summaries.
+                Without memory, it feels like a generic chatbot. With memory, it
+                feels like a business partner.
+                <div class="fix">
+                  <strong>OPPORTUNITY:</strong> Build a
+                  <code>UserAIContext</code> table — industry, role,
+                  preferences, recent project summaries, active clients. Inject
+                  as a system prompt prefix on every AI call. Two days of work
+                  that transforms every AI feature from "impressive" to
+                  "indispensable."
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="personas" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">04</span
+          ><span class="eyebrow-tag">User Research</span>
+        </div>
+        <h2>What Different Buyers Actually Demand</h2>
+        <p style="color: var(--ink-muted)">
+          Now that the platform is enterprise-grade technically, the question
+          shifts from "will it break?" to "will they buy it?" These are the real
+          sales conversations.
+        </p>
+        <div class="persona-grid">
+          <div class="persona">
+            <div class="persona-emoji">🔐</div>
+            <div class="persona-role">IT Security / Procurement</div>
+            <div class="persona-name">The Security Auditor</div>
+            <ul class="persona-wants">
+              <li>SOC2 Type II report (or a credible timeline)</li>
+              <li>Penetration test results from a named firm</li>
+              <li>Data Processing Agreement for GDPR</li>
+              <li>Pre-filled vendor risk questionnaire</li>
+              <li>Data residency options (EU/ZA)</li>
+              <li>Documented incident response SLA</li>
+            </ul>
+          </div>
+
+          <div class="persona">
+            <div class="persona-emoji">💼</div>
+            <div class="persona-role">Sales Operations</div>
+            <div class="persona-name">The RevOps Lead</div>
+            <ul class="persona-wants">
+              <li>Bi-directional HubSpot/Salesforce sync</li>
+              <li>Email open and click tracking inside CRM</li>
+              <li>Revenue forecasting with weighted pipeline</li>
+              <li>Rules-based lead scoring model</li>
+              <li>Bulk CSV import with field mapping UI</li>
+              <li>Custom deal stages per pipeline (not global)</li>
+            </ul>
+          </div>
+
+          <div class="persona">
+            <div class="persona-emoji">🧑‍💻</div>
+            <div class="persona-role">Developer / Technical Buyer</div>
+            <div class="persona-name">The Integration Engineer</div>
+            <ul class="persona-wants">
+              <li>OpenAPI/Swagger spec for the public API</li>
+              <li>Webhook event catalog with payload schemas</li>
+              <li>SDK in at least Node.js</li>
+              <li>Sandbox environment with mocked data</li>
+              <li>Rate limit headers in API responses</li>
+              <li>OAuth2 for API auth beyond API keys</li>
+            </ul>
+          </div>
+
+          <div class="persona">
+            <div class="persona-emoji">📊</div>
+            <div class="persona-role">Executive Sponsor</div>
+            <div class="persona-name">The ROI Decision Maker</div>
+            <ul class="persona-wants">
+              <li>Executive dashboard — revenue, pipeline, velocity</li>
+              <li>Quarter-over-quarter benchmarks built in</li>
+              <li>Exportable reports to PDF and Excel for board use</li>
+              <li>Seat usage visibility: who's active, who's not</li>
+              <li>ROI calculator in the onboarding flow</li>
+              <li>Case studies from similar companies</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="moat" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">05</span
+          ><span class="eyebrow-tag">Strategy</span>
+        </div>
+        <h2>Your Actual Competitive Moat</h2>
+        <p>
+          Here's what a principal engineer at a top-5 company would tell a board
+          about this product's defensibility — and what to double down on.
+        </p>
+        <div class="critique-grid">
+          <div class="card shipped">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-green">Moat #1</span
+                ><span class="card-title"
+                  >The Research Engine — Nobody Else Has This</span
+                >
+              </div>
+              <div class="card-body">
+                Autonomous web research with real-time streaming terminal that
+                auto-populates a CRM pipeline is not something HubSpot,
+                Pipedrive, Monday, or Notion offer.
+                <strong
+                  >Clay.com is the closest competitor and charges $800/month
+                  with a worse UX.</strong
+                >
+                Every demo should open here. Every sales conversation should
+                ask: "How many hours per week does your team spend on manual
+                prospect research?"
+              </div>
+            </div>
+          </div>
+
+          <div class="card shipped">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-green">Moat #2</span
+                ><span class="card-title"
+                  >Deep Canvas Entity Linking — Genuinely Novel</span
+                >
+              </div>
+              <div class="card-body">
+                Dragging a live Deal or Project onto a canvas and seeing
+                real-time progress bars is something no competitor does. Miro is
+                static. Notion databases have no spatial canvas.
+                <strong
+                  >This is the feature that makes visual thinkers fall in
+                  love</strong
+                >
+                — and it needs to be the first thing shown in every demo, not
+                buried in the feature list.
+              </div>
+            </div>
+          </div>
+
+          <div class="card shipped">
+            <div class="card-stripe"></div>
+            <div class="card-inner">
+              <div class="card-meta">
+                <span class="chip chip-green">Moat #3</span
+                ><span class="card-title"
+                  >Energy-Aware Scheduling — Ahead of Its Time</span
+                >
+              </div>
+              <div class="card-body">
+                The <code>energyRequired</code> field on tasks, daily wellbeing
+                logging, and automatic low-energy task suggestions is something
+                no productivity tool has shipped at this integration depth.
+                <strong>This is a positioning story:</strong> "The only business
+                OS that knows when you're burned out and adapts to it." Founders
+                and knowledge workers will tell their networks about this
+                feature.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="roadmap" class="section">
+        <div class="section-eyebrow">
+          <span class="eyebrow-num">06</span
+          ><span class="eyebrow-tag">Execution</span>
+        </div>
+        <h2>What to Build in the Next 90 Days</h2>
+
+        <table class="roadmap-table">
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Item</th>
+              <th>Why Now</th>
+              <th>Impact</th>
+              <th>Effort</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-red">P0</span></td>
+              <td>Socket.io JWT validation on Express server</td>
+              <td>Org room-hopping vulnerability</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                </div>
+              </td>
+              <td>0.5 day</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-red">P0</span></td>
+              <td>Puppeteer try/finally cleanup + Chrome watchdog cron</td>
+              <td>Silent memory leak accumulates</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>1 day</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-red">P0</span></td>
+              <td>Strip Prisma errors from tRPC responses in prod</td>
+              <td>SQL details reachable from browser</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>2 hrs</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gold">P1</span></td>
+              <td>GDPR hard-delete endpoint + soft delete TTL policy</td>
+              <td>EU compliance requirement</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>2 days</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gold">P1</span></td>
+              <td>Sentry alert rules + Slack routing</td>
+              <td>Currently reactive not proactive</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>20 min</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gold">P1</span></td>
+              <td>Optimistic UI on task completion + deal stage moves</td>
+              <td>Highest felt-quality delta per hour of work</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                </div>
+              </td>
+              <td>2 days</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gold">P1</span></td>
+              <td>Collaborative cursors on canvas</td>
+              <td>Highest-impact enterprise demo moment</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>3 days</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P2</span></td>
+              <td>UserAIContext persistent memory layer</td>
+              <td>Transforms AI from generic to indispensable</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>2 days</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P2</span></td>
+              <td>Mobile-optimized /planning/day + PWA manifest</td>
+              <td>Closes daily habit loop off-hours</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>1 week</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P2</span></td>
+              <td>Research Engine public API + credit billing</td>
+              <td>Separate revenue stream, larger addressable market</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                </div>
+              </td>
+              <td>1 week</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P2</span></td>
+              <td>OpenAPI spec + Node.js SDK</td>
+              <td>Prerequisite for developer market</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>1 week</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P3</span></td>
+              <td>SOC2 Type II audit initiation</td>
+              <td>Enterprise procurement blocker in 6 months</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                </div>
+              </td>
+              <td>6 months</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-blue">P3</span></td>
+              <td>Executive dashboard + PDF/Excel export</td>
+              <td>Required for enterprise sign-off</td>
+              <td>
+                <div class="impact-bar">
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip filled"></div>
+                  <div class="impact-pip"></div>
+                  <div class="impact-pip"></div>
+                </div>
+              </td>
+              <td>1 week</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <hr />
+
+        <blockquote>
+          <p>
+            "The v1 question was: 'Is this structurally safe?' You answered yes.
+            The v2 question is: 'Is this the product people tell other people
+            about?' Three things do that — the research engine, the canvas
+            entity linking, and energy-aware scheduling. Double down on those
+            three. Everything else is table stakes."
+          </p>
+          <footer>
+            — Simulated Principal Engineer, Product Infrastructure
+          </footer>
+        </blockquote>
+      </div>
+    </main>
+
+    <script>
+      const sections = document.querySelectorAll("[id]");
+      const tabs = document.querySelectorAll(".nav-tab");
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              tabs.forEach((t) => t.classList.remove("active"));
+              const active = document.querySelector(
+                '.nav-tab[href="#' + e.target.id + '"]',
+              );
+              if (active) active.classList.add("active");
+            }
+          });
+        },
+        { rootMargin: "-35% 0px -60% 0px" },
+      );
+      sections.forEach((s) => obs.observe(s));
+    </script>
+  </body>
+</html>

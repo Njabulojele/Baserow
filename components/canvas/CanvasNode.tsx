@@ -79,7 +79,7 @@ export function CanvasNode({
         style={{
           backgroundColor: node.bgColor || "transparent",
           borderColor: isSelected
-            ? "#6EE7B7"
+            ? "#a9927d"
             : node.borderColor || "transparent",
           borderWidth: node.borderWidth ?? 0,
           borderStyle:
@@ -89,7 +89,7 @@ export function CanvasNode({
           boxShadow: node.shadow
             ? "0 4px 20px rgba(0,0,0,0.3)"
             : isSelected
-              ? "0 0 0 2px #6EE7B7"
+              ? "0 0 0 2px #a9927d"
               : undefined,
         }}
       >
@@ -147,7 +147,7 @@ export function CanvasNode({
             (corner) => (
               <div
                 key={corner}
-                className="absolute w-3 h-3 bg-emerald-400 border border-black rounded-full cursor-nwse-resize z-20"
+                className="absolute w-3 h-3 bg-[#a9927d] border border-black rounded-full cursor-nwse-resize z-20"
                 style={{
                   top: corner.includes("top") ? -5 : undefined,
                   bottom: corner.includes("bottom") ? -5 : undefined,
@@ -208,7 +208,7 @@ function TextContent({
 
   return (
     <div
-      className="w-full h-full p-3 whitespace-pre-wrap break-words overflow-hidden"
+      className="w-full h-full p-3 whitespace-pre-wrap break-all overflow-hidden text-wrap-balance"
       style={{
         color: node.textColor || "#f5f5f4",
         fontSize: node.fontSize || 16,
@@ -261,7 +261,7 @@ function StickyContent({
 
   return (
     <div
-      className="w-full h-full p-4 whitespace-pre-wrap break-words overflow-hidden"
+      className="w-full h-full p-4 whitespace-pre-wrap break-all overflow-hidden text-wrap-balance"
       style={{
         color: node.textColor || "#1a1a1a",
         fontSize: node.fontSize || 14,
@@ -278,8 +278,8 @@ function StickyContent({
 // ─── Shape ───
 function ShapeContent({ node }: { node: CanvasNodeType }) {
   const shapeSvg = () => {
-    const fill = node.fillColor || "#2a2a30";
-    const stroke = node.borderColor || "#6EE7B7";
+    const fill = node.fillColor || "#1a252f";
+    const stroke = node.borderColor || "#a9927d";
     const sw = node.borderWidth || 2;
 
     switch (node.shapeType) {
@@ -574,12 +574,12 @@ function SectionContent({
             if (e.key === "Enter" || e.key === "Escape") onDone();
           }}
           className="bg-transparent border-none outline-none text-sm font-bold"
-          style={{ color: node.sectionColor || "#6EE7B7" }}
+          style={{ color: node.sectionColor || "#a9927d" }}
         />
       ) : (
         <span
           className="text-sm font-bold"
-          style={{ color: node.sectionColor || "#6EE7B7" }}
+          style={{ color: node.sectionColor || "#a9927d" }}
         >
           {node.sectionTitle || "Section"}
         </span>
@@ -611,7 +611,7 @@ function ChecklistContent({ node }: { node: CanvasNodeType }) {
       </div>
       <div className="h-1 bg-white/10 rounded-full overflow-hidden">
         <div
-          className="h-full bg-emerald-400 rounded-full transition-all"
+          className="h-full bg-[#a9927d] rounded-full transition-all"
           style={{
             width: `${items.length > 0 ? (completed / items.length) * 100 : 0}%`,
           }}
@@ -628,7 +628,7 @@ function ChecklistContent({ node }: { node: CanvasNodeType }) {
             }}
           >
             {item.checked ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#a9927d] shrink-0" />
             ) : (
               <Circle className="w-3.5 h-3.5 text-white/30 shrink-0" />
             )}
@@ -652,8 +652,8 @@ function NumberBadgeContent({ node }: { node: CanvasNodeType }) {
     <div
       className="w-full h-full rounded-full flex items-center justify-center font-bold text-lg"
       style={{
-        backgroundColor: node.badgeColor || "#6EE7B7",
-        color: "#0f0f11",
+        backgroundColor: node.badgeColor || "#a9927d",
+        color: "#0a0c10",
       }}
     >
       {node.badgeNumber || 1}

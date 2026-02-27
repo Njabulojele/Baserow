@@ -2,8 +2,6 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { encryptApiKey } from "@/lib/encryption";
 import { TRPCError } from "@trpc/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 export const settingsRouter = router({
   // Get user settings
   getSettings: protectedProcedure.query(async ({ ctx }) => {
