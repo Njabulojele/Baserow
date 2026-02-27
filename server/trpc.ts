@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import superjson from "superjson";
 import { auth } from "@clerk/nextjs/server";
@@ -34,6 +35,39 @@ export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
  */
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    // In production, never let internal implementation details reach the client.
+    // Only TRPCErrors with deliberate messages pass through; everything else
+    // is replaced with a generic message. Stack traces are always stripped.
+    if (process.env.NODE_ENV === "production") {
+      const isTRPCError =
+        error.code !== "INTERNAL_SERVER_ERROR" &&
+        !(error.cause instanceof Prisma.PrismaClientKnownRequestError) &&
+        !(error.cause instanceof Prisma.PrismaClientValidationError) &&
+        !(error.cause instanceof Prisma.PrismaClientUnknownRequestError);
+
+      if (!isTRPCError) {
+        return {
+          ...shape,
+          message: "Internal server error",
+          data: {
+            ...shape.data,
+            stack: undefined,
+          },
+        };
+      }
+
+      // Even for safe TRPCErrors, strip stack traces in production
+      return {
+        ...shape,
+        data: {
+          ...shape.data,
+          stack: undefined,
+        },
+      };
+    }
+    return shape;
+  },
 });
 
 /**

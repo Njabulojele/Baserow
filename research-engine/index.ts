@@ -36,6 +36,7 @@ import express, { Request, Response } from "express";
 import { serve } from "inngest/express";
 import { Inngest } from "inngest";
 import { researchAgent, generateLeadsAgent } from "./agent";
+import { chromeWatchdogCron } from "./chrome-watchdog-cron";
 import { createServer } from "http";
 import { SocketService } from "./lib/socket";
 import cors from "cors";
@@ -61,7 +62,7 @@ app.use(
   "/api/inngest",
   serve({
     client: inngest,
-    functions: [researchAgent, generateLeadsAgent],
+    functions: [researchAgent, generateLeadsAgent, chromeWatchdogCron],
   }),
 );
 

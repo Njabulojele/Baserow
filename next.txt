@@ -1,0 +1,1 @@
+now that the mail and resend are woring, i need the same to work for when i spent 2 or more days without checking on clients, leads, pipelines and everything else. There should be reminders for me when i miss something or some due date is approaching

@@ -36,6 +36,9 @@ import { searchRouter } from "./search";
 // Webhooks
 import { webhookRouter } from "./webhook";
 
+// GDPR
+import { gdprRouter } from "./gdpr";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -73,6 +76,9 @@ export const appRouter = router({
 
   // Webhooks
   webhook: webhookRouter,
+
+  // GDPR
+  gdpr: gdprRouter,
 });
 
 export type AppRouter = typeof appRouter;

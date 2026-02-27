@@ -12,10 +12,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
   // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
-  const WEBHOOK_SECRET =
+
+  const WEBHOOK_SECRET = (
     process.env.CLERK_WEBHOOK_SIGNING_SECRET ||
     process.env.WEBHOOK_SECRET ||
-    process.env.CLERK_WEBHOOK_SECRET!;
+    process.env.CLERK_WEBHOOK_SECRET ||
+    ""
+  ).trim();
 
   if (!WEBHOOK_SECRET) {
     console.error("Missing WEBHOOK_SECRET in .env");
@@ -41,8 +44,7 @@ export async function POST(req: Request) {
   }
 
   // Get the body as raw text
-  const payload = await req.text();
-  const body = payload;
+  const body = await req.text();
 
   // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET);
@@ -58,15 +60,18 @@ export async function POST(req: Request) {
     }) as WebhookEvent;
   } catch (err: any) {
     console.error("❌ Webhook verification failed:", err.message);
-    console.debug("Context:", {
+    const errorBody = {
+      error: "Verification failed",
+      message: err.message,
       svix_id,
       svix_timestamp,
-      signature_preview: svix_signature.substring(0, 10) + "...",
-      body_length: body.length,
-      secret_set: !!WEBHOOK_SECRET,
-    });
-    return new Response(`Verification failed: ${err.message}`, {
+      has_signature: !!svix_signature,
+      body_length: body?.length || 0,
+      secret_prefix: WEBHOOK_SECRET.substring(0, 7),
+    };
+    return new Response(JSON.stringify(errorBody), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
     });
   }
 

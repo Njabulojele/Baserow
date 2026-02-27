@@ -9,6 +9,7 @@
     "postinstall": "prisma generate && PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome"
   },
   "dependencies": {
+    "@clerk/backend": "^2.32.2",
     "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
