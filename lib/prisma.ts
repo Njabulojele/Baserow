@@ -97,4 +97,6 @@ export async function withTenant<T>(
 
 if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma;
 
+export type ExtendedPrismaClient = typeof prisma;
+
 export { prisma };

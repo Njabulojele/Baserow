@@ -270,8 +270,8 @@ export function EntityAttachModal({
                     {React.cloneElement(
                       activeTabInfo.icon as React.ReactElement,
                       {
-                        style: { color: activeTabInfo.color },
-                      },
+                        color: activeTabInfo.color,
+                      } as any,
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

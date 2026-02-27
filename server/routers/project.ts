@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { withTenant } from "@/lib/prisma";
+import { dispatchWebhook } from "../../lib/webhooks";
 
 export const projectRouter = router({
   // Get all projects for the current user
@@ -101,13 +102,15 @@ export const projectRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       return withTenant(ctx.organizationId, async (prisma) => {
-        return prisma.project.create({
+        const project = await prisma.project.create({
           data: {
             ...input,
             userId: ctx.userId,
             organizationId: ctx.organizationId,
           },
         });
+        await dispatchWebhook(ctx.organizationId, "project.created", project);
+        return project;
       });
     }),
 
@@ -151,10 +154,16 @@ export const projectRouter = router({
           (data as Record<string, unknown>).completedAt = new Date();
         }
 
-        return prisma.project.update({
+        const updatedProject = await prisma.project.update({
           where: { id },
           data,
         });
+        await dispatchWebhook(
+          ctx.organizationId,
+          "project.updated",
+          updatedProject,
+        );
+        return updatedProject;
       });
     }),
 
@@ -171,10 +180,16 @@ export const projectRouter = router({
         }
 
         // Soft delete by archiving
-        return prisma.project.update({
+        const deletedProject = await prisma.project.update({
           where: { id: input.id },
           data: { archivedAt: new Date() },
         });
+        await dispatchWebhook(
+          ctx.organizationId,
+          "project.deleted",
+          deletedProject,
+        );
+        return deletedProject;
       });
     }),
 

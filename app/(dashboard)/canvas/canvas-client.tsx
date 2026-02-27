@@ -70,7 +70,7 @@ export function CanvasClient() {
   // Load board data when active board changes
   useEffect(() => {
     if (activeBoard?.boardData) {
-      loadBoardData(activeBoard.boardData as BoardData);
+      loadBoardData(activeBoard.boardData as unknown as BoardData);
     }
   }, [activeBoard, loadBoardData]);
 

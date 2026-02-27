@@ -190,10 +190,10 @@ function CreateOrgModal({
                 slug: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
               })
             }
-            disabled={!name || createMutation.isLoading}
+            disabled={!name || createMutation.isPending}
             className="bg-white text-black hover:bg-white/90"
           >
-            {createMutation.isLoading ? "Creating..." : "Create"}
+            {createMutation.isPending ? "Creating..." : "Create"}
           </Button>
         </div>
       </div>

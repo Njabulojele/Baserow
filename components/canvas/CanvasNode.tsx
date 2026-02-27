@@ -432,7 +432,7 @@ function EntityContent({ node }: { node: CanvasNodeType }) {
 
       {/* Body */}
       <div className="flex-1 flex flex-col gap-1.5 text-[11px] text-white/60">
-        {data.status && (
+        {Boolean(data.status) && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/30">Status:</span>
             <span
@@ -491,21 +491,21 @@ function EntityContent({ node }: { node: CanvasNodeType }) {
             </span>
           </div>
         )}
-        {data.email && (
+        {Boolean(data.email) && (
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-white/30">Email:</span>
             <span className="truncate">{String(data.email)}</span>
           </div>
         )}
-        {data.companyName && !data.name && (
+        {Boolean(data.companyName) && !data.name && (
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-white/30">Company:</span>
             <span className="truncate">{String(data.companyName)}</span>
           </div>
         )}
-        {data.client &&
+        {Boolean(data.client) &&
           typeof data.client === "object" &&
-          (data.client as Record<string, unknown>).name && (
+          Boolean((data.client as Record<string, unknown>).name) && (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-white/30">Client:</span>
               <span className="truncate">
@@ -513,19 +513,19 @@ function EntityContent({ node }: { node: CanvasNodeType }) {
               </span>
             </div>
           )}
-        {data.dueDate && (
+        {Boolean(data.dueDate) && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/30">Due:</span>
             <span>{new Date(String(data.dueDate)).toLocaleDateString()}</span>
           </div>
         )}
-        {data.deadline && (
+        {Boolean(data.deadline) && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/30">Deadline:</span>
             <span>{new Date(String(data.deadline)).toLocaleDateString()}</span>
           </div>
         )}
-        {data.scheduledAt && (
+        {Boolean(data.scheduledAt) && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/30">Scheduled:</span>
             <span>
@@ -533,7 +533,7 @@ function EntityContent({ node }: { node: CanvasNodeType }) {
             </span>
           </div>
         )}
-        {data.scope && (
+        {Boolean(data.scope) && (
           <div className="flex items-center gap-1.5">
             <span className="text-white/30">Scope:</span>
             <span className="capitalize">
@@ -564,7 +564,7 @@ function SectionContent({
     <div className="w-full h-full p-4">
       {isEditing ? (
         <input
-          ref={textRef as React.RefObject<HTMLInputElement>}
+          ref={textRef as any}
           defaultValue={node.sectionTitle || "Section"}
           onBlur={(e) => {
             updateNode(node.id, { sectionTitle: e.target.value });
@@ -681,7 +681,7 @@ function EmbedContent({
         <Link2 className="w-4 h-4 text-white/40 shrink-0" />
         {isEditing ? (
           <input
-            ref={textRef as React.RefObject<HTMLInputElement>}
+            ref={textRef as any}
             defaultValue={node.embedUrl || ""}
             placeholder="Paste URL..."
             onBlur={(e) => {

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ExtendedPrismaClient } from "../../lib/prisma";
 
 const WEIGHTS = {
   engagement: 0.35,
@@ -7,7 +8,7 @@ const WEIGHTS = {
 };
 
 export class ClientHealthService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: ExtendedPrismaClient) {}
 
   async calculateHealth(clientId: string) {
     const client = await this.prisma.client.findUnique({

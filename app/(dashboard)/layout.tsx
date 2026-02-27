@@ -10,6 +10,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Heart } from "lucide-react";
+import { NotificationBell } from "@/components/navigation/NotificationBell";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 
 export default async function DashboardLayout({
   children,
@@ -65,7 +67,10 @@ export default async function DashboardLayout({
               BaseRow
             </span>
           </div>
-          {/* Add breadcrumbs here if needed later */}
+          <div className="flex-1" />
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+          </div>
         </header>
         <DashboardShell>
           <div className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-[1600px] mx-auto min-w-0 flex flex-col">
@@ -86,6 +91,7 @@ export default async function DashboardLayout({
           </div>
         </DashboardShell>
       </SidebarInset>
+      <CommandPalette />
     </SidebarProvider>
   );
 }

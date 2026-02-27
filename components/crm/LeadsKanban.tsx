@@ -73,7 +73,7 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
       await utils.crmLead.getByStatus.cancel();
       const previousLeads = utils.crmLead.getByStatus.getData();
 
-      utils.crmLead.getByStatus.setQueryData(undefined, (old: any) => {
+      utils.crmLead.getByStatus.setData(undefined, (old: any) => {
         if (!old) return old;
         const newObj = { ...old };
         let foundLead: any = null;
@@ -108,10 +108,7 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
     onError: (err, newLead, context) => {
       toast.error("Failed to update status");
       if (context?.previousLeads) {
-        utils.crmLead.getByStatus.setQueryData(
-          undefined,
-          context.previousLeads,
-        );
+        utils.crmLead.getByStatus.setData(undefined, context.previousLeads);
       }
     },
     onSettled: () => {

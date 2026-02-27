@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ExtendedPrismaClient } from "../../lib/prisma";
 
 /**
  * 6-Dimension Lead Scoring Matrix (from BOS PDF v2.0)
@@ -20,9 +21,9 @@ import { PrismaClient } from "@prisma/client";
  *   0-39   → DISCARD  → Archive + log
  */
 export class LeadScoringService {
-  private prisma: PrismaClient;
+  private prisma: ExtendedPrismaClient;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: ExtendedPrismaClient) {
     this.prisma = prisma;
   }
 

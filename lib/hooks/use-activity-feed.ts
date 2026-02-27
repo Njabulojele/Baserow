@@ -21,17 +21,19 @@ export function useActivityFeed(orgId: string | undefined) {
   const socketRef = useRef<Socket | null>(null);
 
   // Initial fetch from DB
-  trpc.team.getActivityFeed.useQuery(
+  const { data } = trpc.team.getActivityFeed.useQuery(
     { orgId: orgId! },
     {
       enabled: !!orgId,
-      onSuccess: (data) => {
-        // Assume API returns string dates via trpc superjson formatting
-        setActivities(data as any);
-      },
       refetchOnWindowFocus: false,
     },
   );
+
+  useEffect(() => {
+    if (data) {
+      setActivities(data as any);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!orgId) return;

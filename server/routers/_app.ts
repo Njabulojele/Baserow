@@ -27,6 +27,15 @@ import { canvasRouter } from "./canvas";
 // Team
 import { teamRouter } from "./team";
 
+// Notifications
+import { notificationRouter } from "./notification";
+
+// Global Search
+import { searchRouter } from "./search";
+
+// Webhooks
+import { webhookRouter } from "./webhook";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -55,6 +64,15 @@ export const appRouter = router({
 
   // Team
   team: teamRouter,
+
+  // Notifications
+  notification: notificationRouter,
+
+  // Global Search
+  search: searchRouter,
+
+  // Webhooks
+  webhook: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1408,3 +1408,32 @@ model Notification {
   @@index([organizationId])
   @@index([createdAt])
 }
+
+model WebhookEndpoint {
+  id             String   @id @default(cuid())
+  organizationId String
+  url            String
+  secret         String
+  events         String[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  deliveries     WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id                String   @id @default(cuid())
+  webhookEndpointId String
+  endpoint          WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id], onDelete: Cascade)
+  event             String
+  payload           Json
+  status            Int      // HTTP Status Code
+  successful        Boolean
+  duration          Int      // ms
+  createdAt         DateTime @default(now())
+
+  @@index([webhookEndpointId])
+}

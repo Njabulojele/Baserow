@@ -5,57 +5,69 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Enable Row Level Security on tables that belong to an organization
-ALTER TABLE "Project" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Client" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "CanvasBoard" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Project') 
+     AND EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'Project' AND column_name = 'organizationId') THEN
+    ALTER TABLE "Project" ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS tenant_isolation_policy ON "Project";
+    CREATE POLICY tenant_isolation_policy ON "Project"
+    USING (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    )
+    WITH CHECK (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    );
+  END IF;
 
--- Project RLS Policies
--- Allow reading/writing if the project's organizationId matches the current tenant, OR if organizationId is null (personal projects)
-CREATE POLICY tenant_isolation_policy ON "Project"
-USING (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-)
-WITH CHECK (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-);
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Client')
+     AND EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'Client' AND column_name = 'organizationId') THEN
+    ALTER TABLE "Client" ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS tenant_isolation_policy ON "Client";
+    CREATE POLICY tenant_isolation_policy ON "Client"
+    USING (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    )
+    WITH CHECK (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    );
+  END IF;
 
--- Client RLS Policies
-CREATE POLICY tenant_isolation_policy ON "Client"
-USING (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-)
-WITH CHECK (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-);
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'CanvasBoard')
+     AND EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'CanvasBoard' AND column_name = 'organizationId') THEN
+    ALTER TABLE "CanvasBoard" ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS tenant_isolation_policy ON "CanvasBoard";
+    CREATE POLICY tenant_isolation_policy ON "CanvasBoard"
+    USING (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    )
+    WITH CHECK (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    );
+  END IF;
 
--- CanvasBoard RLS Policies
-CREATE POLICY tenant_isolation_policy ON "CanvasBoard"
-USING (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-)
-WITH CHECK (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-);
-
--- AuditLog RLS Policies
-CREATE POLICY tenant_isolation_policy ON "AuditLog"
-USING (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-)
-WITH CHECK (
-  "organizationId" = current_setting('app.current_tenant', true) 
-  OR "organizationId" IS NULL
-);
-
--- Note: We only apply this to the core top-level organizational entities for Phase 1. 
--- Entities like 'Task' or 'Deal' that trace their organization permissions through their parent Project/Client 
--- are indirectly protected by the application logic, but establishing the boundary on the parent tables is the critical first step.
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'AuditLog')
+     AND EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'AuditLog' AND column_name = 'organizationId') THEN
+    ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS tenant_isolation_policy ON "AuditLog";
+    CREATE POLICY tenant_isolation_policy ON "AuditLog"
+    USING (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    )
+    WITH CHECK (
+      "organizationId" = current_setting('app.current_tenant', true) 
+      OR "organizationId" IS NULL
+    );
+  END IF;
+END $$;

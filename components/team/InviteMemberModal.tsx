@@ -132,11 +132,11 @@ export function InviteMemberModal({
           <Button
             onClick={() => inviteMutation.mutate({ orgId, email, role })}
             disabled={
-              !email || !email.includes("@") || inviteMutation.isLoading
+              !email || !email.includes("@") || inviteMutation.isPending
             }
             className="bg-white text-black hover:bg-white/90 px-6"
           >
-            {inviteMutation.isLoading ? "Sending..." : "Send Invite"}
+            {inviteMutation.isPending ? "Sending..." : "Send Invite"}
           </Button>
         </div>
       </div>

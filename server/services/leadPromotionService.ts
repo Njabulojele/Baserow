@@ -1,4 +1,5 @@
 import { PrismaClient, CrmLeadSource, CrmLeadStatus } from "@prisma/client";
+import { ExtendedPrismaClient } from "../../lib/prisma";
 import { WorkflowService } from "./workflowService";
 import { WorkflowTriggerType } from "@prisma/client";
 
@@ -11,9 +12,9 @@ import { WorkflowTriggerType } from "@prisma/client";
  * DISCARD (0-39): No promotion — archived
  */
 export class LeadPromotionService {
-  private prisma: PrismaClient;
+  private prisma: ExtendedPrismaClient;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: ExtendedPrismaClient) {
     this.prisma = prisma;
   }
 

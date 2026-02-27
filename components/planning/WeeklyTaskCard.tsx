@@ -35,7 +35,7 @@ export function WeeklyTaskCard({ task }: WeeklyTaskCardProps) {
       await utils.planning.getWeeklyOverview.cancel();
       const previousData = utils.planning.getWeeklyOverview.getData();
 
-      utils.planning.getWeeklyOverview.setData(undefined, (old: any) => {
+      utils.planning.getWeeklyOverview.setData({}, (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -54,10 +54,7 @@ export function WeeklyTaskCard({ task }: WeeklyTaskCardProps) {
     onError: (err, newTodo, context) => {
       toast.error("Failed: " + err.message);
       if (context?.previousData) {
-        utils.planning.getWeeklyOverview.setData(
-          undefined,
-          context.previousData,
-        );
+        utils.planning.getWeeklyOverview.setData({}, context.previousData);
       }
     },
   });

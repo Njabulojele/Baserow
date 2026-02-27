@@ -21,8 +21,10 @@ import {
   ShieldCheck,
   User,
   Globe,
+  Webhook,
   Search,
 } from "lucide-react";
+import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -129,23 +131,35 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Navigation Sidebar (For visual structure) */}
         <div className="space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start bg-[#1a252f] text-white hover:bg-[#2f3e46]"
-          >
-            <Key className="w-4 h-4 mr-2" /> Integrations
-          </Button>
+          <Link href="/settings" className="block">
+            <Button
+              variant="ghost"
+              className="w-full justify-start bg-[#1a252f] text-white hover:bg-[#2f3e46]"
+            >
+              <Key className="w-4 h-4 mr-2" /> Integrations
+            </Button>
+          </Link>
+          <Link href="/settings/webhooks" className="block">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
+            >
+              <Webhook className="w-4 h-4 mr-2" /> Webhooks
+            </Button>
+          </Link>
+          <Link href="/settings/sso" className="block">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" /> Security & SSO
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
           >
             <User className="w-4 h-4 mr-2" /> Account
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
-          >
-            <Globe className="w-4 h-4 mr-2" /> Preferences
           </Button>
         </div>
 

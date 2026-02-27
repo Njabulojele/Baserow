@@ -2,6 +2,7 @@
 
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { useCanvasStore } from "@/lib/stores/canvas-store";
+import { Quadtree } from "@/lib/utils/quadtree";
 import { CanvasNode as CanvasNodeComponent } from "./CanvasNode";
 import { FreeDrawLayer } from "./FreeDrawLayer";
 import { ConnectionLayer } from "./ConnectionLayer";
@@ -365,37 +366,96 @@ export function CanvasViewport() {
     [nodes, viewport.zoom, updateNode, pushHistory],
   );
 
-  // Calculate visible nodes for culling to boost performance
+  // Build a spatial index (Quadtree) when nodes change to enable O(log N) viewport culling
+  const quadtree = React.useMemo(() => {
+    if (nodes.length === 0) return null;
+
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const node of nodes) {
+      const w = Math.max(node.width || 200, 50);
+      const h = Math.max(node.height || 200, 50);
+      if (node.x < minX) minX = node.x;
+      if (node.y < minY) minY = node.y;
+      if (node.x + w > maxX) maxX = node.x + w;
+      if (node.y + h > maxY) maxY = node.y + h;
+    }
+
+    // Add a huge bounds padding to accommodate new nodes being dragged loosely outside
+    const bounds = {
+      x: minX - 5000,
+      y: minY - 5000,
+      width: maxX - minX + 10000,
+      height: maxY - minY + 10000,
+    };
+
+    const tree = new Quadtree(bounds);
+    for (const node of nodes) {
+      const w = Math.max(node.width || 200, 50);
+      const h = Math.max(node.height || 200, 50);
+      tree.insert({
+        id: node.id,
+        rect: { x: node.x, y: node.y, width: w, height: h },
+      });
+    }
+
+    return tree;
+  }, [nodes]);
+
+  // Query the Quadtree for fast viewport culling
   const visibleNodes = React.useMemo(() => {
+    if (nodes.length === 0) return [];
+
+    // For tiny boards, skip the quadtree lookup overhead
+    if (nodes.length < 50 || !quadtree) {
+      const width = typeof window !== "undefined" ? window.innerWidth : 1920;
+      const height = typeof window !== "undefined" ? window.innerHeight : 1080;
+      const startX = -viewport.x / viewport.zoom;
+      const startY = -viewport.y / viewport.zoom;
+      const endX = startX + width / viewport.zoom;
+      const endY = startY + height / viewport.zoom;
+      const bufferX = (endX - startX) * 0.2;
+      const bufferY = (endY - startY) * 0.2;
+      const minX = startX - bufferX;
+      const maxX = endX + bufferX;
+      const minY = startY - bufferY;
+      const maxY = endY + bufferY;
+
+      return nodes.filter((node) => {
+        const nodeRight = node.x + Math.max(node.width || 200, 50);
+        const nodeBottom = node.y + Math.max(node.height || 200, 50);
+        return (
+          nodeRight >= minX &&
+          node.x <= maxX &&
+          nodeBottom >= minY &&
+          node.y <= maxY
+        );
+      });
+    }
+
     const width = typeof window !== "undefined" ? window.innerWidth : 1920;
     const height = typeof window !== "undefined" ? window.innerHeight : 1080;
 
-    // Convert screen viewport to canvas coordinates
     const startX = -viewport.x / viewport.zoom;
     const startY = -viewport.y / viewport.zoom;
     const endX = startX + width / viewport.zoom;
     const endY = startY + height / viewport.zoom;
 
-    // Add a 20% buffer outside the visible area
     const bufferX = (endX - startX) * 0.2;
     const bufferY = (endY - startY) * 0.2;
 
-    const minX = startX - bufferX;
-    const maxX = endX + bufferX;
-    const minY = startY - bufferY;
-    const maxY = endY + bufferY;
+    const viewRect = {
+      x: startX - bufferX,
+      y: startY - bufferY,
+      width: endX - startX + bufferX * 2,
+      height: endY - startY + bufferY * 2,
+    };
 
-    return nodes.filter((node) => {
-      const nodeRight = node.x + Math.max(node.width || 200, 50);
-      const nodeBottom = node.y + Math.max(node.height || 200, 50);
-      return (
-        nodeRight >= minX &&
-        node.x <= maxX &&
-        nodeBottom >= minY &&
-        node.y <= maxY
-      );
-    });
-  }, [nodes, viewport]);
+    const visibleIds = quadtree.retrieve(viewRect);
+    return nodes.filter((n) => visibleIds.has(n.id));
+  }, [nodes, viewport, quadtree]);
 
   return (
     <div
