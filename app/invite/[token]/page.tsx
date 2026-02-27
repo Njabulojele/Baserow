@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, SignIn } from "@clerk/nextjs";
+import { useUser, RedirectToSignIn } from "@clerk/nextjs";
 import { trpc } from "@/lib/trpc/client";
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
@@ -34,11 +34,7 @@ export default function InvitePage({
     );
 
   if (!isSignedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0c10] p-4">
-        <SignIn forceRedirectUrl={`/invite/${token}`} />
-      </div>
-    );
+    return <RedirectToSignIn forceRedirectUrl={`/invite/${token}`} />;
   }
 
   return (
