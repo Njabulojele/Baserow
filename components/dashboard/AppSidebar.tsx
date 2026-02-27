@@ -18,6 +18,7 @@ import {
   Briefcase,
   Zap,
   PenTool,
+  User,
 } from "lucide-react";
 
 import {
@@ -131,6 +132,11 @@ const otherRoutes = [
     label: "Research Agent",
     icon: Search,
     href: "/research",
+  },
+  {
+    label: "Profile",
+    icon: User,
+    href: "/user-profile",
   },
 ];
 
