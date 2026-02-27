@@ -61,6 +61,7 @@ model User {
   deletedAt          DateTime?
   version            Int              @default(1)
   aiContext          UserAIContext?
+  apiKeys            ApiKey[]
 }
 
 model YearPlan {
@@ -1456,3 +1457,52 @@ model UserAIContext {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+/// Public API key for external integrations
+model ApiKey {
+  id          String     @id @default(cuid())
+  userId      String
+  name        String     // e.g. "My Integration", "Zapier"
+  key         String     @unique // hashed API key
+  prefix      String     // first 8 chars for display, e.g. "brw_abc1"
+  scopes      String[]   @default(["research:read", "research:write"])
+  rateLimit   Int        @default(60) // requests per minute
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageLogs   ApiUsage[]
+
+  @@index([userId])
+  @@index([key])
+}
+
+/// Tracks each API call for usage analytics and rate limiting
+model ApiUsage {
+  id          String   @id @default(cuid())
+  apiKeyId    String
+  apiKey      ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  endpoint    String   // e.g. "/api/v1/research"
+  method      String   // GET, POST, etc.
+  statusCode  Int
+  credits     Int      @default(1) // credits consumed by this call
+  latencyMs   Int      // response time
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+}
+
+/// Credit ledger for billing — tracks purchases and consumption
+model CreditLedger {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int      // positive = purchase, negative = consumption
+  balance     Int      // running balance after this entry
+  description String   // e.g. "API call: /api/v1/research", "Purchased 100 credits"
+  referenceId String?  // researchId, apiUsageId, or paymentId
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

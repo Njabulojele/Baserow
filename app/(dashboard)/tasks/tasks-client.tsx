@@ -77,13 +77,13 @@ function getDateLabel(date: Date | null): string {
 
 // Helper function to get date badge variant
 function getDateBadgeStyle(date: Date | null): string {
-  if (!date) return "bg-muted text-muted-foreground";
+  if (!date) return "bg-[#1a252f] text-gray-500 border-[#2f3e46]";
   const d = new Date(date);
-  if (isToday(d)) return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+  if (isToday(d)) return "bg-[#0a0c10] text-[#a9927d] border-[#a9927d]/30";
   if (isTomorrow(d))
-    return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-  if (isPast(d)) return "bg-red-500/10 text-red-600 border-red-500/20";
-  return "bg-violet-500/10 text-violet-600 border-violet-500/20";
+    return "bg-[#0a0c10] text-emerald-400 border-emerald-500/30";
+  if (isPast(d)) return "bg-[#0a0c10] text-red-400 border-red-500/30";
+  return "bg-[#0a0c10] text-blue-400 border-blue-500/30";
 }
 
 // Priority colors
@@ -247,8 +247,10 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
+            Tasks
+          </h1>
+          <p className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
             Manage and track your work
           </p>
         </div>
@@ -259,15 +261,17 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-linear-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+        <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
           <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg shrink-0">
-                <ListTodo className="h-5 w-5 text-blue-500" />
+              <div className="p-2 bg-[#0a0c10] border border-[#2f3e46] rounded-lg shrink-0 shadow-inner">
+                <ListTodo className="h-4 w-4 text-[#a9927d]" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                <p className="text-xl sm:text-2xl font-light text-white">
+                  {stats.total}
+                </p>
+                <p className="text-[10px] font-mono tracking-widest uppercase text-gray-500 truncate mt-1">
                   Total Tasks
                 </p>
               </div>
@@ -275,17 +279,17 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-linear-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+        <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
           <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <div className="p-2 bg-[#0a0c10] border border-emerald-500/20 rounded-lg shrink-0 shadow-inner">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">
+                <p className="text-xl sm:text-2xl font-light text-white">
                   {stats.completed}
                 </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                <p className="text-[10px] font-mono tracking-widest uppercase text-emerald-500/70 truncate mt-1">
                   Completed
                 </p>
               </div>
@@ -293,17 +297,17 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-linear-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+        <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
           <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-lg shrink-0">
-                <Clock className="h-5 w-5 text-amber-500" />
+              <div className="p-2 bg-[#0a0c10] border border-amber-500/20 rounded-lg shrink-0 shadow-inner">
+                <Clock className="h-4 w-4 text-amber-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">
+                <p className="text-xl sm:text-2xl font-light text-white">
                   {stats.inProgress}
                 </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                <p className="text-[10px] font-mono tracking-widest uppercase text-amber-500/70 truncate mt-1">
                   In Progress
                 </p>
               </div>
@@ -311,15 +315,17 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-linear-to-br from-red-500/10 to-red-500/5 border-red-500/20">
+        <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
           <CardContent className="p-4 sm:pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/20 rounded-lg shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+              <div className="p-2 bg-[#0a0c10] border border-red-500/20 rounded-lg shrink-0 shadow-inner">
+                <AlertCircle className="h-4 w-4 text-red-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">{stats.overdue}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                <p className="text-xl sm:text-2xl font-light text-white">
+                  {stats.overdue}
+                </p>
+                <p className="text-[10px] font-mono tracking-widest uppercase text-red-500/70 truncate mt-1">
                   Overdue
                 </p>
               </div>
@@ -329,15 +335,21 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
       </div>
 
       {/* Progress Bar */}
-      <Card>
+      <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
         <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Overall Progress</span>
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-mono uppercase tracking-widest text-white">
+              Overall Progress
+            </span>
+            <span className="text-[10px] font-mono tracking-widest text-[#a9927d]">
               {completionRate}%
             </span>
           </div>
-          <Progress value={completionRate} className="h-2" />
+          <Progress
+            value={completionRate}
+            className="h-1 bg-[#2f3e46]"
+            indicatorClassName="bg-[#a9927d]"
+          />
         </CardContent>
       </Card>
 
@@ -348,33 +360,33 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
         className="w-full space-y-6"
       >
         <div className="w-full overflow-x-auto pb-1 custom-scrollbar">
-          <TabsList className="bg-[#1a252f] border-[#2f3e46] p-1 h-auto flex min-w-max sm:grid sm:grid-cols-4 sm:w-full">
+          <TabsList className="bg-[#0a0c10] border-[#2f3e46] shadow-sm p-1 rounded-md mb-2 flex min-w-max sm:grid sm:grid-cols-4 sm:w-full">
             <TabsTrigger
               value="all"
-              className="flex-1 min-w-[80px] gap-1.5 py-2"
+              className="flex-1 min-w-[80px] gap-1.5 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
             >
-              <ListTodo className="h-4 w-4 shrink-0" />
+              <ListTodo className="h-3 w-3 shrink-0" />
               <span>All</span>
             </TabsTrigger>
             <TabsTrigger
               value="not_started"
-              className="flex-1 min-w-[80px] gap-1.5 py-2"
+              className="flex-1 min-w-[80px] gap-1.5 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
             >
-              <Circle className="h-4 w-4 shrink-0" />
+              <Circle className="h-3 w-3 shrink-0" />
               <span>To Do</span>
             </TabsTrigger>
             <TabsTrigger
               value="in_progress"
-              className="flex-1 min-w-[80px] gap-1.5 py-2"
+              className="flex-1 min-w-[80px] gap-1.5 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
             >
-              <Play className="h-4 w-4 shrink-0" />
+              <Play className="h-3 w-3 shrink-0" />
               <span>Active</span>
             </TabsTrigger>
             <TabsTrigger
               value="done"
-              className="flex-1 min-w-[80px] gap-1.5 py-2"
+              className="flex-1 min-w-[80px] gap-1.5 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
             >
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <CheckCircle2 className="h-3 w-3 shrink-0" />
               <span>Done</span>
             </TabsTrigger>
           </TabsList>
@@ -382,10 +394,10 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
 
         <TabsContent value={status} className="space-y-4">
           {dateOrder.length === 0 ? (
-            <Card className="border-dashed">
+            <Card className="border-dashed bg-[#0a0c10] border-[#2f3e46]">
               <CardContent className="py-12 text-center">
-                <ListTodo className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">
+                <ListTodo className="h-12 w-12 mx-auto text-[#a9927d] opacity-30 mb-4" />
+                <p className="text-[10px] font-mono tracking-widest uppercase text-gray-500">
                   {status === "all"
                     ? "No tasks yet. Create your first task!"
                     : `No ${status.replace("_", " ")} tasks`}
@@ -394,17 +406,20 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
             </Card>
           ) : (
             dateOrder.map((dateLabel) => (
-              <Card key={dateLabel} className="overflow-hidden">
+              <Card
+                key={dateLabel}
+                className="overflow-hidden bg-[#0a0c10] border-[#2f3e46] shadow-sm"
+              >
                 <button
                   onClick={() => toggleDate(dateLabel)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-[#1a252f]/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <CalendarDays className="h-5 w-5 text-muted-foreground" />
+                    <CalendarDays className="h-4 w-4 text-[#a9927d]" />
                     <Badge
                       variant="outline"
                       className={cn(
-                        "text-sm font-medium",
+                        "text-[10px] font-mono uppercase tracking-widest",
                         getDateBadgeStyle(
                           dateLabel === "Today"
                             ? new Date()
@@ -420,26 +435,26 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                     >
                       {dateLabel}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-[10px] font-mono tracking-widest text-gray-500">
                       {groupedTasks[dateLabel]?.length || 0} task
                       {groupedTasks[dateLabel]?.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                   {expandedDates.has(dateLabel) ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    <ChevronUp className="h-4 w-4 text-[#a9927d]" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    <ChevronDown className="h-4 w-4 text-[#a9927d]" />
                   )}
                 </button>
 
                 {expandedDates.has(dateLabel) && (
                   <CardContent className="pt-0 pb-4">
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {groupedTasks[dateLabel]?.map((task: Task) => (
                         <div
                           key={task.id}
                           className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors",
+                            "flex items-center gap-3 p-3 rounded-lg border bg-[#1a252f] border-[#2f3e46] shadow-sm hover:border-[#a9927d]/40 transition-colors",
                             task.status === "done" && "opacity-60",
                           )}
                         >
@@ -451,10 +466,10 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                               }
                             }}
                             className={cn(
-                              "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                              "shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
                               task.status === "done"
-                                ? "bg-green-500 border-green-500 text-white"
-                                : "border-muted-foreground/30 hover:border-green-500",
+                                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                                : "border-[#2f3e46] hover:border-emerald-500/50 hover:bg-emerald-500/10",
                             )}
                           >
                             {task.status === "done" && (
@@ -467,8 +482,9 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                             <div className="flex items-center gap-2">
                               <span
                                 className={cn(
-                                  "font-medium truncate",
-                                  task.status === "done" && "line-through",
+                                  "font-light text-white truncate text-sm",
+                                  task.status === "done" &&
+                                    "line-through text-gray-500",
                                 )}
                               >
                                 {task.title}
@@ -484,15 +500,12 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2 mt-2">
                               {task.project && (
                                 <Badge
-                                  variant="secondary"
-                                  className="text-[10px]"
+                                  variant="outline"
+                                  className="text-[10px] uppercase font-mono tracking-widest bg-[#0a0c10] border-[#2f3e46] px-1.5 h-5"
                                   style={{
-                                    backgroundColor: task.project.color
-                                      ? `${task.project.color}20`
-                                      : undefined,
                                     color: task.project.color || undefined,
                                   }}
                                 >
@@ -500,8 +513,8 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                                 </Badge>
                               )}
                               {task.estimatedMinutes && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
+                                <span className="text-[10px] font-mono text-gray-400 flex items-center gap-1 bg-[#0a0c10] border border-[#2f3e46] px-1.5 h-5 rounded">
+                                  <Clock className="h-3 w-3 text-[#a9927d]" />
                                   {task.estimatedMinutes}m
                                 </span>
                               )}
@@ -537,7 +550,7 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 text-xs"
+                                className="h-7 text-[10px] font-mono tracking-widest uppercase bg-[#0a0c10] border-[#2f3e46] text-[#a9927d] hover:text-white hover:border-[#a9927d]"
                                 onClick={() =>
                                   startTask.mutate({ id: task.id })
                                 }
@@ -548,15 +561,15 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                             )}
                             {task.status === "in_progress" && (
                               <Badge
-                                variant="secondary"
-                                className="bg-blue-500/10 text-blue-500 animate-pulse"
+                                variant="outline"
+                                className="bg-blue-500/10 border-blue-500/30 text-blue-400 animate-pulse text-[10px] font-mono uppercase tracking-widest h-6"
                               >
-                                <Circle className="h-2 w-2 mr-1 fill-current" />
+                                <Circle className="h-2 w-2 mr-1.5 fill-current" />
                                 Working
                               </Badge>
                             )}
                             {task.actualMinutes > 0 && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-[10px] font-mono text-gray-500">
                                 {task.actualMinutes}m
                               </span>
                             )}

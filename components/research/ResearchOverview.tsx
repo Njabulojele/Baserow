@@ -13,6 +13,9 @@ import {
   Clock,
   Maximize2,
   Loader2,
+  Globe,
+  Activity,
+  RefreshCcw,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -22,8 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import ReactMarkdown from "react-markdown";
+import { MarkdownRenderer } from "./MarkdownRenderer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface ResearchOverviewProps {
   research: any;
@@ -83,196 +88,122 @@ function StepIndicator({
 
 export function ResearchOverview({ research, onRetry }: ResearchOverviewProps) {
   const isFailed = research.status === "FAILED";
+  const isGrounding = research.searchMethod === "GEMINI_GROUNDING";
+  const fullReportSource = research.sources?.find(
+    (s: any) =>
+      s.url === "google-search-grounding" || s.title.includes("Final Report"),
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Progress + Steps */}
-        <div className="lg:col-span-2 border border-border rounded-md p-5 bg-card/50">
-          <div className="flex items-center gap-2 mb-5">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Research Progress
-            </h3>
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      {/* Scope Info */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center gap-3">
+          <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+            <Target className="w-4 h-4" />
           </div>
-          <div className="mb-6">
-            <div className="flex justify-between text-xs font-mono mb-2">
-              <span className="text-muted-foreground">Completion</span>
-              <span className="text-blu tabular-nums">
-                {research.progress}%
-              </span>
+          <div>
+            <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+              Scope
+            </p>
+            <p className="text-sm font-medium font-mono uppercase text-white">
+              {research.scope.replace(/_/g, " ")}
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center gap-3">
+          <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+            <Globe className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+              Method
+            </p>
+            <p className="text-sm font-medium font-mono uppercase text-white">
+              {research.searchMethod === "GEMINI_DEEP_RESEARCH"
+                ? "Deep Research"
+                : "Google Search"}
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+              <Activity className="w-4 h-4" />
             </div>
-            <Progress
-              value={research.progress}
-              className="h-[2px] bg-border [&>div]:bg-blu/70 [&>div]:transition-all [&>div]:duration-700"
-            />
+            <div>
+              <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+                Status
+              </p>
+              <p className="text-sm font-medium font-mono uppercase text-white">
+                {research.status}
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <StepIndicator
-              label="SURFACE DISCOVERY"
-              description="Identifying sources and trends"
-              isComplete={research.progress >= 30}
-              isActive={research.progress > 0 && research.progress < 30}
-              isFailed={isFailed}
-            />
-            <StepIndicator
-              label="DEEP ANALYSIS"
-              description="AI synthesis and extraction"
-              isComplete={research.progress >= 70}
-              isActive={research.progress >= 30 && research.progress < 70}
-              isFailed={isFailed}
-            />
-            <StepIndicator
-              label="STRATEGY FORMULATION"
-              description="Generating actions and leads"
-              isComplete={research.progress >= 100}
-              isActive={research.progress >= 70 && research.progress < 100}
-              isFailed={isFailed}
-            />
-            {isFailed && (
-              <div className="flex items-start gap-3 p-3 rounded-md border border-red-500/20 bg-red-500/5">
-                <AlertCircle className="w-3.5 h-3.5 text-red-400 mt-0.5" />
-                <div>
-                  <p className="text-xs font-mono text-red-400">ERROR</p>
-                  <p className="text-[10px] text-red-400/70 mt-0.5">
-                    {research.errorMessage || "Unknown error"}
-                  </p>
-                  <button
-                    onClick={onRetry}
-                    className="text-[10px] font-mono text-red-400 underline underline-offset-2 mt-1 hover:text-red-300"
-                  >
-                    RETRY →
-                  </button>
-                </div>
+          {isFailed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              className="h-8 text-[10px] font-mono text-muted-foreground hover:text-white"
+            >
+              <RefreshCcw className="w-3 h-3 mr-1" /> Retry
+            </Button>
+          )}
+        </div>
+        <div className="bg-[#1a252f] border border-[#2f3e46] p-4 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 text-[#a9927d] rounded-lg">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] text-[#a9927d] uppercase tracking-widest font-mono mb-1">
+                Timeline
+              </p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase">
+                Started{" "}
+                {formatDistanceToNow(new Date(research.createdAt), {
+                  addSuffix: true,
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {research.status === "COMPLETED" && (
+        <div className="bg-[#0a0c10] border border-[#2f3e46] rounded-xl overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-[#2f3e46] flex flex-col sm:flex-row sm:items-center justify-between sticky top-0 bg-[#0a0c10]/95 backdrop-blur z-10 gap-2">
+            <h2 className="text-sm font-mono uppercase tracking-widest text-[#a9927d] flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              {isGrounding
+                ? "Grounded Research Report"
+                : "Deep Research Analysis"}
+            </h2>
+          </div>
+
+          <div className="p-6 md:p-8 relative">
+            {(isGrounding && fullReportSource) ||
+            (!isGrounding && fullReportSource) ? (
+              <div className="prose prose-invert prose-p:leading-relaxed prose-pre:bg-[#1a252f] prose-pre:border prose-pre:border-[#2f3e46] prose-a:text-blu hover:prose-a:text-blu/80 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-table:border-collapse prose-th:border prose-th:border-[#2f3e46] prose-th:bg-[#1a252f] prose-th:p-3 prose-td:border prose-td:border-[#2f3e46] prose-td:p-3 prose-ul:my-6 prose-li:my-2 prose-p:my-6 max-w-none text-gray-300">
+                <MarkdownRenderer content={fullReportSource.content} />
+              </div>
+            ) : research.rawData?.summary ? (
+              <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-gray-300">
+                <MarkdownRenderer content={research.rawData.summary} />
+              </div>
+            ) : (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <EmptyState
+                  title="No Report Available"
+                  description="This research task did not generate a unified text report."
+                  icon={Search}
+                />
               </div>
             )}
           </div>
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          <div className="border border-border rounded-md p-4 bg-card/50">
-            <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-4">
-              Metadata
-            </h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5">
-                  <Target className="w-3 h-3" /> Scope
-                </span>
-                <Badge
-                  variant="outline"
-                  className="text-[9px] h-4 px-1.5 font-mono border-border text-muted-foreground bg-transparent"
-                >
-                  {research.scope.replace(/_/g, " ")}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="w-3 h-3" /> Started
-                </span>
-                <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                  {formatDistanceToNow(new Date(research.createdAt))} ago
-                </span>
-              </div>
-              {research.completedAt && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3" /> Done
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                    {formatDistanceToNow(new Date(research.completedAt))} ago
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="border border-border rounded-md p-4 bg-card/50">
-            <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-4">
-              Stats
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[10px] font-mono text-muted-foreground/60 mb-1">
-                  Insights
-                </p>
-                <p className="text-xl font-mono font-light text-alabaster tabular-nums">
-                  {research.insights.length}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-mono text-muted-foreground/60 mb-1">
-                  Sources
-                </p>
-                <p className="text-xl font-mono font-light text-alabaster tabular-nums">
-                  {research.sources.length}
-                </p>
-              </div>
-            </div>
-          </div>
-          {research.rawData?.trends && research.rawData.trends.length > 0 && (
-            <div className="border border-border rounded-md p-4 bg-card/50">
-              <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">
-                Key Trends
-              </h4>
-              <ul className="space-y-2">
-                {research.rawData.trends.map((trend: string, i: number) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed"
-                  >
-                    <span className="text-blu/60 mt-0.5 shrink-0">▸</span>
-                    {trend}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {research.rawData?.summary && (
-        <div className="border border-border rounded-md p-5 bg-card/50">
-          <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-            <FileText className="w-3 h-3" /> Executive Summary
-          </h3>
-          <div className="prose prose-invert prose-sm max-w-none prose-headings:font-mono prose-headings:text-alabaster prose-p:text-muted-foreground prose-p:leading-relaxed prose-a:text-blu prose-strong:text-alabaster">
-            <ReactMarkdown>{research.rawData.summary}</ReactMarkdown>
-          </div>
-        </div>
       )}
-
-      <div className="border border-border/50 border-dashed rounded-md p-4 bg-card/30">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest">
-            Original Objective
-          </h4>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 text-[10px] font-mono text-muted-foreground hover:text-alabaster px-1.5"
-              >
-                <Maximize2 className="w-2.5 h-2.5 mr-1" /> EXPAND
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl bg-card border-border text-foreground">
-              <DialogHeader>
-                <DialogTitle className="font-mono text-sm">
-                  RESEARCH OBJECTIVE
-                </DialogTitle>
-              </DialogHeader>
-              <div className="mt-4 max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none prose-p:text-muted-foreground">
-                <ReactMarkdown>{research.originalPrompt}</ReactMarkdown>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 font-mono">
-          {research.originalPrompt}
-        </p>
-      </div>
     </div>
   );
 }

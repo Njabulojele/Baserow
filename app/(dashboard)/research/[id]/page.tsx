@@ -294,7 +294,7 @@ export default function ResearchDetailPage({
       );
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${research.title.replace(/\s+/g, "_")}_Report.pdf`;
+      a.download = `${research?.title.replace(/\s+/g, "_") || "Research"}_Report.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();

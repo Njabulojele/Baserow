@@ -34,6 +34,17 @@ export default function RootLayout({
       afterSignUpUrl="/dashboard"
     >
       <html lang="en">
+        <head>
+          <link rel="manifest" href="/manifest.json" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+          />
+          <meta name="apple-mobile-web-app-title" content="Day Plan" />
+          <meta name="theme-color" content="#0a0c10" />
+          <meta name="mobile-web-app-capable" content="yes" />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >

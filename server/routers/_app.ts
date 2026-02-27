@@ -39,6 +39,15 @@ import { webhookRouter } from "./webhook";
 // GDPR
 import { gdprRouter } from "./gdpr";
 
+// AI Context
+import { aiContextRouter } from "./aiContext";
+
+// API Keys & Billing
+import { apiKeyRouter } from "./apiKey";
+
+// AI Chat
+import { chatRouter } from "./chat";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -79,6 +88,15 @@ export const appRouter = router({
 
   // GDPR
   gdpr: gdprRouter,
+
+  // AI Context
+  aiContext: aiContextRouter,
+
+  // API Keys & Billing
+  apiKey: apiKeyRouter,
+
+  // AI Chat
+  chat: chatRouter,
 });
 
 export type AppRouter = typeof appRouter;

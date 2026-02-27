@@ -12,6 +12,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Eye, EyeOff, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
+import { verifyAuthAction } from "@/lib/actions/auth";
 
 export function SignUpForm() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -24,6 +26,7 @@ export function SignUpForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const router = useRouter();
 
   // Step 1: Create Account
@@ -34,6 +37,13 @@ export function SignUpForm() {
     setIsLoading(true);
 
     try {
+      const verifyRes = await verifyAuthAction(turnstileToken);
+      if (verifyRes?.error) {
+        setError(verifyRes.error);
+        setIsLoading(false);
+        return;
+      }
+
       await signUp.create({
         emailAddress: email,
         password,
@@ -270,6 +280,15 @@ export function SignUpForm() {
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+          <div className="flex justify-center my-4 overflow-hidden">
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setTurnstileToken(token)}
+            />
           </div>
         )}
 

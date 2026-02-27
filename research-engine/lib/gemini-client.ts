@@ -15,17 +15,21 @@ export interface AnalysisResult {
 }
 
 // Interactions API Types
-export interface InteractionOutput {
-  type: string;
+export interface InteractionPart {
   text?: string;
-  thought?: string;
-  summary?: string;
-  signature?: string;
-  mime_type?: string;
-  data?: string;
-  name?: string;
-  id?: string;
-  arguments?: any;
+  thought?: {
+    summary?: string;
+    signature: string;
+  };
+  functionCall?: {
+    name: string;
+    args: any;
+  };
+}
+
+export interface InteractionContent {
+  role: string;
+  parts: InteractionPart[];
 }
 
 export interface Interaction {
@@ -36,7 +40,7 @@ export interface Interaction {
     | "failed"
     | "cancelled"
     | "requires_action";
-  outputs?: InteractionOutput[];
+  outputs?: InteractionContent[];
   usage?: {
     total_tokens?: number;
     input_tokens?: number;
@@ -74,15 +78,23 @@ export class GeminiClient {
     return this.retryWithBackoff(async () => {
       const interaction = await this.client.interactions.create({
         model: this.modelName,
-        input: `Search the web and provide comprehensive, well-cited information about: ${prompt}. Include specific facts, data points, and statistics. Cite your sources.`,
+        input: `Search the web and provide comprehensive, well-cited information about: ${prompt}. 
+        
+        CRITICAL FORMATTING INSTRUCTIONS:
+        1. Format your entire response in clear, standard Markdown.
+        2. Use multiple paragraphs separated by blank lines (double line breaks) for readability. DO NOT return a single clustered block of text.
+        3. Use lists (bulleted or numbered) where appropriate.
+        4. If your response includes comparisons, specifications, or structured data, you MUST use Markdown tables.
+        5. Include specific facts, data points, and statistics.
+        6. Cite your sources clearly within the text.`,
         tools: [{ type: "google_search" }],
       });
 
       // Find the text output
-      const textOutput = interaction.outputs?.find(
+      const textOutput = (interaction.outputs as any[])?.find(
         (o: any) => o.type === "text",
       );
-      const text = textOutput?.text || "";
+      const text = (textOutput as any)?.text || "";
 
       // Extract sources from google_search_result outputs
       const searchOutput = interaction.outputs?.find(
@@ -211,10 +223,9 @@ export class GeminiClient {
         input: prompt,
       });
 
-      const textOutput = interaction.outputs?.find(
-        (o: any) => o.type === "text",
-      );
-      return textOutput?.text || "";
+      const outputs = interaction.outputs as any[];
+      const textOutput = outputs?.find((o: any) => o.type === "text");
+      return (textOutput as any)?.text || "";
     });
   }
 

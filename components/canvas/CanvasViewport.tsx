@@ -6,8 +6,13 @@ import { Quadtree } from "@/lib/utils/quadtree";
 import { CanvasNode as CanvasNodeComponent } from "./CanvasNode";
 import { FreeDrawLayer } from "./FreeDrawLayer";
 import { ConnectionLayer } from "./ConnectionLayer";
+import { useCanvasCursors } from "@/lib/hooks/use-canvas-cursors";
+import { useAuth } from "@clerk/nextjs";
 
-export function CanvasViewport() {
+export function CanvasViewport({ boardId }: { boardId: string }) {
+  const { orgId } = useAuth();
+  const { cursors, broadcastCursor } = useCanvasCursors(orgId, boardId);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const lastMouseRef = useRef({ x: 0, y: 0 });
@@ -211,6 +216,10 @@ export function CanvasViewport() {
           height: Math.abs(curY - selectionRect.startY),
         });
       }
+
+      // Broadcast cursor position
+      const pos = screenToCanvas(e.clientX, e.clientY);
+      broadcastCursor(pos.x, pos.y);
     },
     [
       viewport,
@@ -220,6 +229,7 @@ export function CanvasViewport() {
       screenToCanvas,
       continueDrawing,
       selectionRect,
+      broadcastCursor,
     ],
   );
 
@@ -460,7 +470,7 @@ export function CanvasViewport() {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden bg-[#121214] ${
+      className={`relative w-full h-full overflow-hidden bg-[#0a0c10] ${
         activeTool === "pan" || spaceDownRef.current
           ? "cursor-grab active:cursor-grabbing"
           : activeTool === "pen"
@@ -524,6 +534,46 @@ export function CanvasViewport() {
             }}
           />
         ))}
+
+        {/* Collaborative Cursors */}
+        {Array.from(cursors.values()).map((cursor) => (
+          <div
+            key={cursor.userId}
+            className="absolute z-test pointer-events-none transition-transform duration-75 ease-linear"
+            style={{
+              transform: `translate(${cursor.x}px, ${cursor.y}px)`,
+            }}
+          >
+            {/* Custom Mouse Cursor SVG */}
+            <svg
+              width="24"
+              height="36"
+              viewBox="0 0 24 36"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="drop-shadow-md"
+            >
+              <path
+                d="M5.65376 33.1598L3.25052 32.2274L19.4996 3.63385L20.8994 4.19531L5.65376 33.1598Z"
+                fill="#F87171"
+              />
+              <path
+                d="M20.8655 4.18042L1.62128 15.6881L2.4542 16.9248L21.7877 5.25367L20.8655 4.18042Z"
+                fill="#F87171"
+              />
+              <path
+                d="M1 16L18 31V23L23 18L1 16Z"
+                fill="#EF4444"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="absolute left-4 top-4 px-2 py-0.5 bg-red-500 text-white text-[10px] rounded-md font-mono whitespace-nowrap drop-shadow-sm">
+              {cursor.name}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Selection rectangle */}
@@ -540,26 +590,26 @@ export function CanvasViewport() {
       )}
 
       {/* Zoom indicator */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-[#1a1a1e] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white/50 z-10">
+      <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-[#1a252f] border border-[#2f3e46] rounded-lg px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-gray-500 z-10">
         <button
           onClick={() => useCanvasStore.getState().zoomOut()}
-          className="hover:text-white px-1"
+          className="hover:text-white px-1 transition-colors"
         >
           −
         </button>
-        <span className="w-10 text-center font-mono">
+        <span className="w-10 text-center text-[#a9927d]">
           {Math.round(viewport.zoom * 100)}%
         </span>
         <button
           onClick={() => useCanvasStore.getState().zoomIn()}
-          className="hover:text-white px-1"
+          className="hover:text-white px-1 transition-colors"
         >
           +
         </button>
-        <div className="w-px h-3 bg-white/10 mx-1" />
+        <div className="w-px h-3 bg-[#2f3e46] mx-1" />
         <button
           onClick={() => useCanvasStore.getState().resetZoom()}
-          className="hover:text-white px-1"
+          className="hover:text-white px-1 transition-colors"
         >
           Reset
         </button>
@@ -586,8 +636,8 @@ function getNodeDefaults(
         fontSize: 16,
         fontFamily: "Inter",
         textColor: "#f5f5f4",
-        bgColor: "#1e1e22",
-        borderColor: "#333338",
+        bgColor: "#1a252f",
+        borderColor: "#2f3e46",
         borderWidth: 1,
         borderRadius: 8,
         borderStyle: "solid",
@@ -614,8 +664,8 @@ function getNodeDefaults(
         width: 160,
         height: 120,
         shapeType: shapeType as import("@/lib/stores/canvas-store").ShapeType,
-        fillColor: "#2a2a30",
-        borderColor: "#6EE7B7",
+        fillColor: "#1a252f",
+        borderColor: "#a9927d",
         borderWidth: 2,
         opacity: 1,
       };
@@ -626,9 +676,9 @@ function getNodeDefaults(
         width: 500,
         height: 400,
         sectionTitle: "Section",
-        sectionColor: "#6EE7B7",
-        bgColor: "rgba(110,231,183,0.05)",
-        borderColor: "rgba(110,231,183,0.2)",
+        sectionColor: "#a9927d",
+        bgColor: "rgba(169,146,125,0.05)",
+        borderColor: "rgba(169,146,125,0.2)",
         borderWidth: 2,
         borderRadius: 12,
         borderStyle: "dashed",
@@ -639,8 +689,8 @@ function getNodeDefaults(
         type: "checklist" as const,
         width: 260,
         height: 200,
-        bgColor: "#1e1e22",
-        borderColor: "#333338",
+        bgColor: "#1a252f",
+        borderColor: "#2f3e46",
         borderWidth: 1,
         borderRadius: 12,
         text: "Checklist",
@@ -656,7 +706,7 @@ function getNodeDefaults(
         width: 48,
         height: 48,
         badgeNumber: 1,
-        badgeColor: "#6EE7B7",
+        badgeColor: "#a9927d",
       };
     case "embed":
       return {
@@ -667,8 +717,8 @@ function getNodeDefaults(
         embedUrl: "",
         embedTitle: "Link",
         embedDescription: "Paste a URL",
-        bgColor: "#1e1e22",
-        borderColor: "#333338",
+        bgColor: "#1a252f",
+        borderColor: "#2f3e46",
         borderWidth: 1,
         borderRadius: 12,
       };

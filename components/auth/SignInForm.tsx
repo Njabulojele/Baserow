@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { Turnstile } from "@marsidev/react-turnstile";
+import { verifyAuthAction } from "@/lib/actions/auth";
 
 export function SignInForm() {
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -17,6 +19,7 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const router = useRouter();
 
   // Redirect if already signed in
@@ -40,6 +43,13 @@ export function SignInForm() {
     }
 
     try {
+      const verifyRes = await verifyAuthAction(turnstileToken);
+      if (verifyRes?.error) {
+        setError(verifyRes.error);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await signIn.create({
         identifier: email,
         password,
@@ -193,6 +203,15 @@ export function SignInForm() {
           <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+          <div className="flex justify-center my-4 overflow-hidden">
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setTurnstileToken(token)}
+            />
           </div>
         )}
 

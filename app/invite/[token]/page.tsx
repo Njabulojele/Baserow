@@ -34,7 +34,7 @@ export default function InvitePage({
     );
 
   if (!isSignedIn) {
-    return <RedirectToSignIn forceRedirectUrl={`/invite/${token}`} />;
+    return <RedirectToSignIn signInFallbackRedirectUrl={`/invite/${token}`} />;
   }
 
   return (

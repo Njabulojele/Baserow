@@ -8,6 +8,31 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            // Note: 'unsafe-inline' and 'unsafe-eval' are often required by Next.js in dev mode.
+            // We also allow Clerk and Cloudflare Turnstile scripts.
+            value: [
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://va.vercel-scripts.com blob:",
+              "worker-src 'self' blob:",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https://*.clerk.com https://img.clerk.com https://images.unsplash.com https://lh3.googleusercontent.com",
+              "connect-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com wss://localhost:* ws://localhost:* https://va.vercel-scripts.com https://*.sentry.io https://*.ingest.sentry.io",
+              "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.com https://*.clerk.accounts.dev",
+              "object-src 'none'",
+            ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
+
   images: {
     remotePatterns: [
       {

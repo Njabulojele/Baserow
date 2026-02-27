@@ -1,0 +1,15 @@
+app/(dashboard)/research/[id]/page.tsx(297,23): error TS18048: 'research' is possibly 'undefined'.
+app/invite/[token]/page.tsx(37,30): error TS2322: Type '{ forceRedirectUrl: string; }' is not assignable to type 'IntrinsicAttributes & Without<WithClerkProp<SignInRedirectOptions>, "clerk">'.
+  Property 'forceRedirectUrl' does not exist on type 'IntrinsicAttributes & Without<WithClerkProp<SignInRedirectOptions>, "clerk">'. Did you mean 'redirectUrl'?
+inngest/research-agent.ts(145,20): error TS2339: Property 'parts' does not exist on type 'JsonifyObject<{ type: string; arguments?: any; data?: string | undefined; summary?: string | undefined; text?: string | undefined; thought?: string | undefined; id?: string | undefined; name?: string | undefined; signature?: string | undefined; mime_type?: string | undefined; }>'.
+inngest/research-agent.ts(450,28): error TS2339: Property 'model' does not exist on type 'GeminiClient'.
+inngest/research-agent.ts(465,45): error TS18046: 'groundingResult' is of type 'unknown'.
+lib/llm-provider.ts(62,38): error TS2339: Property 'model' does not exist on type 'GeminiClient'.
+lib/llm-provider.ts(128,40): error TS2339: Property 'model' does not exist on type 'GeminiClient'.
+lib/llm-provider.ts(171,38): error TS2339: Property 'model' does not exist on type 'GeminiClient'.
+research-engine/agent.ts(159,20): error TS2339: Property 'parts' does not exist on type 'JsonifyObject<{ type: string; arguments?: any; data?: string | undefined; summary?: string | undefined; text?: string | undefined; thought?: string | undefined; id?: string | undefined; name?: string | undefined; signature?: string | undefined; mime_type?: string | undefined; }>'.
+research-engine/lib/gemini-client.ts(85,32): error TS2339: Property 'text' does not exist on type 'Content_2'.
+  Property 'text' does not exist on type 'ImageContent'.
+research-engine/lib/gemini-client.ts(217,26): error TS2339: Property 'text' does not exist on type 'Content_2'.
+  Property 'text' does not exist on type 'ImageContent'.
+scripts/list-models.ts(1,36): error TS2307: Cannot find module '@google/generative-ai' or its corresponding type declarations.

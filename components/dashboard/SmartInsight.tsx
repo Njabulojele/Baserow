@@ -24,22 +24,22 @@ export function SmartInsight() {
   if (!prediction || !prediction.predictedDate) return null;
 
   return (
-    <Alert className="mb-6 bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800">
-      <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-      <AlertTitle className="text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+    <Alert className="mb-6 bg-[#1a252f] border-[#a9927d]/30 shadow-xl backdrop-blur-sm transition-all hover:border-[#a9927d]/50">
+      <Sparkles className="h-4 w-4 text-[#a9927d]" />
+      <AlertTitle className="text-white flex items-center gap-2 font-mono uppercase tracking-widest text-xs">
         Smart Insight
       </AlertTitle>
-      <AlertDescription className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="text-indigo-800 dark:text-indigo-200">
+      <AlertDescription className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="text-gray-300 font-light text-sm leading-relaxed">
           <p>
             You&apos;re currently working on{" "}
-            <span className="font-semibold">
+            <span className="font-medium text-white">
               {stats.activeTimer.project?.name}
             </span>
             . Based on your recent velocity ({prediction.velocity} tasks/day),
             we predict you&apos;ll finish the remaining{" "}
             {prediction.remainingTasks} tasks by{" "}
-            <span className="font-semibold">
+            <span className="font-medium text-[#a9927d]">
               {format(new Date(prediction.predictedDate), "MMM do")}
             </span>
             .
@@ -47,7 +47,7 @@ export function SmartInsight() {
         </div>
 
         {prediction.daysRemaining > 0 && (
-          <div className="flex items-center gap-2 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/50 px-3 py-1 rounded-full whitespace-nowrap">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-[#a9927d] bg-[#0a0c10] border border-[#2f3e46] px-3 py-1.5 rounded-full whitespace-nowrap shadow-inner">
             <TrendingUp className="h-3 w-3" />
             {prediction.daysRemaining} days to go
           </div>

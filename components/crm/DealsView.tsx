@@ -62,12 +62,64 @@ export default function DealsView({ onAddDeal }: DealsViewProps) {
   const utils = trpc.useUtils();
 
   const moveStageMutation = trpc.deal.moveStage.useMutation({
+    onMutate: async ({ id, pipelineStageId }) => {
+      await utils.deal.getByStage.cancel();
+      const previousData = utils.deal.getByStage.getData({
+        pipelineId: activePipelineId,
+      });
+
+      if (previousData) {
+        utils.deal.getByStage.setData(
+          { pipelineId: activePipelineId },
+          (old) => {
+            if (!old) return old;
+
+            let dealToMove: any = null;
+            old.forEach((stage) => {
+              const found = stage.deals?.find((d) => d.id === id);
+              if (found) dealToMove = found;
+            });
+
+            if (!dealToMove) return old;
+
+            return old.map((stage) => {
+              if (stage.id === pipelineStageId) {
+                return {
+                  ...stage,
+                  deals: [
+                    ...(stage.deals || []),
+                    { ...dealToMove, pipelineStageId },
+                  ],
+                };
+              }
+              if (stage.deals?.some((d) => d.id === id)) {
+                return {
+                  ...stage,
+                  deals: stage.deals.filter((d) => d.id !== id),
+                };
+              }
+              return stage;
+            });
+          },
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: () => {
       toast.success("Deal moved");
+    },
+    onError: (err, variables, context) => {
+      utils.deal.getByStage.setData(
+        { pipelineId: activePipelineId },
+        context?.previousData,
+      );
+      toast.error(err.message);
+    },
+    onSettled: () => {
       utils.deal.getByStage.invalidate();
       utils.deal.getStats.invalidate();
     },
-    onError: (err) => toast.error(err.message),
   });
 
   const closeDealMutation = trpc.deal.close.useMutation({

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc/client";
+import { useState, useEffect } from "react";
 
 interface Task {
   id: string;
@@ -30,6 +31,7 @@ interface Task {
 interface TaskCardProps {
   task: Task;
   onComplete?: () => void;
+  variant?: "default" | "agenda" | "backlog";
 }
 
 const priorityConfig = {
@@ -39,8 +41,19 @@ const priorityConfig = {
   low: { color: "bg-green-500", label: "Low" },
 };
 
-export function TaskCard({ task, onComplete }: TaskCardProps) {
+export function TaskCard({
+  task,
+  onComplete,
+  variant = "default",
+}: TaskCardProps) {
   const utils = trpc.useUtils();
+  const [isOptimisticallyDone, setIsOptimisticallyDone] = useState(
+    task.status === "done",
+  );
+
+  useEffect(() => {
+    setIsOptimisticallyDone(task.status === "done");
+  }, [task.status]);
 
   const startTimer = trpc.task.startTimer.useMutation({
     // Optimistic update
@@ -121,6 +134,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
       return { previousTasks };
     },
     onError: (err, variables, context) => {
+      setIsOptimisticallyDone(false);
       utils.task.getTasks.setData(undefined, context?.previousTasks);
     },
     onSettled: () => {
@@ -141,6 +155,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
   };
 
   const handleComplete = () => {
+    setIsOptimisticallyDone(true);
     completeTask.mutate({ id: task.id });
   };
 
@@ -156,16 +171,20 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
     <div
       className={cn(
         "group flex items-center gap-4 p-4 rounded-xl border transition-all",
-        "bg-card hover:bg-accent/50",
-        task.status === "done" && "opacity-60",
+        variant === "default" && "bg-card hover:bg-accent/50",
+        variant === "agenda" &&
+          "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20",
+        variant === "backlog" &&
+          "bg-[#2f3e46]/40 border-[#2f3e46] hover:bg-[#2f3e46]/60",
+        isOptimisticallyDone && "opacity-60",
         task.timerRunning && "ring-2 ring-primary",
       )}
     >
       {/* Checkbox */}
       <Checkbox
-        checked={task.status === "done"}
+        checked={isOptimisticallyDone}
         onCheckedChange={handleComplete}
-        disabled={completeTask.isPending}
+        disabled={completeTask.isPending || isOptimisticallyDone}
         className="h-5 w-5"
       />
 
@@ -175,7 +194,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
           <h3
             className={cn(
               "font-medium truncate",
-              task.status === "done" && "line-through text-muted-foreground",
+              isOptimisticallyDone && "line-through text-muted-foreground",
             )}
           >
             {task.title}
@@ -229,7 +248,7 @@ export function TaskCard({ task, onComplete }: TaskCardProps) {
       </div>
 
       {/* Timer Toggle */}
-      {task.status !== "done" && (
+      {!isOptimisticallyDone && (
         <Button
           variant={task.timerRunning ? "default" : "outline"}
           size="icon"

@@ -46,7 +46,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
           <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
             Projects
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 muted-foreground/40">
+          <p className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
             Organize and track your work
           </p>
         </div>
@@ -56,21 +56,36 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
       </div>
 
       <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-          <TabsList className="flex w-full min-w-max sm:min-w-0 sm:grid sm:grid-cols-5">
-            <TabsTrigger value="active" className="flex-1">
+        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
+          <TabsList className="bg-[#0a0c10] border-[#2f3e46] shadow-sm p-1 rounded-md mb-2 flex min-w-max sm:grid sm:grid-cols-5 sm:min-w-0">
+            <TabsTrigger
+              value="active"
+              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
+            >
               Active
             </TabsTrigger>
-            <TabsTrigger value="planning" className="flex-1">
+            <TabsTrigger
+              value="planning"
+              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
+            >
               Planning
             </TabsTrigger>
-            <TabsTrigger value="on_hold" className="flex-1">
+            <TabsTrigger
+              value="on_hold"
+              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
+            >
               On Hold
             </TabsTrigger>
-            <TabsTrigger value="completed" className="flex-1">
+            <TabsTrigger
+              value="completed"
+              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
+            >
               Completed
             </TabsTrigger>
-            <TabsTrigger value="all" className="flex-1">
+            <TabsTrigger
+              value="all"
+              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
+            >
               All
             </TabsTrigger>
           </TabsList>
@@ -84,8 +99,10 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
               ))}
             </div>
           ) : !projects || projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <p>No {status === "all" ? "" : status} projects found.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-[#a9927d] bg-[#0a0c10] border border-[#2f3e46] rounded-xl border-dashed">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+                No {status === "all" ? "" : status} projects found.
+              </p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

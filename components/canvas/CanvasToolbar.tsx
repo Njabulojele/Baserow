@@ -133,7 +133,7 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
   } = useCanvasStore();
 
   return (
-    <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-[#1a1a1e]/95 backdrop-blur-md border border-white/10 rounded-xl p-1.5 shadow-2xl">
+    <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-[#0a0c10]/95 backdrop-blur-md border border-[#2f3e46] rounded-xl p-1.5 shadow-xl">
       <div className="grid grid-cols-2 gap-1">
         {tools.map(({ tool, icon, label, shortcut }) => (
           <button
@@ -141,17 +141,17 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
             onClick={() => setActiveTool(tool)}
             className={`relative w-9 h-9 flex items-center justify-center rounded-lg transition-all group ${
               activeTool === tool
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "text-white/50 hover:bg-white/10 hover:text-white/80"
+                ? "bg-[#1a252f] text-[#a9927d] border border-[#a9927d]/40"
+                : "text-gray-500 hover:bg-[#1a252f] hover:text-white border border-transparent"
             }`}
             title={`${label}${shortcut ? ` (${shortcut})` : ""}`}
           >
             {icon}
             {/* Tooltip */}
-            <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
+            <div className="absolute left-12 px-2 py-1 bg-[#1a252f] rounded-md text-[10px] font-mono uppercase tracking-widest text-[#a9927d] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-[#2f3e46] shadow-lg z-50">
               {label}
               {shortcut && (
-                <span className="ml-1.5 text-white/30 font-mono">
+                <span className="ml-1.5 text-gray-500 font-mono">
                   {shortcut}
                 </span>
               )}
@@ -160,23 +160,23 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
         ))}
       </div>
 
-      <div className="w-full h-px bg-white/10 my-1" />
+      <div className="w-full h-px bg-[#2f3e46] my-1" />
 
       {/* Entity button */}
       <div className="flex justify-center">
         <button
           onClick={onOpenEntityModal}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/50 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all group relative"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all group relative border border-transparent hover:border-[#a9927d]/40"
           title="Attach Entity"
         >
           <PlusCircle className="w-4 h-4" />
-          <div className="absolute left-12 px-2 py-1 bg-[#222226] rounded-md text-xs text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-white/10 shadow-lg z-50">
+          <div className="absolute left-12 px-2 py-1 bg-[#1a252f] rounded-md text-[10px] font-mono tracking-widest uppercase text-[#a9927d] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-[#2f3e46] shadow-lg z-50">
             Attach Entity
           </div>
         </button>
       </div>
 
-      <div className="w-full h-px bg-white/10 my-1" />
+      <div className="w-full h-px bg-[#2f3e46] my-1" />
 
       {/* Pen options (visible when pen/eraser active) */}
       {(activeTool === "pen" || activeTool === "eraser") && (
@@ -196,14 +196,14 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
             max={20}
             value={penThickness}
             onChange={(e) => setPenThickness(Number(e.target.value))}
-            className="w-8 appearance-none bg-white/10 h-1 rounded-full accent-emerald-400"
+            className="w-8 appearance-none bg-[#0a0c10] border border-[#2f3e46] h-1 rounded-full accent-[#a9927d]"
             style={{
               writingMode: "vertical-lr" as React.CSSProperties["writingMode"],
               height: 50,
             }}
             title="Thickness"
           />
-          <div className="w-full h-px bg-white/10 my-1" />
+          <div className="w-full h-px bg-[#2f3e46] my-1" />
         </div>
       )}
 
@@ -212,8 +212,10 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
         <button
           onClick={toggleGrid}
           className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-            showGrid ? "text-white/70" : "text-white/30"
-          } hover:bg-white/10`}
+            showGrid
+              ? "text-[#a9927d] bg-[#1a252f] border border-[#a9927d]/30"
+              : "text-gray-500 border border-transparent hover:bg-[#1a252f] hover:text-white"
+          }`}
           title="Toggle Grid"
         >
           <Grid3X3 className="w-4 h-4" />
@@ -221,28 +223,30 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
         <button
           onClick={toggleSnap}
           className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-            snapToGrid ? "text-emerald-400" : "text-white/30"
-          } hover:bg-white/10`}
+            snapToGrid
+              ? "text-[#a9927d] bg-[#1a252f] border border-[#a9927d]/30"
+              : "text-gray-500 border border-transparent hover:bg-[#1a252f] hover:text-white"
+          }`}
           title="Snap to Grid"
         >
           <Magnet className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="w-full h-px bg-white/10 my-1" />
+      <div className="w-full h-px bg-[#2f3e46] my-1" />
 
       {/* Undo / Redo */}
       <div className="grid grid-cols-2 gap-1">
         <button
           onClick={undo}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all border border-transparent"
           title="Undo (Ctrl+Z)"
         >
           <Undo2 className="w-4 h-4" />
         </button>
         <button
           onClick={redo}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white/70 transition-all"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all border border-transparent"
           title="Redo (Ctrl+Y)"
         >
           <Redo2 className="w-4 h-4" />
@@ -254,7 +258,7 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
         <div className="flex justify-center mt-1">
           <button
             onClick={deleteSelectedNodes}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-red-400/70 hover:bg-red-500/20 hover:text-red-400 transition-all"
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 hover:border-red-500/30 transition-all border border-transparent"
             title="Delete selected"
           >
             <Trash2 className="w-4 h-4" />

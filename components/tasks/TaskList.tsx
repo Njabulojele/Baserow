@@ -27,12 +27,14 @@ interface TaskListProps {
   tasks: Task[] | undefined;
   isLoading?: boolean;
   emptyMessage?: string;
+  variant?: "default" | "agenda" | "backlog";
 }
 
 export function TaskList({
   tasks,
   isLoading,
   emptyMessage = "No tasks found",
+  variant = "default",
 }: TaskListProps) {
   if (isLoading) {
     return (
@@ -55,7 +57,7 @@ export function TaskList({
   return (
     <div className="space-y-3">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} />
+        <TaskCard key={task.id} task={task} variant={variant} />
       ))}
     </div>
   );

@@ -15,17 +15,21 @@ export interface AnalysisResult {
 }
 
 // Interactions API Types
-export interface InteractionOutput {
-  type: string;
+export interface InteractionPart {
   text?: string;
-  thought?: string;
-  summary?: string;
-  signature?: string;
-  mime_type?: string;
-  data?: string;
-  name?: string;
-  id?: string;
-  arguments?: any;
+  thought?: {
+    summary?: string;
+    signature: string;
+  };
+  functionCall?: {
+    name: string;
+    args: any;
+  };
+}
+
+export interface InteractionContent {
+  role: string;
+  parts: InteractionPart[];
 }
 
 export interface Interaction {
@@ -36,7 +40,7 @@ export interface Interaction {
     | "failed"
     | "cancelled"
     | "requires_action";
-  outputs?: InteractionOutput[];
+  outputs?: InteractionContent[];
   usage?: {
     total_tokens?: number;
     input_tokens?: number;
@@ -61,6 +65,51 @@ export class GeminiClient {
     this.apiKey = apiKey;
     this.modelName = modelName;
     this.client = new GoogleGenAI({ apiKey });
+  }
+
+  /**
+   * Performs a grounded web search using the Interactions API with google_search tool.
+   */
+  async groundingSearch(prompt: string): Promise<{
+    text: string;
+    sources: { url: string; title: string }[];
+    searchQueries: string[];
+  }> {
+    return this.retryWithBackoff(async () => {
+      const interaction = await this.client.interactions.create({
+        model: "gemini-2.5-flash", // Grounding requires gemini-2.0-flash at minimum, though 2.5 flash is better
+        input: `Search the web and provide comprehensive, well-cited information about: ${prompt}. Include specific facts, data points, and statistics. Cite your sources.`,
+        tools: [{ type: "google_search" }],
+      });
+
+      // Find the text output
+      const outputs = interaction.outputs as any[];
+      const textOutput = outputs?.find((o: any) => o.type === "text");
+      const text = textOutput?.text || "";
+
+      // Extract sources from google_search_result outputs
+      const searchOutput = outputs?.find(
+        (o: any) => o.type === "google_search_result",
+      );
+      const sources: { url: string; title: string }[] = [];
+      const searchQueries: string[] = [];
+
+      if (searchOutput && (searchOutput as any).search_results) {
+        for (const result of (searchOutput as any).search_results) {
+          if (result.url) {
+            sources.push({
+              url: result.url,
+              title: result.title || result.url,
+            });
+          }
+          if (result.search_query) {
+            searchQueries.push(result.search_query);
+          }
+        }
+      }
+
+      return { text, sources, searchQueries };
+    });
   }
 
   /**

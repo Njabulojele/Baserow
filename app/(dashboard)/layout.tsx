@@ -12,6 +12,7 @@ import {
 import { Heart } from "lucide-react";
 import { NotificationBell } from "@/components/navigation/NotificationBell";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { AIMiniChat } from "@/components/ai/AIMiniChat";
 
 export default async function DashboardLayout({
   children,
@@ -94,6 +95,7 @@ export default async function DashboardLayout({
         </DashboardShell>
       </SidebarInset>
       <CommandPalette />
+      <AIMiniChat />
     </SidebarProvider>
   );
 }
