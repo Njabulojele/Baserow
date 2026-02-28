@@ -10,6 +10,14 @@ import {
   Loader2,
   GripVertical,
   Minimize2,
+  UserPlus,
+  Edit,
+  RefreshCw,
+  Briefcase,
+  Calendar,
+  Search,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
@@ -55,13 +63,11 @@ export function AIMiniChat() {
         getToken(),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
       ]);
-      console.log("[Chat] Got token:", token ? "yes" : "no (timeout or null)");
       return {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
     } catch (err) {
-      console.warn("[Chat] getToken() failed:", err);
       return { "Content-Type": "application/json" };
     }
   };
@@ -74,8 +80,6 @@ export function AIMiniChat() {
     const msg = input.trim();
     if (!msg || isStreaming) return;
 
-    console.log("[Chat] Sending message:", msg);
-
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: msg }]);
     setIsStreaming(true);
@@ -83,15 +87,12 @@ export function AIMiniChat() {
 
     try {
       const headers = await getHeaders();
-      console.log("[Chat] Making fetch to /api/chat/stream");
       const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers,
         credentials: "include",
         body: JSON.stringify({ message: msg }),
       });
-
-      console.log("[Chat] Response status:", response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -262,6 +263,51 @@ export function AIMiniChat() {
     };
   }, [isDragging]);
 
+  const renderActionConfig = (action: any) => {
+    switch (action.type) {
+      case "addTask":
+        return { icon: Plus, label: `Add: ${action.title || "Task"}` };
+      case "updateTask":
+        return { icon: Edit, label: `Update Task` };
+      case "startTimer":
+        return { icon: Timer, label: `Start Timer` };
+      case "stopTimer":
+        return { icon: Timer, label: `Stop Timer` };
+      case "addClient":
+        return {
+          icon: UserPlus,
+          label: `Add Client: ${action.name || "Client"}`,
+        };
+      case "updateClient":
+        return { icon: Edit, label: `Update Client` };
+      case "addLead":
+        return { icon: Plus, label: `Add Lead: ${action.firstName || "Lead"}` };
+      case "moveLead":
+        return { icon: ArrowRight, label: `Move Lead` };
+      case "updateLead":
+        return { icon: Edit, label: `Update Lead` };
+      case "convertLead":
+        return { icon: RefreshCw, label: `Convert Lead` };
+      case "addDeal":
+        return { icon: Briefcase, label: `Add Deal: ${action.name || "Deal"}` };
+      case "updateDeal":
+        return { icon: Edit, label: `Update Deal` };
+      case "addEvent":
+        return {
+          icon: Calendar,
+          label: `Add Event: ${action.title || "Meeting"}`,
+        };
+      case "startResearch":
+        return { icon: Search, label: `Start Research` };
+      case "addNote":
+        return { icon: FileText, label: `Add Note` };
+      case "addMeeting":
+        return { icon: Calendar, label: `Schedule Meeting` };
+      default:
+        return { icon: Plus, label: `Execute Action` };
+    }
+  };
+
   return (
     <>
       {/* FAB */}
@@ -269,7 +315,7 @@ export function AIMiniChat() {
         <button
           onClick={() => setIsOpen(true)}
           style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-          className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-gradient-to-br from-[#a9927d] to-[#8b7a6a] text-[#0a0c10] shadow-2xl hover:scale-110 active:scale-95 transition-transform duration-200 group"
+          className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-linear-to-br from-[#a9927d] to-[#8b7a6a] text-[#0a0c10] shadow-2xl hover:scale-110 active:scale-95 transition-transform duration-200 group"
         >
           <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform" />
         </button>
@@ -372,24 +418,22 @@ export function AIMiniChat() {
                     msg.role === "assistant" && (
                       <span className="inline-block w-1.5 h-3.5 bg-[#a9927d] animate-pulse ml-0.5 -mb-0.5 rounded-sm" />
                     )}
-                  {msg.action && (
-                    <button
-                      onClick={() => handleExecuteAction(msg.action)}
-                      disabled={isExecuting}
-                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#a9927d]/20 border border-[#a9927d]/30 text-[#a9927d] hover:bg-[#a9927d]/30 transition-colors text-[10px] font-mono uppercase tracking-wider"
-                    >
-                      {msg.action.type === "addTask" ? (
-                        <Plus className="h-3 w-3" />
-                      ) : (
-                        <Timer className="h-3 w-3" />
-                      )}
-                      {isExecuting
-                        ? "Executing..."
-                        : msg.action.type === "addTask"
-                          ? `Add: ${msg.action.title}`
-                          : "Start Timer"}
-                    </button>
-                  )}
+                  {msg.action &&
+                    (() => {
+                      const { icon: ActionIcon, label } = renderActionConfig(
+                        msg.action,
+                      );
+                      return (
+                        <button
+                          onClick={() => handleExecuteAction(msg.action)}
+                          disabled={isExecuting}
+                          className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#a9927d]/20 border border-[#a9927d]/30 text-[#a9927d] hover:bg-[#a9927d]/30 transition-colors text-[10px] font-mono uppercase tracking-wider"
+                        >
+                          <ActionIcon className="h-3 w-3" />
+                          {isExecuting ? "Executing..." : label}
+                        </button>
+                      );
+                    })()}
                 </div>
               </div>
             ))}
