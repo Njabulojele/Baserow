@@ -48,6 +48,11 @@ import { apiKeyRouter } from "./apiKey";
 // AI Chat
 import { chatRouter } from "./chat";
 
+// Daily Operating System
+import { habitRouter } from "./habit";
+import { contentIdeaRouter } from "./contentIdea";
+import { proposalTemplateRouter } from "./proposalTemplate";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -97,6 +102,11 @@ export const appRouter = router({
 
   // AI Chat
   chat: chatRouter,
+
+  // Daily Operating System
+  habit: habitRouter,
+  contentIdea: contentIdeaRouter,
+  proposalTemplate: proposalTemplateRouter,
 });
 
 export type AppRouter = typeof appRouter;

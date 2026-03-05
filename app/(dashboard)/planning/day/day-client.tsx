@@ -1,49 +1,37 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
-  Moon,
   ChevronLeft,
   ChevronRight,
-  Target,
+  Moon,
   Heart,
   Plus,
-  Clock,
-  CheckCircle2,
-  Circle,
-  Flag,
-  AlertTriangle,
-  Play,
-  TrendingUp,
-  Trophy,
+  Flame,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { TaskList } from "@/components/tasks/TaskList";
-import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
-// import { toast } from "sonner";
 import { EveningReview } from "@/components/dashboard/EveningReview";
 import { NoteEditor } from "@/components/notes/NoteEditor";
-import { DayPlanOnboarding } from "@/components/planning/DayPlanOnboarding";
+
+// Daily Operating System components
+import { PillarCard } from "@/components/planning/PillarCard";
+import { MiniCalendar } from "@/components/planning/MiniCalendar";
+import { DailyScheduleTimeline } from "@/components/planning/DailyScheduleTimeline";
+import { PillarProgressChart } from "@/components/planning/PillarProgressChart";
+import { ContentDistributionChecklist } from "@/components/planning/ContentDistributionChecklist";
+import { LeadChannelsList } from "@/components/planning/LeadChannelsList";
+import { ContentIdeaPanel } from "@/components/planning/ContentIdeaPanel";
+import { ProposalTemplateModal } from "@/components/planning/ProposalTemplateModal";
 
 interface DayPlanningClientProps {
   initialData: any;
 }
-
-// Removed priority matrix quadrant helper
 
 export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -52,20 +40,40 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
 
   const utils = trpc.useUtils();
 
+  // Seed default pillars on first load
+  const seedMutation = trpc.habit.seedDefaults.useMutation({
+    onSuccess: (data) => {
+      if (data.seeded) {
+        utils.habit.getDailyChecklist.invalidate();
+        utils.habit.getPillars.invalidate();
+      }
+    },
+  });
+
+  const seededRef = useState({ called: false })[0];
+  useEffect(() => {
+    if (!seededRef.called) {
+      seededRef.called = true;
+      seedMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Existing day plan data
   const { data: dayPlan } = trpc.planning.getDayPlan.useQuery(
     { date: currentDate },
-    { initialData: initialData },
+    { initialData },
   );
 
-  const { data: todayWellbeing } = trpc.wellbeing.getTodayEntry.useQuery(
-    undefined,
-    {
-      enabled: !!(
-        format(currentDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
-      ),
-      staleTime: 1000 * 60 * 5,
-    },
-  );
+  // Daily checklist (pillars + habits)
+  const { data: checklist } = trpc.habit.getDailyChecklist.useQuery({
+    date: currentDate,
+  });
+
+  // Weekly stats for completion dates on mini calendar
+  const { data: weeklyStats } = trpc.habit.getWeeklyStats.useQuery({
+    date: currentDate,
+  });
 
   const createTaskMutation = trpc.task.createTask.useMutation({
     onSuccess: () => {
@@ -87,28 +95,9 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
     setCurrentDate(d);
   };
 
-  // Calculate metrics
-  const completedTasks = dayPlan?.completedTasks || 0;
-  const totalTasks = dayPlan?.totalTasks || 0;
-  const completionRate =
-    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  // Focus score based on completion rate (0-100)
-  const focusScore = completionRate;
-
-  // Get tasks from our new endpoints for the specific date
-  // We use the 'dayPlan' data which already has the tasks for 'currentDate'
-  const todaysTasks = dayPlan?.tasks || [];
-
-  // We also want backlog tasks to populate the right column
-  const { data: backlogTasks } = trpc.task.getBacklogTasks.useQuery(undefined, {
-    staleTime: 1000 * 60 * 5,
-  });
-
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickTask.trim()) return;
-
     createTaskMutation.mutate({
       title: quickTask.trim(),
       scheduledDate: currentDate,
@@ -116,283 +105,323 @@ export function DayPlanningClient({ initialData }: DayPlanningClientProps) {
     });
   };
 
+  const completedDates =
+    weeklyStats?.dailyStats.filter((d) => d.completed > 0).map((d) => d.date) ||
+    [];
+
+  const isToday =
+    format(currentDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+
+  // Calculate total time from pillar data
+  const totalMinutes =
+    checklist?.pillars.reduce((s, p) => s + p.dailyMinutes, 0) || 0;
+
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
-      {/* Header with Quick Actions */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
-            Day Navigation
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            {format(currentDate, "EEEE, MMMM do, yyyy")}
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <Link href="/planning/review" className="w-full sm:w-auto">
-            <Button
-              size="sm"
-              className="w-full bg-[#1a252f] border border-[#a9927d]/50 text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] transition-all font-mono tracking-widest uppercase text-[10px] shadow-xl"
-            >
-              <Heart className="size-3 mr-2" />
-              Daily Review
-            </Button>
-          </Link>
-          <div className="flex items-center justify-between sm:justify-start gap-1 border border-[#2f3e46] rounded-lg p-1 bg-[#0a0c10]">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={prevDay}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="px-3 text-[10px] font-mono uppercase tracking-widest text-gray-400 hover:text-white hover:bg-[#1a252f]"
-              onClick={() => setCurrentDate(new Date())}
-            >
-              Today
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={nextDay}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+    <div className="min-h-screen">
+      {/* ━━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-[#2f3e46]/50">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-[#a9927d]" />
+                  Daily Operating System
+                </h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {format(currentDate, "EEEE, MMMM do, yyyy")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Overall progress badge */}
+              {checklist && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a252f] rounded-lg border border-[#2f3e46]">
+                  <div className="relative w-7 h-7">
+                    <svg className="w-7 h-7" viewBox="0 0 28 28">
+                      <circle
+                        cx="14"
+                        cy="14"
+                        r="11"
+                        fill="none"
+                        stroke="#2f3e46"
+                        strokeWidth="3"
+                      />
+                      <circle
+                        cx="14"
+                        cy="14"
+                        r="11"
+                        fill="none"
+                        stroke="#a9927d"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(checklist.overallRate / 100) * 69} 69`}
+                        transform="rotate(-90 14 14)"
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-bold text-white">
+                      {checklist.totalCompleted}/{checklist.totalHabits}
+                    </span>
+                    <span className="text-[9px] font-mono text-gray-500 block">
+                      habits done
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Time allocation badge */}
+              <div className="px-3 py-1.5 bg-[#1a252f] rounded-lg border border-[#2f3e46]">
+                <span className="text-[10px] font-mono text-[#a9927d]">
+                  {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+                </span>
+                <span className="text-[9px] font-mono text-gray-500 block">
+                  focused work
+                </span>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-1 border border-[#2f3e46] rounded-lg p-1 bg-[#0a0c10]">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={prevDay}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-3 text-[10px] font-mono uppercase tracking-widest text-gray-400 hover:text-white"
+                  onClick={() => setCurrentDate(new Date())}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={nextDay}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Action buttons */}
+              <Link href="/planning/review">
+                <Button
+                  size="sm"
+                  className="bg-[#1a252f] border border-[#a9927d]/50 text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] font-mono tracking-widest uppercase text-[10px] h-8"
+                >
+                  <Heart className="size-3 mr-1.5" />
+                  Review
+                </Button>
+              </Link>
+
+              {isToday && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#2f3e46] bg-[#0a0c10] text-gray-300 hover:text-white hover:border-[#a9927d] font-mono tracking-widest uppercase text-[10px] h-8"
+                  onClick={() => setIsReviewOpen(true)}
+                >
+                  <Moon className="size-3 mr-1.5" />
+                  Evening
+                </Button>
+              )}
+
+              <NoteEditor
+                dayPlanId={dayPlan?.dayPlan?.id}
+                title={format(currentDate, "MMM do")}
+              />
+            </div>
           </div>
 
-          {format(currentDate, "yyyy-MM-dd") ===
-            format(new Date(), "yyyy-MM-dd") && (
+          {/* Quick Add */}
+          <form onSubmit={handleQuickAdd} className="flex gap-2 mt-3">
+            <div className="relative flex-1">
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Quick add task for today..."
+                value={quickTask}
+                onChange={(e) => setQuickTask(e.target.value)}
+                className="pl-10 h-9 bg-[#0a0c10] border-[#2f3e46] text-white focus-visible:ring-[#a9927d] font-light placeholder:text-gray-600 text-sm"
+              />
+            </div>
             <Button
-              variant="outline"
-              className="w-full sm:w-auto border-[#2f3e46] bg-[#0a0c10] text-gray-300 hover:text-white hover:border-[#a9927d] font-mono tracking-widest uppercase text-[10px]"
-              onClick={() => setIsReviewOpen(true)}
+              type="submit"
+              disabled={createTaskMutation.isPending}
+              className="h-9 bg-[#1a252f] border border-[#2f3e46] text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] font-mono tracking-widest uppercase text-[10px]"
             >
-              <Moon className="size-3 mr-2" />
-              Evening Review
+              <Plus className="h-3 w-3 mr-1.5" />
+              Add
             </Button>
-          )}
-
-          <NoteEditor
-            dayPlanId={dayPlan?.dayPlan?.id}
-            title={format(currentDate, "MMM do")}
-          />
+          </form>
         </div>
       </div>
 
       <EveningReview open={isReviewOpen} onOpenChange={setIsReviewOpen} />
 
-      {/* Quick Add Bar */}
-      <form
-        onSubmit={handleQuickAdd}
-        className="flex flex-col sm:flex-row gap-3"
-      >
-        <div className="relative flex-1">
-          <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Quick add task..."
-            value={quickTask}
-            onChange={(e) => setQuickTask(e.target.value)}
-            className="pl-10 h-11 sm:h-10 bg-[#0a0c10] border-[#2f3e46] text-white focus-visible:ring-[#a9927d] font-light placeholder:text-gray-600"
-          />
-        </div>
-        <Button
-          type="submit"
-          disabled={createTaskMutation.isPending}
-          className="h-11 sm:h-10 bg-[#1a252f] border border-[#2f3e46] text-[#a9927d] hover:bg-[#a9927d] hover:text-[#1a252f] transition-all font-mono tracking-widest uppercase text-[10px]"
-        >
-          <Plus className="h-3 w-3 mr-2" />
-          Add Task
-        </Button>
-      </form>
+      {/* ━━━ Main Grid ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* ── LEFT COLUMN: Calendar + Progress + Schedule ─────────────── */}
+          <div className="lg:col-span-3 space-y-4">
+            <MiniCalendar
+              selectedDate={currentDate}
+              onSelectDate={setCurrentDate}
+              completedDates={completedDates}
+            />
 
-      {/* First-use onboarding */}
-      <DayPlanOnboarding />
+            <PillarProgressChart date={currentDate} />
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Metrics & Focus */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Today's Metrics */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
-            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-4">
-              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
-                <TrendingUp className="h-4 w-4 text-[#a9927d]" />
-                Today's Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center py-4">
-                <div className="relative">
-                  <svg className="w-32 h-32" viewBox="0 0 100 100">
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      className="text-muted/20"
+            {/* Pillar time allocation summary */}
+            <div className="bg-[#1a252f] rounded-xl border border-[#2f3e46] p-3">
+              <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d] mb-2">
+                Focus Blocks
+              </h3>
+              <div className="space-y-1.5">
+                {checklist?.pillars.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: p.color }}
                     />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="none"
-                      stroke="url(#gradient)"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${focusScore * 2.51} 251`}
-                      transform="rotate(-90 50 50)"
-                    />
-                    <defs>
-                      <linearGradient
-                        id="gradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="100%"
-                        y2="0%"
-                      >
-                        <stop offset="0%" stopColor="#a9927d" />
-                        <stop offset="100%" stopColor="#d4c4b7" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-3xl font-bold">{focusScore}</span>
-                      <span className="text-sm text-muted-foreground block">
-                        Focus
-                      </span>
+                    <span className="text-[10px] text-gray-400 flex-1 truncate">
+                      {p.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">
+                      {p.dailyMinutes}m
+                    </span>
+                    <div className="w-12 h-1 bg-[#0a0c10] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${p.completionRate}%`,
+                          backgroundColor: p.color,
+                        }}
+                      />
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-center p-3 rounded-lg bg-[#0a0c10] border border-[#2f3e46] shadow-inner">
-                  <div className="text-2xl font-light text-white">
-                    {completedTasks}
-                  </div>
-                  <div className="text-[10px] uppercase font-mono tracking-widest text-[#a9927d] mt-1">
-                    Completed
-                  </div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-[#0a0c10] border border-[#2f3e46] shadow-inner">
-                  <div className="text-2xl font-light text-white">
-                    {totalTasks - completedTasks}
-                  </div>
-                  <div className="text-[10px] uppercase font-mono tracking-widest text-gray-500 mt-1">
-                    Remaining
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Goal Progress - Shows goals linked to today's tasks */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
-            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-3">
-              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
-                <Target className="h-4 w-4 text-[#a9927d]" />
-                Today's Goal Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {dayPlan?.tasks?.filter((t: any) => t.keyStepId).length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No goal-linked tasks today. Link tasks to goals for progress
-                  tracking.
-                </p>
-              ) : (
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Tasks linked to goals:{" "}
-                    {dayPlan?.tasks?.filter((t: any) => t.keyStepId).length ||
-                      0}
-                  </p>
-                  <p>Complete tasks to update goal progress automatically.</p>
-                </div>
+          {/* ── CENTER COLUMN: The 5-Pillar Operating Card ──────────────── */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Section header */}
+            <div className="flex items-center gap-2 px-1">
+              <Zap className="w-4 h-4 text-[#a9927d]" />
+              <h2 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d]">
+                Daily Operating Card
+              </h2>
+              <div className="flex-1 h-px bg-[#2f3e46]/50" />
+              {checklist && (
+                <span className="text-[10px] font-mono text-gray-500">
+                  {checklist.overallRate}% complete
+                </span>
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Daily Win */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl">
-            <CardHeader className="pb-2 border-b border-[#2f3e46]/50 mb-3">
-              <CardTitle className="text-xs font-mono uppercase tracking-widest flex items-center gap-2 text-white">
-                <Trophy className="h-4 w-4 text-[#a9927d]" />
-                Daily Win
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 rounded-lg bg-[#0a0c10] border border-[#a9927d]/30 italic text-sm text-gray-300 font-serif">
+            {/* Pillar cards */}
+            {checklist?.pillars.map((pillar) => (
+              <PillarCard key={pillar.id} pillar={pillar} date={currentDate} />
+            ))}
+
+            {/* Content ideas */}
+            <ContentIdeaPanel />
+
+            {/* Proposal generator */}
+            <ProposalTemplateModal />
+          </div>
+
+          {/* ── RIGHT COLUMN: Schedule + Distribution + Channels ────────── */}
+          <div className="lg:col-span-4 space-y-4">
+            <DailyScheduleTimeline date={currentDate} />
+
+            <ContentDistributionChecklist date={currentDate} />
+
+            <LeadChannelsList />
+
+            {/* Daily win */}
+            <div className="bg-[#1a252f] rounded-xl border border-[#2f3e46] p-4">
+              <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d] mb-2 flex items-center gap-2">
+                🏆 Daily Win
+              </h3>
+              <div className="p-3 rounded-lg bg-[#0a0c10] border border-[#a9927d]/20 italic text-sm text-gray-300 font-serif">
                 {dayPlan?.dayPlan?.dailyWin ||
-                  todayWellbeing?.dailyWin ||
                   "What's your one big win for today?"}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
 
-        {/* Center Column: Today's Agenda */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl flex flex-col h-[500px] lg:h-[calc(100vh-220px)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#2f3e46]/50 mb-4 shrink-0">
-              <div>
-                <CardTitle className="text-xs font-mono uppercase tracking-widest text-white flex items-center gap-2">
-                  <Flag className="h-4 w-4 text-[#a9927d]" />
-                  Today's Agenda
-                </CardTitle>
-                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
-                  {completedTasks} of {totalTasks} completed ({completionRate}%)
-                </CardDescription>
+            {/* Tasks for today */}
+            {dayPlan && dayPlan.tasks && dayPlan.tasks.length > 0 && (
+              <div className="bg-[#1a252f] rounded-xl border border-[#2f3e46] overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#2f3e46]/50 flex items-center justify-between">
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-[#a9927d]">
+                    Today's Tasks
+                  </h3>
+                  <Link href="/tasks">
+                    <span className="text-[9px] font-mono text-gray-500 hover:text-[#a9927d] transition-colors">
+                      View All →
+                    </span>
+                  </Link>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {dayPlan.tasks.slice(0, 8).map((task: any) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors"
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          task.status === "done"
+                            ? "bg-emerald-400"
+                            : task.status === "in_progress"
+                              ? "bg-amber-400"
+                              : "bg-gray-600"
+                        }`}
+                      />
+                      <span
+                        className={`text-xs flex-1 truncate ${
+                          task.status === "done"
+                            ? "line-through text-gray-600"
+                            : "text-gray-300"
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                      {task.project && (
+                        <span
+                          className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: `${task.project.color}20`,
+                            color: task.project.color,
+                          }}
+                        >
+                          {task.project.name}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <TaskList
-                tasks={todaysTasks}
-                emptyMessage="No tasks scheduled for today. Add one above or pull from the backlog!"
-                variant="agenda"
-              />
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Right Column: Backlog */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="bg-[#1a252f] border-[#2f3e46] shadow-xl flex flex-col h-[500px] lg:h-[calc(100vh-220px)] opacity-90">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#2f3e46]/50 mb-4 shrink-0">
-              <div>
-                <CardTitle className="text-xs font-mono uppercase tracking-widest text-white flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-gray-400" />
-                  Backlog & Overdue
-                </CardTitle>
-                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
-                  Unscheduled Tasks
-                </CardDescription>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                asChild
-                className="h-7 text-[10px] font-mono border-[#2f3e46] bg-transparent text-gray-400 hover:text-white pb-0"
-              >
-                <Link href="/tasks">View All</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <TaskList
-                tasks={backlogTasks}
-                emptyMessage="Inbox is zero. Excellent work!"
-                variant="backlog"
-              />
-            </CardContent>
-          </Card>
-        </div>
+      {/* Footer */}
+      <div className="text-center py-6 border-t border-[#2f3e46]/20 mt-8">
+        <p className="text-[10px] font-mono text-muted-foreground/30 uppercase tracking-widest">
+          openinfinity.co.za · Daily Operating System · 2026 · Built for
+          founders who are serious about growth.
+        </p>
       </div>
     </div>
   );

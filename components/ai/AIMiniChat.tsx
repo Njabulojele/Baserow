@@ -58,10 +58,12 @@ export function AIMiniChat() {
    */
   const getHeaders = async (): Promise<Record<string, string>> => {
     try {
-      // Timeout getToken after 3s in case Clerk JS failed to load
+      // Increase getToken timeout to 10s in case of slow network/Clerk refresh
       const token = await Promise.race([
         getToken(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error("Token timeout")), 10000),
+        ),
       ]);
       return {
         "Content-Type": "application/json",
@@ -225,6 +227,9 @@ export function AIMiniChat() {
 
   // Dragging
   const onDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Disable dragging on mobile devices
+    if (typeof window !== "undefined" && window.innerWidth < 640) return;
+
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
     setIsDragging(true);
@@ -324,14 +329,19 @@ export function AIMiniChat() {
       {/* Chat Window */}
       {isOpen && (
         <div
-          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-          className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] rounded-2xl bg-[#0a0c10] border border-[#2f3e46] shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"
+          style={
+            {
+              "--tx": `${position.x}px`,
+              "--ty": `${position.y}px`,
+            } as React.CSSProperties
+          }
+          className="fixed z-50 bottom-0 right-0 w-full h-[100dvh] sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[520px] sm:rounded-2xl bg-[#0a0c10] border-t sm:border border-[#2f3e46] shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 sm:translate-x-[var(--tx)] sm:translate-y-[var(--ty)]"
         >
           {/* Header */}
           <div
             onMouseDown={onDragStart}
             onTouchStart={onDragStart}
-            className="flex items-center justify-between px-4 py-3 border-b border-[#2f3e46] bg-[#1a252f] cursor-grab active:cursor-grabbing shrink-0 select-none"
+            className="flex items-center justify-between px-4 py-3 border-b border-[#2f3e46] bg-[#1a252f] sm:cursor-grab active:sm:cursor-grabbing shrink-0 select-none"
           >
             <div className="flex items-center gap-2">
               <GripVertical className="h-3.5 w-3.5 text-gray-600" />

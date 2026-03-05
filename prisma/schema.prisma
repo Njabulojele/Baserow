@@ -62,6 +62,11 @@ model User {
   version            Int              @default(1)
   aiContext          UserAIContext?
   apiKeys            ApiKey[]
+  pillars            Pillar[]
+  habitTemplates     HabitTemplate[]
+  habitLogs          HabitLog[]
+  contentIdeas       ContentIdea[]
+  proposalTemplates  ProposalTemplate[]
 }
 
 model YearPlan {
@@ -1505,4 +1510,101 @@ model CreditLedger {
   createdAt   DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ─── Daily Operating System Models ────────────────────────────────────────────
+
+/// A focus pillar in the daily operating system (e.g. Leads, Clients, Products)
+model Pillar {
+  id              String          @id @default(cuid())
+  userId          String
+  name            String
+  icon            String          @default("target")   // lucide icon name
+  color           String          @default("#a9927d")   // hex colour for the pillar
+  dailyMinutes    Int             @default(45)           // target time allocation
+  order           Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitTemplates  HabitTemplate[]
+
+  @@index([userId])
+}
+
+/// A recurring habit/action within a pillar (e.g. "Send 5 LinkedIn requests")
+model HabitTemplate {
+  id              String      @id @default(cuid())
+  userId          String
+  pillarId        String
+  title           String
+  description     String?
+  estimatedMinutes Int        @default(10)
+  platform        String?     // e.g. "linkedin", "gmail", "facebook", "youtube", "blog"
+  platformIcon    String?     // lucide or custom icon name
+  recurrence      String      @default("daily")  // "daily" | "weekly" | "custom"
+  customDays      String[]    @default([])        // e.g. ["monday", "wednesday"] for custom
+  order           Int         @default(0)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pillar          Pillar      @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+  habitLogs       HabitLog[]
+
+  @@index([userId])
+  @@index([pillarId])
+}
+
+/// Date-stamped record of a habit being checked off — one per habit per day
+model HabitLog {
+  id              String        @id @default(cuid())
+  userId          String
+  habitTemplateId String
+  date            DateTime      @db.Date
+  completed       Boolean       @default(true)
+  completedAt     DateTime      @default(now())
+  notes           String?
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitTemplate   HabitTemplate @relation(fields: [habitTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([habitTemplateId, date])
+  @@index([userId, date])
+  @@index([habitTemplateId])
+}
+
+/// Content idea bank with platform tags and optional research link
+model ContentIdea {
+  id              String    @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  platform        String    @default("linkedin") // linkedin, facebook, youtube, blog, email
+  status          String    @default("idea")      // idea, researched, drafted, published
+  researchId      String?  // link to Research for AI-powered validation
+  publishedUrl    String?
+  scheduledDate   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+/// Reusable client proposal templates with variable placeholders
+model ProposalTemplate {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  description     String?
+  content         String   // Markdown with {{variable}} placeholders
+  variables       String[] @default([]) // list of variable names e.g. ["clientName","projectScope"]
+  category        String   @default("general") // general, web_design, marketing, saas
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
