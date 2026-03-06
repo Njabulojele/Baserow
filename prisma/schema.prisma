@@ -67,6 +67,7 @@ model User {
   habitLogs          HabitLog[]
   contentIdeas       ContentIdea[]
   proposalTemplates  ProposalTemplate[]
+  prospectingAgents  ProspectingAgent[]
 }
 
 model YearPlan {
@@ -783,7 +784,8 @@ model LeadData {
 
 model Lead {
   id              String    @id @default(cuid())
-  leadDataId      String
+  leadDataId      String?
+  agentId         String?   // Links to the new ProspectingAgent
   name            String
   company         String?
   email           String?
@@ -796,15 +798,22 @@ model Lead {
   suggestedDM     String
   suggestedEmail  String
   personalization Json?
+  whyIsLead       String?   // New field: Why this contact is a lead
+  offerPositioning String?  // New field: How to position the offer
+  sourceUrl       String?   // New field: Where this lead was found
+  contextSnippet  String?   // The actual post/chat/content snippet from the source
   contacted       Boolean   @default(false)
   contactedAt     DateTime?
   score           Float     @default(0)
   tier            String    @default("UNSCORED")
   promotedToCrmId String?   @unique
   createdAt       DateTime  @default(now())
-  leadData        LeadData  @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
+  
+  leadData        LeadData?         @relation(fields: [leadDataId], references: [id], onDelete: Cascade)
+  agent           ProspectingAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
 
   @@index([leadDataId])
+  @@index([agentId])
   @@index([score])
   @@index([tier])
 }
@@ -1605,6 +1614,24 @@ model ProposalTemplate {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ProspectingAgent {
+  id              String      @id @default(cuid())
+  userId          String
+  name            String
+  platform        String      // e.g. "reddit", "google"
+  searchKeywords  String[]    // Keywords to search for
+  status          String      @default("ACTIVE") // ACTIVE or INACTIVE
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads           Lead[]
 
   @@index([userId])
 }

@@ -33,9 +33,15 @@ export function SignInForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
-    if (!isLoaded) return;
+    if (!isLoaded) {
+      setError(
+        "Authentication system is still loading. If this persists, please check your connection (or missing API keys).",
+      );
+      return;
+    }
+
+    setIsLoading(true);
 
     if (isSignedIn) {
       router.push("/dashboard");
@@ -83,7 +89,19 @@ export function SignInForm() {
 
   // Handle Social Login (Google)
   const handleGoogleLogin = async () => {
-    if (!isLoaded) return;
+    console.log(
+      "Google Login button clicked. isLoaded:",
+      isLoaded,
+      "isSignedIn:",
+      isSignedIn,
+    );
+
+    if (!isLoaded) {
+      setError(
+        "Authentication system is still loading. If this persists, please check your connection (or missing API keys).",
+      );
+      return;
+    }
 
     if (isSignedIn) {
       router.push("/dashboard");
@@ -99,7 +117,10 @@ export function SignInForm() {
       });
     } catch (err: any) {
       console.error("OAuth error:", err);
-      setError("Failed to initiate Google login.");
+      setError(
+        "Failed to initiate Google login: " +
+          (err?.errors?.[0]?.longMessage || err.message || "Unknown error"),
+      );
       setIsLoading(false);
     }
   };
@@ -112,6 +133,7 @@ export function SignInForm() {
       {/* Social Login */}
       <div className="grid grid-cols-1 gap-4">
         <Button
+          type="button"
           variant="outline"
           className="w-full h-12 text-base font-medium relative hover:bg-muted/50 transition-colors border-input"
           onClick={handleGoogleLogin}

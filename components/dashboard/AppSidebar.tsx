@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 const mainRoutes = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Day Navigation", icon: Calendar, href: "/planning/day" },
+  { label: "Platform Leads", icon: Target, href: "/platform-lead" },
   { label: "Strategy", icon: Target, href: "/strategy" },
   { label: "Tasks", icon: CheckSquare, href: "/tasks" },
   { label: "Projects", icon: FolderOpen, href: "/projects" },

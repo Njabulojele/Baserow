@@ -57,7 +57,7 @@ export class GeminiClient {
   private apiKey: string;
   private modelName: string;
 
-  constructor(encryptedApiKey: string, modelName: string = "gemini-2.0-pro") {
+  constructor(encryptedApiKey: string, modelName: string = "gemini-2.5-flash") {
     const apiKey = decryptApiKey(encryptedApiKey);
     if (!apiKey) {
       throw new Error("Invalid or missing API key after decryption");
@@ -94,17 +94,20 @@ export class GeminiClient {
       const sources: { url: string; title: string }[] = [];
       const searchQueries: string[] = [];
 
-      if (searchOutput && (searchOutput as any).search_results) {
-        for (const result of (searchOutput as any).search_results) {
-          if (result.url) {
-            sources.push({
-              url: result.url,
-              title: result.title || result.url,
-            });
-          }
-          if (result.search_query) {
-            searchQueries.push(result.search_query);
-          }
+      // Gemini 2.5+ returns results under `.result`, older versions use `.search_results`
+      const rawResults =
+        (searchOutput as any)?.result ||
+        (searchOutput as any)?.search_results ||
+        [];
+      for (const item of rawResults) {
+        if (item.url) {
+          sources.push({
+            url: item.url,
+            title: item.title || item.url,
+          });
+        }
+        if (item.search_query) {
+          searchQueries.push(item.search_query);
         }
       }
 

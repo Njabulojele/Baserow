@@ -52,6 +52,7 @@ import { chatRouter } from "./chat";
 import { habitRouter } from "./habit";
 import { contentIdeaRouter } from "./contentIdea";
 import { proposalTemplateRouter } from "./proposalTemplate";
+import { prospectingRouter } from "./prospecting";
 
 export const appRouter = router({
   task: taskRouter,
@@ -107,6 +108,7 @@ export const appRouter = router({
   habit: habitRouter,
   contentIdea: contentIdeaRouter,
   proposalTemplate: proposalTemplateRouter,
+  prospecting: prospectingRouter,
 });
 
 export type AppRouter = typeof appRouter;
