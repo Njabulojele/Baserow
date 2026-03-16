@@ -383,8 +383,8 @@ function ShapeContent({ node }: { node: CanvasNodeType }) {
               height="96"
               rx={node.shapeType === "roundedRect" ? 12 : 0}
               fill={fill}
-              stroke={stroke}
-              strokeWidth={sw}
+              // stroke={stroke}
+              // strokeWidth={sw}
             />
           </svg>
         );

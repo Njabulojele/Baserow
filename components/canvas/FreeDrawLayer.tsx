@@ -23,13 +23,76 @@ export function FreeDrawLayer({
   const penPaths = currentPath ? [...drawings, currentPath] : drawings;
   const hasContent = penPaths.length > 0 || (arrowStart && arrowEnd);
 
-  const handleArrowClick = useCallback(
+  const handleArrowMouseDown = useCallback(
     (e: React.MouseEvent, id: string) => {
       if (activeTool !== "select") return;
       e.stopPropagation();
       selectDrawing(id);
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const vpZoom = useCanvasStore.getState().viewport.zoom;
+
+      let lastX = startX;
+      let lastY = startY;
+
+      const onMove = (ev: MouseEvent) => {
+        const dx = (ev.clientX - lastX) / vpZoom;
+        const dy = (ev.clientY - lastY) / vpZoom;
+        useCanvasStore.getState().moveDrawing(id, dx, dy);
+        lastX = ev.clientX;
+        lastY = ev.clientY;
+      };
+
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        useCanvasStore.getState().pushHistory();
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
     },
     [activeTool, selectDrawing],
+  );
+
+  const handleEndpointMouseDown = useCallback(
+    (
+      e: React.MouseEvent,
+      id: string,
+      pointIndex: number,
+      currentPoints: { x: number; y: number }[],
+    ) => {
+      if (activeTool !== "select") return;
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const vpZoom = useCanvasStore.getState().viewport.zoom;
+      const initialPoint = currentPoints[pointIndex];
+
+      const onMove = (ev: MouseEvent) => {
+        const dx = (ev.clientX - startX) / vpZoom;
+        const dy = (ev.clientY - startY) / vpZoom;
+
+        const newPoints = [...currentPoints];
+        newPoints[pointIndex] = {
+          x: initialPoint.x + dx,
+          y: initialPoint.y + dy,
+        };
+        useCanvasStore.getState().updateDrawingPoints(id, newPoints);
+      };
+
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        useCanvasStore.getState().pushHistory();
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [activeTool],
   );
 
   if (!hasContent) return null;
@@ -112,7 +175,7 @@ export function FreeDrawLayer({
                   pointerEvents: activeTool === "select" ? "stroke" : "none",
                   cursor: "pointer",
                 }}
-                onClick={(e) => handleArrowClick(e, path.id)}
+                onMouseDown={(e) => handleArrowMouseDown(e, path.id)}
               />
               {/* Visible arrow line */}
               <line
@@ -139,20 +202,37 @@ export function FreeDrawLayer({
                   <circle
                     cx={start.x + O}
                     cy={start.y + O}
-                    r={5}
+                    r={6}
                     fill="#3B82F6"
                     stroke="#fff"
                     strokeWidth={1.5}
-                    style={{ pointerEvents: "none" }}
+                    style={{
+                      pointerEvents: activeTool === "select" ? "all" : "none",
+                      cursor: activeTool === "select" ? "crosshair" : "default",
+                    }}
+                    onMouseDown={(e) =>
+                      handleEndpointMouseDown(e, path.id, 0, path.points)
+                    }
                   />
                   <circle
                     cx={end.x + O}
                     cy={end.y + O}
-                    r={5}
+                    r={6}
                     fill="#3B82F6"
                     stroke="#fff"
                     strokeWidth={1.5}
-                    style={{ pointerEvents: "none" }}
+                    style={{
+                      pointerEvents: activeTool === "select" ? "all" : "none",
+                      cursor: activeTool === "select" ? "crosshair" : "default",
+                    }}
+                    onMouseDown={(e) =>
+                      handleEndpointMouseDown(
+                        e,
+                        path.id,
+                        path.points.length - 1,
+                        path.points,
+                      )
+                    }
                   />
                 </>
               )}

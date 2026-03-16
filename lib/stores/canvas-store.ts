@@ -234,6 +234,10 @@ interface CanvasActions {
   selectDrawing: (id: string | null) => void;
   deleteSelectedDrawing: () => void;
   moveDrawing: (id: string, dx: number, dy: number) => void;
+  updateDrawingPoints: (
+    id: string,
+    newPoints: { x: number; y: number }[],
+  ) => void;
 
   // Grid
   toggleGrid: () => void;
@@ -635,6 +639,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
                 points: d.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
               }
             : d,
+        ),
+        isDirty: true,
+      })),
+
+    updateDrawingPoints: (id, newPoints) =>
+      set((s) => ({
+        drawings: s.drawings.map((d) =>
+          d.id === id ? { ...d, points: newPoints } : d,
         ),
         isDirty: true,
       })),

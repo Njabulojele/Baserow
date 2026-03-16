@@ -711,8 +711,9 @@ function getNodeDefaults(
         height: 120,
         shapeType: shapeType as import("@/lib/stores/canvas-store").ShapeType,
         fillColor: "#1a252f",
-        borderColor: "#a9927d",
-        borderWidth: 2,
+        borderColor: "#ffffff",
+        borderWidth: 1,
+        borderRadius: 12,
         opacity: 1,
       };
     case "section":
