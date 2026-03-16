@@ -23,17 +23,25 @@ import {
   Redo2,
   Trash2,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CanvasToolbarProps {
   onOpenEntityModal: () => void;
 }
 
-const tools: {
+interface ToolItem {
   tool: ToolType;
   icon: React.ReactNode;
   label: string;
-  shortcut: string;
-}[] = [
+  shortcut?: string;
+}
+
+const cursorTools: ToolItem[] = [
   {
     tool: "select",
     icon: <MousePointer2 className="w-4 h-4" />,
@@ -46,6 +54,9 @@ const tools: {
     label: "Pan",
     shortcut: "H",
   },
+];
+
+const createTools: ToolItem[] = [
   {
     tool: "text",
     icon: <Type className="w-4 h-4" />,
@@ -65,6 +76,15 @@ const tools: {
     shortcut: "R",
   },
   {
+    tool: "section",
+    icon: <Frame className="w-4 h-4" />,
+    label: "Section",
+    shortcut: "F",
+  },
+];
+
+const drawTools: ToolItem[] = [
+  {
     tool: "pen",
     icon: <Pencil className="w-4 h-4" />,
     label: "Pen",
@@ -82,37 +102,58 @@ const tools: {
     label: "Arrow",
     shortcut: "A",
   },
-  {
-    tool: "section",
-    icon: <Frame className="w-4 h-4" />,
-    label: "Section",
-    shortcut: "F",
-  },
+];
+
+const extraTools: ToolItem[] = [
   {
     tool: "checklist",
     icon: <CheckSquare className="w-4 h-4" />,
     label: "Checklist",
-    shortcut: "",
   },
-  {
-    tool: "numberBadge",
-    icon: <Hash className="w-4 h-4" />,
-    label: "Number",
-    shortcut: "",
-  },
-  {
-    tool: "embed",
-    icon: <Link2 className="w-4 h-4" />,
-    label: "Embed Link",
-    shortcut: "",
-  },
-  {
-    tool: "image",
-    icon: <Image className="w-4 h-4" />,
-    label: "Image",
-    shortcut: "",
-  },
+  { tool: "numberBadge", icon: <Hash className="w-4 h-4" />, label: "Number" },
+  { tool: "embed", icon: <Link2 className="w-4 h-4" />, label: "Embed Link" },
+  { tool: "image", icon: <Image className="w-4 h-4" />, label: "Image" },
 ];
+
+function ToolButton({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: ToolItem;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
+            isActive
+              ? "bg-white/10 text-white"
+              : "text-white/40 hover:bg-white/5 hover:text-white/70"
+          }`}
+        >
+          {item.icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        className="font-mono text-[10px] uppercase tracking-widest"
+      >
+        {item.label}
+        {item.shortcut && (
+          <span className="ml-1.5 text-white/30">{item.shortcut}</span>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function Divider() {
+  return <div className="w-6 h-px bg-white/10 mx-auto my-0.5" />;
+}
 
 export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
   const {
@@ -133,138 +174,207 @@ export function CanvasToolbar({ onOpenEntityModal }: CanvasToolbarProps) {
   } = useCanvasStore();
 
   return (
-    <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-[#0a0c10]/95 backdrop-blur-md border border-[#2f3e46] rounded-xl p-1.5 shadow-xl">
-      <div className="grid grid-cols-2 gap-1">
-        {tools.map(({ tool, icon, label, shortcut }) => (
-          <button
-            key={tool}
-            onClick={() => setActiveTool(tool)}
-            className={`relative w-9 h-9 flex items-center justify-center rounded-lg transition-all group ${
-              activeTool === tool
-                ? "bg-[#1a252f] text-[#a9927d] border border-[#a9927d]/40"
-                : "text-gray-500 hover:bg-[#1a252f] hover:text-white border border-transparent"
-            }`}
-            title={`${label}${shortcut ? ` (${shortcut})` : ""}`}
-          >
-            {icon}
-            {/* Tooltip */}
-            <div className="absolute left-12 px-2 py-1 bg-[#1a252f] rounded-md text-[10px] font-mono uppercase tracking-widest text-[#a9927d] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-[#2f3e46] shadow-lg z-50">
-              {label}
-              {shortcut && (
-                <span className="ml-1.5 text-gray-500 font-mono">
-                  {shortcut}
-                </span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="w-full h-px bg-[#2f3e46] my-1" />
-
-      {/* Entity button */}
-      <div className="flex justify-center">
-        <button
-          onClick={onOpenEntityModal}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all group relative border border-transparent hover:border-[#a9927d]/40"
-          title="Attach Entity"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <div className="absolute left-12 px-2 py-1 bg-[#1a252f] rounded-md text-[10px] font-mono tracking-widest uppercase text-[#a9927d] whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity border border-[#2f3e46] shadow-lg z-50">
-            Attach Entity
-          </div>
-        </button>
-      </div>
-
-      <div className="w-full h-px bg-[#2f3e46] my-1" />
-
-      {/* Pen options (visible when pen/eraser active) */}
-      {(activeTool === "pen" || activeTool === "eraser") && (
-        <div className="flex flex-col gap-1 items-center px-0.5">
-          {activeTool === "pen" && (
-            <input
-              type="color"
-              value={penColor}
-              onChange={(e) => setPenColor(e.target.value)}
-              className="w-7 h-7 rounded border-none cursor-pointer bg-transparent"
-              title="Pen color"
-            />
-          )}
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={penThickness}
-            onChange={(e) => setPenThickness(Number(e.target.value))}
-            className="w-8 appearance-none bg-[#0a0c10] border border-[#2f3e46] h-1 rounded-full accent-[#a9927d]"
-            style={{
-              writingMode: "vertical-lr" as React.CSSProperties["writingMode"],
-              height: 50,
-            }}
-            title="Thickness"
+    <TooltipProvider delayDuration={200}>
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5 bg-[#0a0c10]/90 backdrop-blur-xl rounded-2xl p-1.5 shadow-2xl shadow-black/40 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
+        {/* Cursor */}
+        {cursorTools.map((item) => (
+          <ToolButton
+            key={item.tool}
+            item={item}
+            isActive={activeTool === item.tool}
+            onClick={() => setActiveTool(item.tool)}
           />
-          <div className="w-full h-px bg-[#2f3e46] my-1" />
-        </div>
-      )}
+        ))}
 
-      {/* Grid & Snap */}
-      <div className="grid grid-cols-2 gap-1">
-        <button
-          onClick={toggleGrid}
-          className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-            showGrid
-              ? "text-[#a9927d] bg-[#1a252f] border border-[#a9927d]/30"
-              : "text-gray-500 border border-transparent hover:bg-[#1a252f] hover:text-white"
-          }`}
-          title="Toggle Grid"
-        >
-          <Grid3X3 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={toggleSnap}
-          className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all group relative ${
-            snapToGrid
-              ? "text-[#a9927d] bg-[#1a252f] border border-[#a9927d]/30"
-              : "text-gray-500 border border-transparent hover:bg-[#1a252f] hover:text-white"
-          }`}
-          title="Snap to Grid"
-        >
-          <Magnet className="w-4 h-4" />
-        </button>
-      </div>
+        <Divider />
 
-      <div className="w-full h-px bg-[#2f3e46] my-1" />
+        {/* Create */}
+        {createTools.map((item) => (
+          <ToolButton
+            key={item.tool}
+            item={item}
+            isActive={activeTool === item.tool}
+            onClick={() => setActiveTool(item.tool)}
+          />
+        ))}
 
-      {/* Undo / Redo */}
-      <div className="grid grid-cols-2 gap-1">
-        <button
-          onClick={undo}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all border border-transparent"
-          title="Undo (Ctrl+Z)"
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-        <button
-          onClick={redo}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-[#1a252f] hover:text-white transition-all border border-transparent"
-          title="Redo (Ctrl+Y)"
-        >
-          <Redo2 className="w-4 h-4" />
-        </button>
-      </div>
+        <Divider />
 
-      {/* Delete */}
-      {selectedNodeIds.size > 0 && (
-        <div className="flex justify-center mt-1">
-          <button
-            onClick={deleteSelectedNodes}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 hover:border-red-500/30 transition-all border border-transparent"
-            title="Delete selected"
+        {/* Draw */}
+        {drawTools.map((item) => (
+          <ToolButton
+            key={item.tool}
+            item={item}
+            isActive={activeTool === item.tool}
+            onClick={() => setActiveTool(item.tool)}
+          />
+        ))}
+
+        {/* Pen options when pen or eraser active */}
+        {(activeTool === "pen" || activeTool === "eraser") && (
+          <div className="flex flex-col items-center gap-1 py-1">
+            {activeTool === "pen" && (
+              <input
+                type="color"
+                value={penColor}
+                onChange={(e) => setPenColor(e.target.value)}
+                className="w-6 h-6 rounded-full border-none cursor-pointer bg-transparent"
+                title="Pen color"
+              />
+            )}
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={penThickness}
+              onChange={(e) => setPenThickness(Number(e.target.value))}
+              className="appearance-none bg-transparent h-1 rounded-full accent-white/60"
+              style={{
+                writingMode:
+                  "vertical-lr" as React.CSSProperties["writingMode"],
+                height: 40,
+                width: 4,
+              }}
+              title="Thickness"
+            />
+          </div>
+        )}
+
+        <Divider />
+
+        {/* Extras */}
+        {extraTools.map((item) => (
+          <ToolButton
+            key={item.tool}
+            item={item}
+            isActive={activeTool === item.tool}
+            onClick={() => setActiveTool(item.tool)}
+          />
+        ))}
+
+        {/* Entity */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onOpenEntityModal}
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-white/40 hover:bg-white/5 hover:text-white/70 transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="font-mono text-[10px] uppercase tracking-widest"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
+            Attach Entity
+          </TooltipContent>
+        </Tooltip>
+
+        <Divider />
+
+        {/* Canvas controls */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={toggleGrid}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
+                showGrid
+                  ? "text-white/70 bg-white/5"
+                  : "text-white/25 hover:bg-white/5 hover:text-white/50"
+              }`}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="font-mono text-[10px] uppercase tracking-widest"
+          >
+            Grid
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={toggleSnap}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${
+                snapToGrid
+                  ? "text-white/70 bg-white/5"
+                  : "text-white/25 hover:bg-white/5 hover:text-white/50"
+              }`}
+            >
+              <Magnet className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="font-mono text-[10px] uppercase tracking-widest"
+          >
+            Snap
+          </TooltipContent>
+        </Tooltip>
+
+        <Divider />
+
+        {/* Undo / Redo */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={undo}
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-white/25 hover:bg-white/5 hover:text-white/50 transition-all"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="font-mono text-[10px] uppercase tracking-widest"
+          >
+            Undo <span className="text-white/30">⌘Z</span>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={redo}
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-white/25 hover:bg-white/5 hover:text-white/50 transition-all"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            className="font-mono text-[10px] uppercase tracking-widest"
+          >
+            Redo <span className="text-white/30">⌘Y</span>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Delete */}
+        {selectedNodeIds.size > 0 && (
+          <>
+            <Divider />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={deleteSelectedNodes}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-red-500/50 hover:bg-red-500/10 hover:text-red-400 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                className="font-mono text-[10px] uppercase tracking-widest"
+              >
+                Delete
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

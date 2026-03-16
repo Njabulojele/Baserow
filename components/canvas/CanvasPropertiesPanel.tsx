@@ -17,6 +17,12 @@ import {
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64, 72];
 const FONT_FAMILIES = ["Inter", "DM Sans", "Sora", "Roboto Mono", "Georgia"];
 const COLOR_SWATCHES = [
+  "#000000",
+  "#1a1a1a",
+  "#333333",
+  "#666666",
+  "#999999",
+  "#cccccc",
   "#ffffff",
   "#f5f5f4",
   "#d4d4d8",
@@ -206,7 +212,19 @@ export function CanvasPropertiesPanel() {
             Background
           </label>
           <div className="flex flex-wrap gap-1">
-            {COLOR_SWATCHES.slice(0, 12).map((c) => (
+            {/* No fill / transparent button */}
+            <button
+              onClick={() => updateNode(node.id, { bgColor: "transparent" })}
+              className={`w-[18px] h-[18px] rounded transition-transform border border-dashed border-white/20 flex items-center justify-center ${
+                node.bgColor === "transparent" || !node.bgColor
+                  ? "scale-125 ring-1 ring-white/40"
+                  : "hover:scale-110"
+              }`}
+              title="No fill"
+            >
+              <span className="text-[8px] text-white/40 leading-none">∅</span>
+            </button>
+            {COLOR_SWATCHES.slice(0, 14).map((c) => (
               <button
                 key={c}
                 onClick={() => updateNode(node.id, { bgColor: c })}
@@ -225,7 +243,7 @@ export function CanvasPropertiesPanel() {
             Text Color
           </label>
           <div className="flex flex-wrap gap-1">
-            {COLOR_SWATCHES.slice(0, 12).map((c) => (
+            {COLOR_SWATCHES.slice(0, 14).map((c) => (
               <button
                 key={c}
                 onClick={() => updateNode(node.id, { textColor: c })}

@@ -43,9 +43,24 @@ export function CanvasNode({
   useEffect(() => {
     if (isEditing && textRef.current) {
       textRef.current.focus();
-      textRef.current.select();
+      // Only select if there's text to select
+      if (textRef.current.value) {
+        textRef.current.select();
+      }
     }
   }, [isEditing]);
+
+  // Auto-edit: listen for custom event from CanvasViewport when text tool places a node
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.nodeId === node.id) {
+        setIsEditing(true);
+      }
+    };
+    window.addEventListener("canvas-auto-edit", handler);
+    return () => window.removeEventListener("canvas-auto-edit", handler);
+  }, [node.id]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -187,6 +202,7 @@ function TextContent({
       <textarea
         ref={textRef}
         defaultValue={node.text || ""}
+        placeholder="Start typing..."
         onBlur={(e) => {
           updateNode(node.id, { text: e.target.value });
           onDone();
@@ -194,7 +210,7 @@ function TextContent({
         onKeyDown={(e) => {
           if (e.key === "Escape") onDone();
         }}
-        className="w-full h-full bg-transparent resize-none p-3 outline-none"
+        className="w-full h-full bg-transparent resize-none p-3 outline-none placeholder:text-white/20"
         style={{
           color: node.textColor || "#f5f5f4",
           fontSize: node.fontSize || 16,
@@ -217,7 +233,9 @@ function TextContent({
         fontStyle: node.fontStyle || "normal",
       }}
     >
-      {node.text || "Double-click to edit"}
+      {node.text || (
+        <span className="text-white/15 italic">Double-click to edit</span>
+      )}
     </div>
   );
 }

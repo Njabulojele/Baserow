@@ -124,6 +124,7 @@ export function CanvasClient() {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
         useCanvasStore.getState().deleteSelectedNodes();
+        useCanvasStore.getState().deleteSelectedDrawing();
       }
       if (e.key === "Escape") {
         useCanvasStore.getState().deselectAll();

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Heart } from "lucide-react";
 import { NotificationBell } from "@/components/navigation/NotificationBell";
+import { GlobalTimerIndicator } from "@/components/navigation/GlobalTimerIndicator";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { AIMiniChat } from "@/components/ai/AIMiniChat";
 
@@ -70,6 +71,7 @@ export default async function DashboardLayout({
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            <GlobalTimerIndicator />
             <NotificationBell />
           </div>
         </header>
@@ -82,12 +84,12 @@ export default async function DashboardLayout({
                 <Heart className="w-3 h-3 text-red-500/40 fill-red-500/40 inline mx-0.5" />{" "}
                 by{" "}
                 <a
-                  href="https://pinltdco.com"
+                  href="https://www.openinfinity.co.za"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-alabaster transition-colors"
                 >
-                  OpenInfinity Pty Ltd
+                  OpenInfinity
                 </a>
               </p>
             </footer>

@@ -49,36 +49,47 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
     activeShapeType,
     selectNodesInRect,
     pushHistory,
+    startArrow,
+    moveArrow,
+    endArrow,
+    arrowStart,
+    arrowEnd,
   } = useCanvasStore();
 
-  // ---- Pan / Zoom ----
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // ---- Pan / Zoom (native listener for passive:false) ----
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      const { viewport: vp } = useCanvasStore.getState();
       if (e.ctrlKey || e.metaKey) {
         // Zoom
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        const newZoom = Math.max(0.1, Math.min(5, viewport.zoom * delta));
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
+        const newZoom = Math.max(0.1, Math.min(5, vp.zoom * delta));
+        const rect = el.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        const scale = newZoom / viewport.zoom;
-        setViewport({
+        const scale = newZoom / vp.zoom;
+        useCanvasStore.getState().setViewport({
           zoom: newZoom,
-          x: mx - (mx - viewport.x) * scale,
-          y: my - (my - viewport.y) * scale,
+          x: mx - (mx - vp.x) * scale,
+          y: my - (my - vp.y) * scale,
         });
       } else {
         // Pan
-        setViewport({
-          x: viewport.x - e.deltaX,
-          y: viewport.y - e.deltaY,
+        useCanvasStore.getState().setViewport({
+          x: vp.x - e.deltaX,
+          y: vp.y - e.deltaY,
         });
       }
-    },
-    [viewport, setViewport],
-  );
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Space key for panning
   useEffect(() => {
@@ -140,6 +151,11 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
         return;
       }
 
+      if (activeTool === "arrow") {
+        startArrow(pos);
+        return;
+      }
+
       if (activeTool === "select" && e.button === 0) {
         // Start lasso selection
         const rect = containerRef.current?.getBoundingClientRect();
@@ -169,7 +185,18 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
         ].includes(activeTool)
       ) {
         const nodeDefaults = getNodeDefaults(activeTool, activeShapeType, pos);
-        addNode(nodeDefaults);
+        const newId = addNode(nodeDefaults);
+        // For text nodes, auto-select and trigger editing
+        if (activeTool === "text") {
+          useCanvasStore.getState().selectNode(newId);
+          // Set a brief timeout to allow React to render the node before triggering edit
+          setTimeout(() => {
+            const editEvent = new CustomEvent("canvas-auto-edit", {
+              detail: { nodeId: newId },
+            });
+            window.dispatchEvent(editEvent);
+          }, 50);
+        }
         useCanvasStore.getState().setActiveTool("select");
       }
     },
@@ -180,6 +207,7 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
       deselectAll,
       addNode,
       startDrawing,
+      startArrow,
       activeShapeType,
     ],
   );
@@ -200,6 +228,12 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
       if ((activeTool === "pen" || activeTool === "eraser") && isDrawing) {
         const pos = screenToCanvas(e.clientX, e.clientY);
         continueDrawing(pos);
+        return;
+      }
+
+      if (activeTool === "arrow" && arrowStart) {
+        const pos = screenToCanvas(e.clientX, e.clientY);
+        moveArrow(pos);
         return;
       }
 
@@ -226,8 +260,10 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
       setViewport,
       activeTool,
       isDrawing,
+      arrowStart,
       screenToCanvas,
       continueDrawing,
+      moveArrow,
       selectionRect,
       broadcastCursor,
     ],
@@ -241,6 +277,10 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
 
     if ((activeTool === "pen" || activeTool === "eraser") && isDrawing) {
       endDrawing();
+    }
+
+    if (activeTool === "arrow" && arrowStart) {
+      endArrow();
     }
 
     if (selectionRect && selectionRect.width > 5 && selectionRect.height > 5) {
@@ -270,7 +310,9 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
   }, [
     activeTool,
     isDrawing,
+    arrowStart,
     endDrawing,
+    endArrow,
     setIsPanning,
     selectionRect,
     screenToCanvas,
@@ -480,7 +522,6 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
               : "cursor-default"
       }`}
       onContextMenu={(e) => e.preventDefault()}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -513,8 +554,13 @@ export function CanvasViewport({ boardId }: { boardId: string }) {
         {/* Connections */}
         <ConnectionLayer nodes={nodes} connections={connections} />
 
-        {/* Free draw */}
-        <FreeDrawLayer drawings={drawings} currentPath={currentDrawingPath} />
+        {/* Free draw + arrows */}
+        <FreeDrawLayer
+          drawings={drawings}
+          currentPath={currentDrawingPath}
+          arrowStart={arrowStart}
+          arrowEnd={arrowEnd}
+        />
 
         {/* Nodes (Filtered by Viewport Culling) */}
         {visibleNodes.map((node) => (
@@ -632,15 +678,15 @@ function getNodeDefaults(
         type: "text" as const,
         width: 240,
         height: 60,
-        text: "Double-click to edit",
+        text: "",
         fontSize: 16,
         fontFamily: "Inter",
         textColor: "#f5f5f4",
-        bgColor: "#1a252f",
-        borderColor: "#2f3e46",
-        borderWidth: 1,
-        borderRadius: 8,
-        borderStyle: "solid",
+        bgColor: "transparent",
+        borderColor: "transparent",
+        borderWidth: 0,
+        borderRadius: 0,
+        borderStyle: "none",
       };
     case "sticky":
       return {
@@ -689,9 +735,9 @@ function getNodeDefaults(
         type: "checklist" as const,
         width: 260,
         height: 200,
-        bgColor: "#1a252f",
-        borderColor: "#2f3e46",
-        borderWidth: 1,
+        bgColor: "rgba(26,37,47,0.6)",
+        borderColor: "transparent",
+        borderWidth: 0,
         borderRadius: 12,
         text: "Checklist",
         checklistItems: [
@@ -717,9 +763,9 @@ function getNodeDefaults(
         embedUrl: "",
         embedTitle: "Link",
         embedDescription: "Paste a URL",
-        bgColor: "#1a252f",
-        borderColor: "#2f3e46",
-        borderWidth: 1,
+        bgColor: "rgba(26,37,47,0.6)",
+        borderColor: "transparent",
+        borderWidth: 0,
         borderRadius: 12,
       };
     default:

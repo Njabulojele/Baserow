@@ -118,7 +118,7 @@ export interface DrawingPath {
   points: { x: number; y: number }[];
   color: string;
   thickness: number;
-  tool: "pen" | "eraser";
+  tool: "pen" | "eraser" | "arrow";
 }
 
 export interface Viewport {
@@ -151,6 +151,9 @@ interface CanvasState {
   isPanning: boolean;
   isDrawing: boolean;
   currentDrawingPath: DrawingPath | null;
+  arrowStart: { x: number; y: number } | null;
+  arrowEnd: { x: number; y: number } | null;
+  selectedDrawingId: string | null;
   snapToGrid: boolean;
   showGrid: boolean;
   penColor: string;
@@ -222,6 +225,16 @@ interface CanvasActions {
   setPenThickness: (thickness: number) => void;
   clearDrawings: () => void;
 
+  // Arrow
+  startArrow: (point: { x: number; y: number }) => void;
+  moveArrow: (point: { x: number; y: number }) => void;
+  endArrow: () => void;
+
+  // Drawing selection
+  selectDrawing: (id: string | null) => void;
+  deleteSelectedDrawing: () => void;
+  moveDrawing: (id: string, dx: number, dy: number) => void;
+
   // Grid
   toggleGrid: () => void;
   toggleSnap: () => void;
@@ -249,6 +262,9 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
     isPanning: false,
     isDrawing: false,
     currentDrawingPath: null,
+    arrowStart: null,
+    arrowEnd: null,
+    selectedDrawingId: null,
     snapToGrid: false,
     showGrid: true,
     penColor: "#ffffff",
@@ -319,7 +335,11 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
         return { selectedNodeIds: newSet, selectedConnectionId: null };
       }),
     deselectAll: () =>
-      set({ selectedNodeIds: new Set(), selectedConnectionId: null }),
+      set({
+        selectedNodeIds: new Set(),
+        selectedConnectionId: null,
+        selectedDrawingId: null,
+      }),
     selectAll: () =>
       set((s) => ({
         selectedNodeIds: new Set(s.nodes.map((n) => n.id)),
@@ -553,6 +573,71 @@ export const useCanvasStore = create<CanvasState & CanvasActions>(
       set({ drawings: [], isDirty: true });
       get().pushHistory();
     },
+
+    // ──── Arrow ────
+    startArrow: (point) => set({ arrowStart: point, arrowEnd: point }),
+    moveArrow: (point) => set({ arrowEnd: point }),
+    endArrow: () => {
+      const { arrowStart, arrowEnd, penColor, penThickness } = get();
+      if (!arrowStart || !arrowEnd) {
+        set({ arrowStart: null, arrowEnd: null });
+        return;
+      }
+      const dist = Math.hypot(
+        arrowEnd.x - arrowStart.x,
+        arrowEnd.y - arrowStart.y,
+      );
+      if (dist < 5) {
+        set({ arrowStart: null, arrowEnd: null });
+        return;
+      }
+      const path: DrawingPath = {
+        id: generateId(),
+        points: [arrowStart, arrowEnd],
+        color: penColor,
+        thickness: Math.max(penThickness, 2),
+        tool: "arrow",
+      };
+      set((s) => ({
+        drawings: [...s.drawings, path],
+        arrowStart: null,
+        arrowEnd: null,
+        isDirty: true,
+      }));
+      get().pushHistory();
+    },
+
+    // ──── Drawing Selection ────
+    selectDrawing: (id) =>
+      set({
+        selectedDrawingId: id,
+        selectedNodeIds: new Set(),
+        selectedConnectionId: null,
+      }),
+
+    deleteSelectedDrawing: () => {
+      const { selectedDrawingId } = get();
+      if (!selectedDrawingId) return;
+      set((s) => ({
+        drawings: s.drawings.filter((d) => d.id !== selectedDrawingId),
+        selectedDrawingId: null,
+        isDirty: true,
+      }));
+      get().pushHistory();
+    },
+
+    moveDrawing: (id, dx, dy) =>
+      set((s) => ({
+        drawings: s.drawings.map((d) =>
+          d.id === id
+            ? {
+                ...d,
+                points: d.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+              }
+            : d,
+        ),
+        isDirty: true,
+      })),
 
     // ──── Grid ────
     toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
