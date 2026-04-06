@@ -30,8 +30,8 @@ export default function RootLayout({
     <ClerkProvider
       signInUrl="/login"
       signUpUrl="/register"
-      afterSignInUrl="/dashboard"
-      afterSignUpUrl="/dashboard"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
     >
       <html lang="en">
         <head>

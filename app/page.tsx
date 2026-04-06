@@ -347,7 +347,7 @@ export default function LandingPage() {
               <Heart className="w-3 h-3 text-red-500 fill-red-500 inline mx-0.5" />{" "}
               by{" "}
               <a
-                href="https://pinltdco.com"
+                href="https://www.openinfinity.co.za"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium hover:text-foreground transition-colors"
