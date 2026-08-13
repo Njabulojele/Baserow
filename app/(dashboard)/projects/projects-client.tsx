@@ -1,35 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectForm } from "@/components/projects/ProjectForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
-
-interface Project {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  priority: string;
-  type: string;
-  color: string | null;
-  deadline: Date | null;
-  completionPercentage: number;
-  actualHoursSpent: number;
-  _count: { tasks: number };
-  client: { id: string; name: string } | null;
-}
+import { FolderKanban, Plus, Search, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProjectsClientProps {
-  initialProjects: any[];
+  initialProjects?: any[];
 }
 
-export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
+export function ProjectsClient({ initialProjects }: ProjectsClientProps = {}) {
   const [status, setStatus] = useState<string>("active");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Use server-prefetched data for 'active', fetch fresh for other views
   const { data: projects, isLoading } = trpc.project.getProjects.useQuery(
     status === "all"
       ? undefined
@@ -39,80 +25,83 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
     },
   );
 
+  const filteredProjects = (projects || []).filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
   return (
-    <div className="container mx-auto py-6 sm:py-8 px-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+    <div className="w-full space-y-6 pb-12">
+      {/* ──────────────────────────────────────────────
+         HEADER & CONTROLS
+         ────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">
-            Projects
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <FolderKanban className="w-7 h-7 text-blue-500" />
+            Projects & Workspaces
           </h1>
-          <p className="text-[10px] font-mono tracking-widest uppercase text-gray-500 mt-1">
-            Organize and track your work
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+            Syncboard Kanban Backlog — Revenue & task progress across client/product lines
           </p>
         </div>
-        <div className="w-full sm:w-auto">
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status Filter Pills */}
+          <div className="bg-secondary p-1 rounded-full flex items-center shadow-inner">
+            {["active", "planning", "on_hold", "completed", "all"].map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatus(st)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-xs font-semibold capitalize transition-all duration-200",
+                  status === st
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {st.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-secondary text-foreground text-xs rounded-full pl-9 pr-4 py-2 w-44 focus:w-56 focus:outline-none transition-all placeholder:text-muted-foreground"
+            />
+          </div>
+
           <ProjectForm />
         </div>
       </div>
 
-      <Tabs value={status} onValueChange={setStatus} className="space-y-6">
-        <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
-          <TabsList className="bg-[#0a0c10] border-[#2f3e46] shadow-sm p-1 rounded-md mb-2 flex min-w-max sm:grid sm:grid-cols-5 sm:min-w-0">
-            <TabsTrigger
-              value="active"
-              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
-            >
-              Active
-            </TabsTrigger>
-            <TabsTrigger
-              value="planning"
-              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
-            >
-              Planning
-            </TabsTrigger>
-            <TabsTrigger
-              value="on_hold"
-              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
-            >
-              On Hold
-            </TabsTrigger>
-            <TabsTrigger
-              value="completed"
-              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
-            >
-              Completed
-            </TabsTrigger>
-            <TabsTrigger
-              value="all"
-              className="flex-1 text-[10px] font-mono uppercase tracking-widest text-gray-400 data-[state=active]:bg-[#1a252f] data-[state=active]:text-white"
-            >
-              All
-            </TabsTrigger>
-          </TabsList>
+      {/* ──────────────────────────────────────────────
+         PROJECT CARDS GRID (Toota look)
+         ────────────────────────────────────────────── */}
+      {isLoading ? (
+        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[250px] w-full rounded-2xl" />
+          ))}
         </div>
-
-        <TabsContent value={status}>
-          {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-48 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : !projects || projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-[#a9927d] bg-[#0a0c10] border border-[#2f3e46] rounded-xl border-dashed">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                No {status === "all" ? "" : status} projects found.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      ) : filteredProjects.length === 0 ? (
+        <div className="toota-card flex flex-col items-center justify-center py-16 text-center space-y-3">
+          <FolderKanban className="w-12 h-12 text-muted-foreground opacity-40" />
+          <p className="text-sm font-semibold text-foreground">No projects found</p>
+          <p className="text-xs text-muted-foreground">Create your first project to get started</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
+          {filteredProjects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

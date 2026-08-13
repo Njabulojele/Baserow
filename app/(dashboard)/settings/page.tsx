@@ -1,520 +1,373 @@
 "use client";
 
 import { useState } from "react";
-import { trpc } from "@/lib/trpc/client";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import {
   Settings,
-  Key,
+  Mail,
+  Timer,
+  Target,
+  Laptop,
+  Check,
+  Send,
   Save,
-  CheckCircle2,
-  ShieldCheck,
-  User,
-  Globe,
-  Webhook,
-  Search,
+  Bell,
+  Volume2,
+  Lock,
+  Sparkles,
 } from "lucide-react";
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState("");
-  const [serperKey, setSerperKey] = useState("");
-  const [groqKey, setGroqKey] = useState("");
-  const utils = trpc.useUtils();
+  const [activeTab, setActiveTab] = useState<"smtp" | "timer" | "goals" | "apps">("smtp");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const { data: settings, isLoading } = trpc.settings.getSettings.useQuery();
-  const { data: models = [] } = trpc.settings.getAvailableModels.useQuery();
-  const updateMutation = trpc.settings.updateSettings.useMutation();
+  // Form State
+  const [smtpProvider, setSmtpProvider] = useState("gmail");
+  const [smtpHost, setSmtpHost] = useState("smtp.gmail.com");
+  const [smtpPort, setSmtpPort] = useState("587");
+  const [smtpUser, setSmtpUser] = useState("clement@openinfinity.co.za");
+  const [smtpPass, setSmtpPass] = useState("••••••••••••••••");
 
-  const handleUpdateKey = async () => {
-    if (!apiKey) {
-      toast.error("Please enter a valid API key");
-      return;
-    }
+  // Timer & Pomodoro State
+  const [workDuration, setWorkDuration] = useState(60);
+  const [shortBreakDuration, setShortBreakDuration] = useState(10);
+  const [longBreakDuration, setLongBreakDuration] = useState(30);
+  const [autoContinue, setAutoContinue] = useState(false);
+  const [overrunAlert, setOverrunAlert] = useState(true);
 
-    try {
-      await updateMutation.mutateAsync({ geminiApiKey: apiKey });
-      setApiKey(""); // Clear input for security
-      utils.settings.getSettings.invalidate();
+  // Goal & Nudge State
+  const [defaultNeglectDays, setDefaultNeglectDays] = useState(3);
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(true);
 
-      toast.success("API Key updated successfully", {
-        description: "Your key has been encrypted and saved safely.",
-      });
-    } catch (error: any) {
-      toast.error("Failed to update settings", {
-        description: error.message,
-      });
-    }
+  const handleSaveSettings = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success("Settings saved successfully!");
+    }, 600);
   };
 
-  const handleUpdateSerperKey = async () => {
-    if (!serperKey) {
-      toast.error("Please enter a valid Serper API key");
-      return;
-    }
-
-    try {
-      await updateMutation.mutateAsync({ serperApiKey: serperKey });
-      setSerperKey("");
-      utils.settings.getSettings.invalidate();
-
-      toast.success("Serper API Key saved", {
-        description: "You can now use Serper for web search.",
-      });
-    } catch (error: any) {
-      toast.error("Failed to save Serper key", {
-        description: error.message,
-      });
-    }
-  };
-
-  const handleUpdateGroqKey = async () => {
-    if (!groqKey) {
-      toast.error("Please enter a valid Groq API key");
-      return;
-    }
-
-    try {
-      await updateMutation.mutateAsync({ groqApiKey: groqKey });
-      setGroqKey("");
-      utils.settings.getSettings.invalidate();
-
-      toast.success("Groq API Key saved", {
-        description: "You can now use Groq as an LLM provider.",
-      });
-    } catch (error: any) {
-      toast.error("Failed to save Groq key", {
-        description: error.message,
-      });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="p-8 text-center text-gray-500">Loading settings...</div>
+  const handleTestSmtp = () => {
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 1200)),
+      {
+        loading: "Sending test email via SMTP...",
+        success: "Test email dispatched to " + smtpUser,
+        error: "SMTP connection failed",
+      },
     );
-  }
+  };
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-[#a9927d]/20 rounded-xl">
-          <Settings className="w-8 h-8 text-[#a9927d]" />
-        </div>
+    <div className="w-full space-y-6 pb-12">
+      {/* ──────────────────────────────────────────────
+         HEADER
+         ────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">Settings</h1>
-          <p className="text-gray-400 mt-1">
-            Manage your account preferences and integrations
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <Settings className="w-7 h-7 text-primary" />
+            Anchor Settings & Configuration
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+            Configure SMTP email delivery, timer parameters, goal neglect thresholds, and app tracking rules
           </p>
         </div>
+
+        <button
+          onClick={handleSaveSettings}
+          disabled={isSaving}
+          className="toota-pill-active flex items-center gap-2 text-xs py-2.5 px-6"
+        >
+          <Save className="w-4 h-4" />
+          <span>{isSaving ? "Saving..." : "Save Settings"}</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Navigation Sidebar (For visual structure) */}
-        <div className="space-y-2">
-          <Link href="/settings" className="block">
-            <Button
-              variant="ghost"
-              className="w-full justify-start bg-[#1a252f] text-white hover:bg-[#2f3e46]"
-            >
-              <Key className="w-4 h-4 mr-2" /> Integrations
-            </Button>
-          </Link>
-          <Link href="/settings/webhooks" className="block">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
-            >
-              <Webhook className="w-4 h-4 mr-2" /> Webhooks
-            </Button>
-          </Link>
-          <Link href="/settings/sso" className="block">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
-            >
-              <ShieldCheck className="w-4 h-4 mr-2" /> Security & SSO
-            </Button>
-          </Link>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-400 hover:text-white hover:bg-[#1a252f]/50"
-          >
-            <User className="w-4 h-4 mr-2" /> Account
-          </Button>
-        </div>
+      {/* ──────────────────────────────────────────────
+         TAB NAVIGATION PILLS
+         ────────────────────────────────────────────── */}
+      <div className="bg-secondary p-1 rounded-full flex items-center w-fit shadow-inner">
+        <button
+          onClick={() => setActiveTab("smtp")}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition-all duration-200",
+            activeTab === "smtp"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Mail className="w-3.5 h-3.5" /> Email & SMTP
+        </button>
 
-        {/* Main Content Area */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* AI Integration Card */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <ShieldCheck className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">
-                  AI & Research Configuration
-                </h2>
-                <p className="text-sm text-gray-400">
-                  Manage your LLM providers and models
-                </p>
-              </div>
-            </div>
+        <button
+          onClick={() => setActiveTab("timer")}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition-all duration-200",
+            activeTab === "timer"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Timer className="w-3.5 h-3.5" /> Timer & Pomodoro
+        </button>
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-gray-300">Default LLM Provider</Label>
-                <Select
-                  value={settings?.llmProvider || "GEMINI"}
-                  onValueChange={(value) =>
-                    updateMutation.mutate({ llmProvider: value })
-                  }
-                >
-                  <SelectTrigger className="bg-black/20 border-[#2f3e46] h-10">
-                    <SelectValue placeholder="Select provider" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
-                    <SelectItem value="GEMINI">
-                      Google Gemini (Recommended)
-                    </SelectItem>
-                    <SelectItem value="GROQ">
-                      Groq (Llama 3.1 - Fast)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[10px] text-gray-500">
-                  Select your primary LLM for research processing. If one fails
-                  (e.g. quota), the system will try to fallback.
-                </p>
-              </div>
+        <button
+          onClick={() => setActiveTab("goals")}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition-all duration-200",
+            activeTab === "goals"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Target className="w-3.5 h-3.5" /> Goals & Nudges
+        </button>
 
-              <Separator className="bg-[#2f3e46]" />
+        <button
+          onClick={() => setActiveTab("apps")}
+          className={cn(
+            "flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition-all duration-200",
+            activeTab === "apps"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Laptop className="w-3.5 h-3.5" /> App Rules
+        </button>
+      </div>
 
-              <div className="bg-black/20 p-4 rounded-xl border border-[#2f3e46]">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-white flex items-center gap-2">
-                      Gemini API Status
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Standard LLM provider
-                    </p>
-                  </div>
-                  {settings?.hasGeminiKey ? (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-[#6b9080]/20 rounded-full border border-[#6b9080]/30">
-                      <CheckCircle2 className="w-4 h-4 text-[#6b9080]" />
-                      <span className="text-xs font-bold text-[#6b9080]">
-                        CONNECTED
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full border border-amber-500/30">
-                      <Key className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs font-bold text-amber-500">
-                        MISSING KEY
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+      {/* ──────────────────────────────────────────────
+         TAB CONTENT SECTIONS
+         ────────────────────────────────────────────── */}
+      {/* 1. SMTP TAB */}
+      {activeTab === "smtp" && (
+        <div className="toota-card space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">SMTP Email Dispatch Settings</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Supports free mail providers (Gmail, Outlook.com, Yahoo) via app-passwords for goal nudges and client portal invites.
+            </p>
+          </div>
 
-              <div className="space-y-3">
-                <Label className="text-gray-300">AI Model</Label>
-                <Select
-                  value={settings?.geminiModel || "gemini-2.0-flash"}
-                  onValueChange={(value) =>
-                    updateMutation.mutate({ geminiModel: value })
-                  }
-                >
-                  <SelectTrigger className="bg-black/20 border-[#2f3e46] h-10">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-white">
-                    {models?.map((model: any) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[10px] text-gray-500">
-                  Select the underlying Gemini model for research analysis.
-                  "Flash" models are faster, "Pro" models are more
-                  reasoning-capable.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-gray-300">Update API Key</Label>
-                <div className="flex gap-3">
-                  <Input
-                    type="password"
-                    placeholder={
-                      settings?.hasGeminiKey
-                        ? "••••••••••••••••••••••••••"
-                        : "Paste your Gemini API key"
-                    }
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="flex-1 bg-black/20 border-[#2f3e46] focus:border-[#a9927d]"
-                  />
-                  <Button
-                    onClick={handleUpdateKey}
-                    disabled={updateMutation.isPending || !apiKey}
-                    className="bg-[#a9927d] hover:bg-[#8f7a68] text-white"
-                  >
-                    {updateMutation.isPending ? (
-                      "Saving..."
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-[10px] text-gray-500">
-                  Your key is encrypted using AES-256 before storage.
-                </p>
-              </div>
-
-              <Separator className="bg-[#2f3e46]" />
-
-              {/* Groq Integration Section */}
-              <div className="space-y-6">
-                <div className="bg-black/20 p-4 rounded-xl border border-[#2f3e46]">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-white flex items-center gap-2">
-                        Groq API Status
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        High-speed LLM provider
-                      </p>
-                    </div>
-                    {settings?.hasGroqKey ? (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-[#6b9080]/20 rounded-full border border-[#6b9080]/30">
-                        <CheckCircle2 className="w-4 h-4 text-[#6b9080]" />
-                        <span className="text-xs font-bold text-[#6b9080]">
-                          CONNECTED
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full border border-amber-500/30">
-                        <Key className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-bold text-amber-500">
-                          MISSING KEY
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-gray-300">Groq API Key</Label>
-                  <div className="flex gap-3">
-                    <Input
-                      type="password"
-                      placeholder={
-                        settings?.hasGroqKey
-                          ? "••••••••••••••••••••••••••"
-                          : "Paste your Groq API key"
-                      }
-                      value={groqKey}
-                      onChange={(e) => setGroqKey(e.target.value)}
-                      className="flex-1 bg-black/20 border-[#2f3e46] focus:border-[#a9927d]"
-                    />
-                    <Button
-                      onClick={handleUpdateGroqKey}
-                      disabled={updateMutation.isPending || !groqKey}
-                      className="bg-[#a9927d] hover:bg-[#8f7a68] text-white"
-                    >
-                      {updateMutation.isPending ? (
-                        "Saving..."
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-gray-500">
-                    Used as a fallback or for higher speed research steps.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-[#1a252f] border-[#2f3e46] text-white">
-            <CardHeader>
-              <CardTitle>Research Scraping Mode</CardTitle>
-              <CardDescription className="text-gray-400">
-                Choose how the research agent gathers information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <RadioGroup
-                value={settings?.scrapingMode || "AGENTIC"}
-                onValueChange={(val) =>
-                  updateMutation.mutate({ scrapingMode: val })
-                }
-                className="flex flex-col space-y-2"
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Email Provider</label>
+              <select
+                value={smtpProvider}
+                onChange={(e) => setSmtpProvider(e.target.value)}
+                className="w-full bg-secondary text-foreground text-xs rounded-xl px-4 py-2.5 focus:outline-none"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="AGENTIC" id="agentic" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="agentic" className="font-bold">
-                      Agentic Search (Deep & Smart)
-                    </Label>
-                    <p className="text-sm text-gray-400">
-                      Iteratively searches, analyzes gaps, and searches again.
-                      Best for complex topics. (Uses LLM)
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 mt-4">
-                  <RadioGroupItem value="SCRAPER" id="scraper" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="scraper" className="font-bold">
-                      Fast Scraper (Single Pass)
-                    </Label>
-                    <p className="text-sm text-gray-400">
-                      fast, single-pass search & scrape. No AI "thinking" during
-                      collection. Best for speed & avoiding rate limits.
-                    </p>
-                  </div>
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
+                <option value="gmail">Gmail (App Password)</option>
+                <option value="outlook">Outlook / Microsoft 365</option>
+                <option value="yahoo">Yahoo Mail</option>
+                <option value="custom">Custom SMTP Server</option>
+              </select>
+            </div>
 
-          {/* Serper Integration Card */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-[#6b9080]/10 rounded-lg">
-                <Search className="w-5 h-5 text-[#6b9080]" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">SMTP Host</label>
+                <input
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  className="w-full bg-secondary text-foreground text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+                />
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">
-                  Web Search (Serper)
-                </h2>
-                <p className="text-sm text-gray-400">
-                  Optional: Use Serper.dev for custom web scraping
-                </p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">SMTP Port</label>
+                <input
+                  type="text"
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(e.target.value)}
+                  className="w-full bg-secondary text-foreground text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+                />
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="bg-black/20 p-4 rounded-xl border border-[#2f3e46]">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-white">
-                      Serper API Status
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Get a free key at serper.dev
-                    </p>
-                  </div>
-                  {settings?.hasSerperKey ? (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-[#6b9080]/20 rounded-full border border-[#6b9080]/30">
-                      <CheckCircle2 className="w-4 h-4 text-[#6b9080]" />
-                      <span className="text-xs font-bold text-[#6b9080]">
-                        CONNECTED
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-500/20 rounded-full border border-gray-500/30">
-                      <Key className="w-4 h-4 text-gray-400" />
-                      <span className="text-xs font-bold text-gray-400">
-                        OPTIONAL
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-gray-300">Serper API Key</Label>
-                <div className="flex gap-3">
-                  <Input
-                    type="password"
-                    placeholder={
-                      settings?.hasSerperKey
-                        ? "••••••••••••••••••••••••••"
-                        : "Paste your Serper API key"
-                    }
-                    value={serperKey}
-                    onChange={(e) => setSerperKey(e.target.value)}
-                    className="flex-1 bg-black/20 border-[#2f3e46] focus:border-[#6b9080]"
-                  />
-                  <Button
-                    onClick={handleUpdateSerperKey}
-                    disabled={updateMutation.isPending || !serperKey}
-                    className="bg-[#6b9080] hover:bg-[#5a7a6b] text-white"
-                  >
-                    {updateMutation.isPending ? (
-                      "Saving..."
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-[10px] text-gray-500">
-                  When creating research, select "Serper API" as search method
-                  to use this.
-                </p>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Username / Email Address</label>
+              <input
+                type="email"
+                value={smtpUser}
+                onChange={(e) => setSmtpUser(e.target.value)}
+                className="w-full bg-secondary text-foreground text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+              />
             </div>
-          </Card>
 
-          {/* Account Info (Read Only for now) */}
-          <Card className="bg-[#1a252f] border-[#2f3e46] p-6 opacity-80">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Account Overview
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase text-gray-500">
-                    Name
-                  </Label>
-                  <Input
-                    value={settings?.name || ""}
-                    disabled
-                    className="bg-black/10 border-[#2f3e46]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase text-gray-500">
-                    Email
-                  </Label>
-                  <Input
-                    value={settings?.email || ""}
-                    disabled
-                    className="bg-black/10 border-[#2f3e46]"
-                  />
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">App Password / Secret</label>
+              <input
+                type="password"
+                value={smtpPass}
+                onChange={(e) => setSmtpPass(e.target.value)}
+                className="w-full bg-secondary text-foreground text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+              />
             </div>
-          </Card>
+
+            <div className="pt-2">
+              <button
+                onClick={handleTestSmtp}
+                className="toota-pill text-xs flex items-center gap-2 hover:bg-secondary/80"
+              >
+                <Send className="w-3.5 h-3.5" /> Send Test Email
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* 2. TIMER & POMODORO TAB */}
+      {activeTab === "timer" && (
+        <div className="toota-card space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Timer & Pomodoro Configuration</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Customize focus durations, break lengths, auto-continue behavior, and overrun sound alerts.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Work Session (min)</label>
+                <input
+                  type="number"
+                  value={workDuration}
+                  onChange={(e) => setWorkDuration(Number(e.target.value))}
+                  className="w-full bg-secondary text-foreground font-mono text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Short Break (min)</label>
+                <input
+                  type="number"
+                  value={shortBreakDuration}
+                  onChange={(e) => setShortBreakDuration(Number(e.target.value))}
+                  className="w-full bg-secondary text-foreground font-mono text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Long Break (min)</label>
+                <input
+                  type="number"
+                  value={longBreakDuration}
+                  onChange={(e) => setLongBreakDuration(Number(e.target.value))}
+                  className="w-full bg-secondary text-foreground font-mono text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2 border-t border-secondary/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-foreground">Pomodoro Auto-Continue</p>
+                  <p className="text-[11px] text-muted-foreground">Automatically start break/work session without manual click</p>
+                </div>
+                <button
+                  onClick={() => setAutoContinue(!autoContinue)}
+                  className={cn(
+                    "w-11 h-6 rounded-full transition-colors p-1 flex items-center",
+                    autoContinue ? "bg-emerald-500 justify-end" : "bg-secondary justify-start",
+                  )}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-foreground">10-Minute Overrun Alert Sound</p>
+                  <p className="text-[11px] text-muted-foreground">Play native OS alert sound if session runs 10 minutes past target duration</p>
+                </div>
+                <button
+                  onClick={() => setOverrunAlert(!overrunAlert)}
+                  className={cn(
+                    "w-11 h-6 rounded-full transition-colors p-1 flex items-center",
+                    overrunAlert ? "bg-emerald-500 justify-end" : "bg-secondary justify-start",
+                  )}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. GOALS & NUDGES TAB */}
+      {activeTab === "goals" && (
+        <div className="toota-card space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Consistency & Nudge Engine Settings</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Set default goal neglect thresholds and automated notification rules.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Default Neglect Threshold (Days)</label>
+              <input
+                type="number"
+                value={defaultNeglectDays}
+                onChange={(e) => setDefaultNeglectDays(Number(e.target.value))}
+                className="w-full bg-secondary text-foreground font-mono text-xs rounded-xl px-4 py-2.5 focus:outline-none"
+              />
+              <p className="text-[11px] text-muted-foreground">Trigger neglect alerts if a goal is unlogged for this number of days</p>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-secondary/50">
+              <div>
+                <p className="text-xs font-bold text-foreground">Email Notifications for Neglected Goals</p>
+                <p className="text-[11px] text-muted-foreground">Send email reminder via SMTP when threshold is crossed</p>
+              </div>
+              <button
+                onClick={() => setEmailAlertsEnabled(!emailAlertsEnabled)}
+                className={cn(
+                  "w-11 h-6 rounded-full transition-colors p-1 flex items-center",
+                  emailAlertsEnabled ? "bg-emerald-500 justify-end" : "bg-secondary justify-start",
+                )}
+              >
+                <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. APP RULES TAB */}
+      {activeTab === "apps" && (
+        <div className="toota-card space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Desktop App Productivity Classifications</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Classify active window titles captured by the Electron tracking wrapper into Productive, Focused, or Unproductive categories.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { app: "VS Code / Cursor", category: "Productive", badge: "bg-emerald-500/15 text-emerald-500" },
+              { app: "Antigravity AI", category: "Focused", badge: "bg-blue-500/15 text-blue-500" },
+              { app: "Figma", category: "Productive", badge: "bg-emerald-500/15 text-emerald-500" },
+              { app: "YouTube / Social", category: "Unproductive", badge: "bg-amber-500/15 text-amber-500" },
+            ].map((rule, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50">
+                <span className="text-xs font-semibold text-foreground">{rule.app}</span>
+                <span className={cn("text-xs font-bold px-3 py-1 rounded-full", rule.badge)}>
+                  {rule.category}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

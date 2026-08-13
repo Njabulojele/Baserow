@@ -9,7 +9,7 @@ import {
   Workflow,
   Heart,
 } from "lucide-react";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignedIn, SignedOut } from "@clerk/react";
 import Image from "next/image";
 
 export default function LandingPage() {

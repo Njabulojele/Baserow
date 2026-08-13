@@ -19,6 +19,7 @@ export const taskRouter = router({
             .enum([
               "not_started",
               "in_progress",
+              "in_review",
               "blocked",
               "done",
               "cancelled",
@@ -103,6 +104,17 @@ export const taskRouter = router({
         tags: z.array(z.string()).optional(),
         goalId: z.string().optional(),
         keyStepId: z.string().optional(),
+        status: z
+          .enum([
+            "not_started",
+            "in_progress",
+            "in_review",
+            "blocked",
+            "done",
+            "cancelled",
+          ])
+          .optional()
+          .default("not_started"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -112,7 +124,6 @@ export const taskRouter = router({
             ...input,
             userId: ctx.userId,
             organizationId: ctx.organizationId,
-            status: "not_started",
           },
         });
 
@@ -134,7 +145,7 @@ export const taskRouter = router({
           .enum(["deep_work", "shallow_work", "admin", "meeting", "learning"])
           .optional(),
         status: z
-          .enum(["not_started", "in_progress", "blocked", "done", "cancelled"])
+          .enum(["not_started", "in_progress", "in_review", "blocked", "done", "cancelled"])
           .optional(),
         dueDate: z.date().nullable().optional(),
         scheduledDate: z.date().nullable().optional(),

@@ -33,14 +33,14 @@ import { CrmLeadSource } from "@prisma/client";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email"),
+  lastName: z.string().optional(),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   title: z.string().optional(),
-  companyName: z.string().min(1, "Company name is required"),
+  companyName: z.string().optional(),
   companyWebsite: z.string().url().optional().or(z.literal("")),
   industry: z.string().optional(),
-  source: z.nativeEnum(CrmLeadSource),
+  source: z.nativeEnum(CrmLeadSource).optional(),
   estimatedValue: z.string().optional(),
 });
 
@@ -99,6 +99,9 @@ export function LeadFormDialog({
     // Clean up empty strings to undefined/null for the server
     const data = {
       ...values,
+      lastName: values.lastName || "",
+      email: values.email || "",
+      companyName: values.companyName || "",
       phone: values.phone || undefined,
       title: values.title || undefined,
       companyWebsite: values.companyWebsite || undefined,
@@ -148,7 +151,7 @@ export function LeadFormDialog({
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name *</FormLabel>
+                    <FormLabel>Last Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Doe" {...field} />
                     </FormControl>
@@ -163,7 +166,7 @@ export function LeadFormDialog({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email *</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -211,7 +214,7 @@ export function LeadFormDialog({
               name="companyName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name *</FormLabel>
+                  <FormLabel>Company Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Acme Inc." {...field} />
                   </FormControl>

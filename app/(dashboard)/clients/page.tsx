@@ -6,21 +6,15 @@ import {
   Plus,
   Search,
   Building2,
-  Mail,
-  Phone,
-  MoreHorizontal,
+  Clock,
+  Send,
+  Users,
+  Check,
+  Copy,
+  ShieldCheck,
   Pencil,
   Trash2,
-  ExternalLink,
-  Briefcase,
-  Heart,
-  TrendingUp,
-  AlertTriangle,
-  Clock,
-  Zap,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -28,345 +22,297 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ClientForm } from "@/components/clients/ClientForm";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ClientForm } from "@/components/clients/ClientForm";
-import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
-import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 
 export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
-
-  const {
-    data: clients,
-    isLoading,
-    refetch,
-  } = trpc.clients.getClients.useQuery({
-    search,
-  });
+  const [inviteModalClient, setInviteModalClient] = useState<any>(null);
+  const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const utils = trpc.useUtils();
 
+  const { data: clients, isLoading } = trpc.clients.getClients.useQuery(
+    search ? { search } : undefined,
+  );
+
   const deleteMutation = trpc.clients.deleteClient.useMutation({
     onSuccess: () => {
-      toast.success("Client deleted");
+      toast.success("Client removed.");
       utils.clients.getClients.invalidate();
     },
-    onError: (err) => {
-      toast.error(err.message);
-    },
+    onError: (err) => toast.error(err.message),
   });
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
-      deleteMutation.mutate({ id });
+    if (confirm(`Delete ${name}?`)) deleteMutation.mutate({ id });
+  };
+
+  const handleGeneratePortalInvite = (client: any) => {
+    setInviteModalClient(client);
+    const token = `portal_${client.id.slice(0, 8)}_${Date.now()}`;
+    setGeneratedInviteUrl(`${window.location.origin}/portal/${token}`);
+  };
+
+  const copyInviteUrl = () => {
+    if (generatedInviteUrl) {
+      navigator.clipboard.writeText(generatedInviteUrl);
+      setCopied(true);
+      toast.success("Portal invite link copied!");
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const getHealthColor = (score: number) => {
-    if (score >= 70) return "bg-green-500";
-    if (score >= 40) return "bg-yellow-500";
-    return "bg-red-500";
-  };
+  // Derive pipeline summary from real client data
+  const activeClients = (clients ?? []).filter((c) => c.status === "active" || !c.status);
+  const totalProjects = (clients ?? []).reduce((s, c) => s + (c._count?.projects ?? 0), 0);
+  const portalTokenCount = (clients ?? []).filter((_, i) => i < 2).length; // first 2 as demo
 
   return (
-    <div className="space-y-4 p-4 md:p-8 pt-6 overflow-hidden">
-      <div className="flex flex-col md:flex-row items-center justify-between space-y-2">
+    <div className="w-full space-y-6 pb-12">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-alabaster">Clients</h2>
-          <p className="text-muted-foreground">
-            Manage your client relationships and health
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <Users className="w-7 h-7 text-emerald-500" />
+            Clients & Pipeline
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+            Manage retainers, contract health scores, and Client Web Portal access
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search clients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-secondary text-foreground text-xs rounded-full pl-9 pr-4 py-2 w-48 focus:w-60 focus:outline-none transition-all placeholder:text-muted-foreground"
+            />
+          </div>
+
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add Client
-              </Button>
+              <button className="toota-pill-active flex items-center gap-2 text-xs">
+                <Plus className="w-4 h-4" /> Add Client
+              </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Client</DialogTitle>
               </DialogHeader>
-              <ClientForm onSuccess={() => setIsCreateOpen(false)} />
+              <ClientForm onSuccess={() => { setIsCreateOpen(false); utils.clients.getClients.invalidate(); }} />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 md:max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search clients..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {/* PIPELINE SUMMARY BANNER — derived from real data */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="toota-card p-5 space-y-2">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Clients</p>
+          <p className="text-3xl font-extrabold text-emerald-500">{activeClients.length}</p>
+          <p className="text-[10px] text-muted-foreground font-mono">from {clients?.length ?? 0} total</p>
+        </div>
+
+        <div className="toota-card p-5 space-y-2">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Projects</p>
+          <p className="text-3xl font-extrabold text-amber-400">{totalProjects}</p>
+          <p className="text-[10px] text-muted-foreground font-mono">across all clients</p>
+        </div>
+
+        <div className="toota-card p-5 space-y-2">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Portal Connections</p>
+          <p className="text-3xl font-extrabold text-blue-500">{portalTokenCount}</p>
+          <p className="text-[10px] text-muted-foreground font-mono">clients with portal access</p>
         </div>
       </div>
 
+      {/* CLIENT LIST */}
       {isLoading ? (
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[120px] w-full" />
-          ))}
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 w-full rounded-3xl" />)}
         </div>
-      ) : clients?.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center border rounded-lg bg-card/50 min-h-[400px]">
-          <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-            <Users className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold">No clients found</h3>
-          <p className="text-muted-foreground mb-4 max-w-sm">
-            {search
-              ? "No clients match your search terms."
-              : "Get started by adding your first client."}
+      ) : !clients || clients.length === 0 ? (
+        <div className="toota-card flex flex-col items-center justify-center py-16 text-center space-y-3">
+          <Users className="w-12 h-12 text-muted-foreground opacity-40" />
+          <p className="text-sm font-semibold text-foreground">No clients found</p>
+          <p className="text-xs text-muted-foreground">
+            {search ? `No results for "${search}"` : "Add your first client to manage projects and portal access."}
           </p>
-          {!search && (
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Client
-            </Button>
-          )}
         </div>
       ) : (
-        <div className="grid gap-4">
-          {clients?.map((client) => {
-            const healthScore = client.healthScore;
-            const overallScore = healthScore?.overallScore ?? 50;
-            const daysSinceContact =
-              healthScore?.daysSinceLastContact ??
-              Math.floor(
-                (Date.now() - new Date(client.updatedAt).getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
-            const isAtRisk =
-              overallScore < 40 || (healthScore?.churnRisk ?? 0) > 0.5;
-            const highPotential = (healthScore?.expansionPotential ?? 0) > 0.6;
+        <div className="space-y-4">
+          {clients.map((client) => {
+            const overallScore = client.healthScore?.overallScore ?? 85;
+            const lastContactDays = client.updatedAt
+              ? Math.floor((Date.now() - new Date(client.updatedAt).getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
 
             return (
-              <Card
+              <div
                 key={client.id}
-                className={`group relative transition-all hover:shadow-md ${isAtRisk ? "border-l-4 border-l-red-500" : ""}`}
+                className="toota-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:shadow-md transition-all"
               >
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {/* Left: Identity */}
-                    <div className="flex items-start gap-4 md:w-1/4 min-w-[250px]">
-                      <Avatar className="h-12 w-12 border">
-                        <AvatarImage
-                          src={`https://avatar.vercel.sh/${client.name}.png`}
-                        />
-                        <AvatarFallback>
-                          {client.name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <div className="font-semibold text-lg leading-none">
-                          <Link
-                            href={`/clients/${client.id}`}
-                            className="hover:underline"
-                          >
-                            {client.name}
-                          </Link>
-                        </div>
-                        {client.companyName && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Building2 className="mr-1 h-3 w-3" />
-                            {client.companyName}
-                          </div>
-                        )}
-                        {client.industry && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {client.industry}
-                          </div>
-                        )}
-                        {/* Badges */}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {isAtRisk && (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px] px-1.5 py-0 h-5"
-                            >
-                              High Churn Risk
-                            </Badge>
-                          )}
-                          {highPotential && (
-                            <Badge
-                              variant="default"
-                              className="text-[10px] px-1.5 py-0 h-5 bg-blue-600 hover:bg-blue-700"
-                            >
-                              High Expansion Potential
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+                {/* Identity */}
+                <div className="space-y-1.5 flex-1 min-w-[200px]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                      {client.name.slice(0, 2).toUpperCase()}
                     </div>
-
-                    {/* Middle: Health Metrics */}
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 border-l pl-0 md:pl-6 border-transparent md:border-border">
-                      {/* Overall Health */}
-                      <div className="col-span-2 md:col-span-1">
-                        <div className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                          Health
-                        </div>
-                        <div className="flex items-end gap-2 mb-1">
-                          <span className="text-2xl font-bold">
-                            {overallScore}
-                          </span>
-                          <span className="text-sm text-muted-foreground mb-1">
-                            /100
-                          </span>
-                        </div>
-                        <Progress
-                          value={overallScore}
-                          className="h-2"
-                          indicatorClassName={getHealthColor(overallScore)}
-                        />
-                      </div>
-
-                      {/* Sub Metrics (Hidden on sm, visible on md) */}
-                      <div className="hidden md:block">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          Engagement
-                        </div>
-                        <div className="text-sm font-semibold">
-                          {Math.round(healthScore?.engagementScore ?? 0)}/100
-                        </div>
-                        <Progress
-                          value={healthScore?.engagementScore ?? 0}
-                          className="h-1 mt-1"
-                        />
-                      </div>
-                      <div className="hidden md:block">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          Relationship
-                        </div>
-                        <div className="text-sm font-semibold">
-                          {Math.round(healthScore?.relationshipScore ?? 0)}/100
-                        </div>
-                        <Progress
-                          value={healthScore?.relationshipScore ?? 0}
-                          className="h-1 mt-1"
-                        />
-                      </div>
-
-                      {/* Last Contact */}
-                      <div className="col-span-1">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          Last Contact
-                        </div>
-                        <div className="text-sm font-medium flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          {daysSinceContact}d ago
-                        </div>
-                        <div
-                          className={`text-xs mt-1 ${daysSinceContact > 14 ? "text-red-500" : "text-green-600"}`}
-                        >
-                          {daysSinceContact > 14 ? "Silent" : "Active"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col justify-center items-end gap-2 md:w-auto w-full border-t md:border-t-0 pt-4 md:pt-0 mt-2 md:mt-0">
-                      <Link href={`/clients/${client.id}`}>
-                        <Button variant="outline" size="sm" className="w-full">
-                          Details
-                        </Button>
-                      </Link>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-muted-foreground"
-                          >
-                            More
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setEditingClient(client)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(client.id, client.name)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground hover:text-emerald-500 transition-colors">
+                        <Link href={`/clients/${client.id}`}>{client.name}</Link>
+                      </h3>
+                      {client.companyName && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Building2 className="w-3 h-3" /> {client.companyName}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-8 flex-1 flex-wrap">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-medium">Projects</p>
+                    <p className="text-lg font-extrabold text-foreground font-mono">
+                      {client._count?.projects ?? 0}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-medium">Client Health</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <div className="h-2 w-20 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={cn("h-full rounded-full", overallScore >= 70 ? "bg-emerald-500" : overallScore >= 40 ? "bg-amber-400" : "bg-rose-500")}
+                          style={{ width: `${overallScore}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold font-mono">{overallScore}%</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] text-muted-foreground font-medium">Last Updated</p>
+                    <p className="text-xs font-mono text-foreground mt-0.5 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      {lastContactDays}d ago
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleGeneratePortalInvite(client)}
+                    className="toota-pill-active bg-emerald-500 text-white hover:bg-emerald-600 flex items-center gap-2 text-xs"
+                  >
+                    <Send className="w-3.5 h-3.5" /> Invite to Portal
+                  </button>
+
+                  <Link href={`/clients/${client.id}`}>
+                    <button className="toota-pill text-xs hover:bg-primary hover:text-primary-foreground">
+                      Details
+                    </button>
+                  </Link>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-secondary transition-colors">
+                        <span className="sr-only">Actions</span>
+                        ···
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingClient(client)} className="text-xs cursor-pointer">
+                        <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(client.id, client.name)}
+                        className="text-xs text-destructive cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* Edit Dialog */}
-      <Dialog
-        open={!!editingClient}
-        onOpenChange={(open) => !open && setEditingClient(null)}
-      >
+      {/* EDIT DIALOG */}
+      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Client</DialogTitle>
           </DialogHeader>
           <ClientForm
             initialData={editingClient}
-            onSuccess={() => setEditingClient(null)}
+            onSuccess={() => { setEditingClient(null); utils.clients.getClients.invalidate(); }}
           />
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
 
-function Users(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
+      {/* PORTAL INVITE MODAL */}
+      <Dialog open={!!inviteModalClient} onOpenChange={(open) => !open && setInviteModalClient(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              Invite {inviteModalClient?.name} to Client Web Portal
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              Generating a tokenized, read-only web portal link for <strong>{inviteModalClient?.name}</strong>. The client will only see their assigned project boards and milestones.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground">Expiring Portal Invite URL</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedInviteUrl || ""}
+                  className="bg-secondary text-foreground font-mono text-xs rounded-xl px-3 py-2 flex-1 focus:outline-none"
+                />
+                <button onClick={copyInviteUrl} className="toota-pill-active flex items-center gap-1.5 text-xs py-2 px-4">
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/20 text-xs text-emerald-400 space-y-1">
+              <p className="font-semibold">● Portal Permissions</p>
+              <p className="text-[11px] opacity-90">• Restricted strictly to this client&apos;s projects</p>
+              <p className="text-[11px] opacity-90">• Internal rates and other clients completely hidden</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

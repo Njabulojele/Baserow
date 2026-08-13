@@ -97,7 +97,7 @@ export function StrategyAnalytics() {
         </div>
       </div>
 
-      {data?.annualGoals.length === 0 ? (
+      {(data?.annualGoals ?? []).length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 border border-[#2f3e46] border-dashed rounded-lg bg-[#0a0c10]">
           <Trophy className="h-8 w-8 mb-3 opacity-30 text-[#a9927d]" />
           <p className="text-xs font-mono uppercase tracking-widest">
@@ -105,7 +105,7 @@ export function StrategyAnalytics() {
           </p>
         </div>
       ) : (
-        data?.annualGoals.map((goal, idx) => {
+        (data?.annualGoals ?? []).map((goal, idx) => {
           const status = getGoalStatus(goal.progress);
           const StatusIcon = status.icon;
           return (
@@ -156,7 +156,7 @@ export function StrategyAnalytics() {
 
   const QuarterlyView = () => (
     <div className="space-y-4 pt-4">
-      {data?.quarterFocuses.length === 0 ? (
+      {(data?.quarterFocuses ?? []).length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 border border-[#2f3e46] border-dashed rounded-lg bg-[#0a0c10]">
           <Target className="h-8 w-8 mb-3 opacity-30 text-[#a9927d]" />
           <p className="text-xs font-mono uppercase tracking-widest">
@@ -164,7 +164,7 @@ export function StrategyAnalytics() {
           </p>
         </div>
       ) : (
-        data?.quarterFocuses.map((focus, idx) => {
+        (data?.quarterFocuses ?? []).map((focus, idx) => {
           const status = getGoalStatus(focus.progress);
           const StatusIcon = status.icon;
           return (

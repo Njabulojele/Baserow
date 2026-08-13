@@ -70,98 +70,112 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
 
-  /* Primary — Electric Blue */
-  --primary: #2176ff;
+  /* Primary — Toota Dark Pill / Soft Black */
+  --primary: #111113;
   --primary-foreground: #ffffff;
 
-  /* Secondary — Eggshell */
-  --secondary: #f3efe0;
-  --secondary-foreground: #1b1b1e;
+  /* Secondary — Soft Neutral Pill */
+  --secondary: #e4e5e9;
+  --secondary-foreground: #111113;
 
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #2176ff;
+  --info: #3b82f6;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  /* Base — True Black */
-  --background: #000000;
-  --foreground: #ffffff;
+  /* Base — Off-White / Soft Light Grey (Toota Light Theme) */
+  --background: #ebecef;
+  --foreground: #111113;
 
-  /* Cards — Carbon Black */
-  --card: #1b1b1e;
-  --card-foreground: #eae6e5;
+  /* Cards — Crisp White Soft Card Elevation */
+  --card: #ffffff;
+  --card-foreground: #111113;
 
-  --popover: #1b1b1e;
-  --popover-foreground: #eae6e5;
+  --popover: #ffffff;
+  --popover-foreground: #111113;
 
-  /* Muted — Charcoal Blue */
-  --muted: #373f51;
-  --muted-foreground: #8a8f9e;
+  /* Muted — Subtle Slate */
+  --muted: #e8eaee;
+  --muted-foreground: #6c727f;
 
-  /* Accent — Blue */
-  --accent: #2176ff;
+  /* Accent — Gradient / Soft Highlight */
+  --accent: #111113;
   --accent-foreground: #ffffff;
 
-  /* Borders — dark charcoal */
-  --border: #2a2a2e;
-  --input: #2a2a2e;
-  --ring: #2176ff;
+  /* Borders — Transparent / No Border in Toota system */
+  --border: transparent;
+  --input: #e4e5e9;
+  --ring: #111113;
 
   /* Chart Colors */
-  --chart-1: #2176ff;
-  --chart-2: #f3efe0;
-  --chart-3: #373f51;
-  --chart-4: #eae6e5;
-  --chart-5: #1b1b1e;
+  --chart-1: #10b981;
+  --chart-2: #f59e0b;
+  --chart-3: #ef4444;
+  --chart-4: #3b82f6;
+  --chart-5: #8b5cf6;
 
-  /* Sidebar */
-  --sidebar: #000000;
-  --sidebar-foreground: #eae6e5;
-  --sidebar-primary: #2176ff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1b1b1e;
-  --sidebar-accent-foreground: #eae6e5;
-  --sidebar-border: #1b1b1e;
-  --sidebar-ring: #2176ff;
+  /* Sidebar — Dark Toota Sidebar */
+  --sidebar: #121316;
+  --sidebar-foreground: #e4e5e9;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #111113;
+  --sidebar-accent: #202228;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: transparent;
+  --sidebar-ring: #ffffff;
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1b1b1e;
-  --card-foreground: #eae6e5;
-  --popover: #1b1b1e;
-  --popover-foreground: #eae6e5;
-  --primary: #2176ff;
-  --primary-foreground: #ffffff;
-  --secondary: #f3efe0;
-  --secondary-foreground: #1b1b1e;
-  --muted: #373f51;
-  --muted-foreground: #8a8f9e;
-  --accent: #2176ff;
+  --radius: 1rem;
+
+  /* Base — Rich Dark Background */
+  --background: #0d0e11;
+  --foreground: #f3f4f6;
+
+  /* Cards — Liquid Dark Card Surface */
+  --card: #17181d;
+  --card-foreground: #f3f4f6;
+
+  --popover: #17181d;
+  --popover-foreground: #f3f4f6;
+
+  --primary: #ffffff;
+  --primary-foreground: #0d0e11;
+
+  --secondary: #22242b;
+  --secondary-foreground: #f3f4f6;
+
+  --muted: #202228;
+  --muted-foreground: #8b92a1;
+
+  --accent: #252830;
   --accent-foreground: #ffffff;
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #2a2a2e;
-  --input: #2a2a2e;
-  --ring: #2176ff;
-  --sidebar: #000000;
-  --sidebar-foreground: #eae6e5;
-  --sidebar-primary: #2176ff;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1b1b1e;
-  --sidebar-accent-foreground: #eae6e5;
-  --sidebar-border: #1b1b1e;
-  --sidebar-ring: #2176ff;
+
+  --border: transparent;
+  --input: #22242b;
+  --ring: #ffffff;
+
+  --sidebar: #101114;
+  --sidebar-foreground: #9ca3af;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #101114;
+  --sidebar-accent: #1e2026;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: transparent;
+  --sidebar-ring: #ffffff;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: transparent;
+    outline-color: var(--ring);
   }
   html {
     overflow-x: hidden;
@@ -177,17 +191,40 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* Toota Card Elevation & Soft UI Utilities */
+.toota-card {
+  @apply bg-card text-card-foreground rounded-3xl p-6 transition-all duration-200;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.dark .toota-card {
+  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.3);
+}
+
+.toota-pill {
+  @apply bg-secondary text-secondary-foreground rounded-full px-4 py-2 text-xs font-medium transition-all;
+}
+
+.toota-pill-active {
+  @apply bg-primary text-primary-foreground rounded-full px-4 py-2 text-xs font-semibold shadow-sm transition-all;
+}
+
+.toota-gradient-bar {
+  background: linear-gradient(90deg, #fbbf24 0%, #a3e635 50%, #34d399 100%);
+}
+
+/* Custom scrollbar for soft Toota theme */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
+  height: 5px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #2a2a2e;
-  border-radius: 2px;
+  background: rgba(156, 163, 175, 0.25);
+  border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #373f51;
+  background: rgba(156, 163, 175, 0.4);
 }

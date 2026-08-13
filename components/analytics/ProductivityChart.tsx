@@ -40,14 +40,22 @@ export function ProductivityChart() {
   });
 
   const chartData = useMemo(() => {
-    if (!data) return [];
-    return data.map((item) => ({
-      ...item,
-      label:
-        range === "today"
-          ? item.date
-          : format(parseISO(item.date), range === "7d" ? "EEE" : "MMM d"),
-    }));
+    if (!data || !Array.isArray(data)) return [];
+    return data.map((item: any) => {
+      let label = item.day || item.date || "";
+      if (item.date && typeof item.date === "string") {
+        try {
+          label = format(parseISO(item.date), range === "7d" ? "EEE" : "MMM d");
+        } catch {
+          label = item.date;
+        }
+      }
+      return {
+        ...item,
+        hours: item.hours ?? item.score ?? 0,
+        label: label || "N/A",
+      };
+    });
   }, [data, range]);
 
   if (isLoading) {

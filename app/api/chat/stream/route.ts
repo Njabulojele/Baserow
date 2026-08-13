@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@clerk/react/server";
 import { prisma } from "@/lib/prisma";
 import { GeminiClient } from "@/lib/gemini-client";
 import { format } from "date-fns";

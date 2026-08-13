@@ -1,6 +1,6 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/react";
 import { Menu } from "lucide-react";
 import {
   Sheet,

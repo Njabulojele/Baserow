@@ -7,7 +7,7 @@ import { CanvasNode as CanvasNodeComponent } from "./CanvasNode";
 import { FreeDrawLayer } from "./FreeDrawLayer";
 import { ConnectionLayer } from "./ConnectionLayer";
 import { useCanvasCursors } from "@/lib/hooks/use-canvas-cursors";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/react";
 
 export function CanvasViewport({ boardId }: { boardId: string }) {
   const { orgId } = useAuth();

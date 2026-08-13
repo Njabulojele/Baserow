@@ -8,26 +8,17 @@ import {
   MoreVertical,
   Pause,
   CheckCircle2,
-  XCircle,
   RotateCcw,
+  Building2,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { trpc } from "@/lib/trpc/client";
 
 interface ProjectCardProps {
   project: {
@@ -36,49 +27,34 @@ interface ProjectCardProps {
     description: string | null;
     status: string;
     priority: string;
-    type: string;
+    type?: string;
     color: string | null;
     deadline: Date | null;
     completionPercentage: number;
     actualHoursSpent: number;
-    _count: { tasks: number };
+    revenueZAR?: number;
+    _count?: { tasks: number };
+    tasks?: any[];
     client: { id: string; name: string } | null;
   };
 }
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  active: {
-    label: "Active",
-    className: "bg-[#0a0c10] text-[#a9927d] border-[#a9927d]/30",
-  },
-  planning: {
-    label: "Planning",
-    className: "bg-[#0a0c10] text-blue-400 border-blue-500/30",
-  },
-  on_hold: {
-    label: "On Hold",
-    className: "bg-[#0a0c10] text-amber-400 border-amber-500/30",
-  },
-  completed: {
-    label: "Completed",
-    className: "bg-[#0a0c10] text-gray-400 border-[#2f3e46]",
-  },
-  cancelled: {
-    label: "Cancelled",
-    className: "bg-[#0a0c10] text-red-400 border-red-500/30",
-  },
+const statusBadgeStyles: Record<string, string> = {
+  active: "bg-emerald-500/15 text-emerald-500",
+  planning: "bg-blue-500/15 text-blue-500",
+  on_hold: "bg-amber-500/15 text-amber-500",
+  completed: "bg-teal-500/15 text-teal-400",
+  cancelled: "bg-rose-500/15 text-rose-500",
 };
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const utils = trpc.useUtils();
-  const statusInfo = statusConfig[project.status] || statusConfig.active;
 
   const updateStatus = trpc.project.updateProject.useMutation({
     onMutate: () => setIsUpdating(true),
     onSuccess: () => {
       utils.project.getProjects.invalidate();
-      utils.project.getUrgencySummary.invalidate();
     },
     onSettled: () => setIsUpdating(false),
   });
@@ -88,184 +64,146 @@ export function ProjectCard({ project }: ProjectCardProps) {
     e.stopPropagation();
     updateStatus.mutate({
       id: project.id,
-      status: newStatus as
-        | "active"
-        | "planning"
-        | "on_hold"
-        | "completed"
-        | "cancelled",
+      status: newStatus as any,
     });
   };
 
-  const deadlineText = project.deadline
-    ? new Date(project.deadline).toLocaleDateString("en-ZA", {
-        month: "short",
-        day: "numeric",
-      })
-    : null;
-
-  const isOverdue = project.deadline && new Date(project.deadline) < new Date();
-
-  // Determine which actions to show based on current status
-  const availableActions = [];
-  if (project.status !== "on_hold") {
-    availableActions.push({
-      label: "Put on Hold",
-      icon: Pause,
-      status: "on_hold",
-      className: "text-amber-500",
-    });
-  }
-  if (project.status !== "completed") {
-    availableActions.push({
-      label: "Mark as Complete",
-      icon: CheckCircle2,
-      status: "completed",
-      className: "text-emerald-500",
-    });
-  }
-  if (project.status !== "active" && project.status !== "planning") {
-    availableActions.push({
-      label: "Reactivate",
-      icon: RotateCcw,
-      status: "active",
-      className: "text-blue-500",
-    });
-  }
-  if (project.status !== "cancelled") {
-    availableActions.push({
-      label: "Cancel",
-      icon: XCircle,
-      status: "cancelled",
-      className: "text-red-500",
-    });
-  }
+  const taskCount = project._count?.tasks ?? project.tasks?.length ?? 0;
 
   return (
-    <Link href={`/projects/${project.id}`}>
-      <Card
-        className={`relative group hover:shadow-2xl transition-all duration-300 bg-[#1a252f] border border-[#2f3e46] hover:border-[#a9927d]/40 cursor-pointer overflow-hidden ${
-          isUpdating ? "opacity-60 pointer-events-none" : ""
-        }`}
+    <Link href={`/projects/${project.id}`} className="block h-[250px] w-full">
+      <div
+        className={cn(
+          "toota-card h-full w-full p-5 flex flex-col justify-between hover:translate-y-[-2px] transition-all duration-300 group cursor-pointer relative overflow-hidden",
+          isUpdating && "opacity-60 pointer-events-none",
+        )}
       >
-        {/* Color accent strip */}
+        {/* Soft Accent Strip */}
         <div
-          className="absolute top-0 left-0 w-full h-1 rounded-t-lg"
-          style={{
-            backgroundColor: project.color || "var(--primary)",
-          }}
+          className="absolute top-0 left-0 w-full h-1"
+          style={{ backgroundColor: project.color || "var(--primary)" }}
         />
 
-        <CardHeader className="pb-2 pt-4 px-4 sm:px-6">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <CardTitle className="text-base sm:text-lg truncate font-light text-white">
-                {project.name}
-              </CardTitle>
-              {project.client && (
-                <CardDescription className="text-[10px] font-mono tracking-widest uppercase text-[#a9927d] truncate mt-0.5">
-                  {project.client.name}
-                </CardDescription>
+        {/* Top Section */}
+        <div className="space-y-2 pt-1">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: project.color || "var(--primary)" }}
+                />
+                <h3 className="text-base font-bold text-foreground truncate group-hover:text-emerald-500 transition-colors">
+                  {project.name}
+                </h3>
+              </div>
+
+              {project.client ? (
+                <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 pl-4 truncate">
+                  <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="truncate">{project.client.name}</span>
+                </p>
+              ) : (
+                <div className="h-4" />
               )}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Badge
-                variant="outline"
-                className={`text-[10px] h-5 ${statusInfo.className}`}
-              >
-                {statusInfo.label}
-              </Badge>
 
-              {/* Status Actions Dropdown */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span
+                className={cn(
+                  "text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider capitalize",
+                  statusBadgeStyles[project.status] || statusBadgeStyles.active,
+                )}
+              >
+                {project.status.replace("_", " ")}
+              </span>
+
               <DropdownMenu>
-                <DropdownMenuTrigger
-                  asChild
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white hover:bg-[#0a0c10]"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+                  <button className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {availableActions.map((action, i) => (
-                    <DropdownMenuItem
-                      key={action.status}
-                      onClick={(e) => handleStatusChange(e, action.status)}
-                      className={`cursor-pointer text-[10px] font-mono uppercase tracking-widest focus:bg-[#1a252f] ${action.className}`}
-                    >
-                      <action.icon className="h-3 w-3 mr-2" />
-                      {action.label}
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem
+                    onClick={(e) => handleStatusChange(e, "active")}
+                    className="text-xs font-medium cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-2 text-blue-500" /> Reactivate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => handleStatusChange(e, "on_hold")}
+                    className="text-xs font-medium cursor-pointer"
+                  >
+                    <Pause className="w-3.5 h-3.5 mr-2 text-amber-500" /> Put on Hold
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => handleStatusChange(e, "completed")}
+                    className="text-xs font-medium cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Mark Complete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent className="px-4 sm:px-6 pb-4 space-y-3 border-t border-[#2f3e46]/30 pt-4">
-          {project.description && (
-            <p className="text-[10px] font-mono text-gray-400 line-clamp-2">
-              {project.description}
-            </p>
-          )}
-
-          {/* Progress Bar */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                Progress
-              </span>
-              <span className="font-mono text-[10px] text-[#a9927d]">
-                {Math.round(project.completionPercentage)}%
-              </span>
-            </div>
-            <div className="h-1.5 bg-[#0a0c10] border border-[#2f3e46] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(project.completionPercentage, 100)}%`,
-                  backgroundColor:
-                    project.completionPercentage >= 100
-                      ? "#34d399"
-                      : project.completionPercentage >= 50
-                        ? "#a9927d"
-                        : "#4b5563",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Meta Info */}
-          <div className="flex items-center gap-3 flex-wrap text-[10px] font-mono uppercase tracking-widest text-gray-500 pt-2">
-            <span className="flex items-center gap-1.5">
-              <ListChecks className="h-3 w-3 text-[#a9927d]" />
-              {project._count.tasks} task{project._count.tasks !== 1 ? "s" : ""}
-            </span>
-            <span className="flex items-center gap-1.5 shrink-0">
-              <Clock className="h-3 w-3 text-[#a9927d]" />
-              {project.actualHoursSpent.toFixed(1)}h
-            </span>
-            {deadlineText && (
-              <span
-                className={`flex items-center gap-1.5 shrink-0 ${
-                  isOverdue ? "text-red-400" : ""
-                }`}
-              >
-                📅 {deadlineText}
-                {isOverdue && " (Overdue)"}
-              </span>
+          {/* Fixed-Height Description Block */}
+          <div className="h-9 overflow-hidden">
+            {project.description ? (
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                {project.description}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 italic leading-snug">
+                No description provided
+              </p>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Progress Bar & Completion */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground font-medium">Progress</span>
+            <span className="font-mono font-bold text-foreground">
+              {Math.round(project.completionPercentage)}%
+            </span>
+          </div>
+
+          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(project.completionPercentage, 100)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Pinned Footer Meta Details */}
+        <div className="mt-auto pt-3 border-t border-secondary/50 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1 text-foreground font-bold">
+              <ListChecks className="w-3.5 h-3.5 text-emerald-500" />
+              {taskCount} task{taskCount !== 1 ? "s" : ""}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              {project.actualHoursSpent.toFixed(1)}h
+            </span>
+          </div>
+
+          {/* Avatar Stack */}
+          <div className="flex items-center -space-x-1.5">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-black font-bold text-[9px] ring-2 ring-background">
+              CJ
+            </div>
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-[9px] ring-2 ring-background">
+              AI
+            </div>
+          </div>
+        </div>
+      </div>
     </Link>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { UserProfile } from "@clerk/nextjs";
+import { UserProfile } from "@clerk/react";
 import { dark } from "@clerk/themes";
 
 export default function UserProfilePage() {

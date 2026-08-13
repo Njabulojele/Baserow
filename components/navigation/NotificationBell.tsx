@@ -27,18 +27,33 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Poll for unread count every 60 seconds
-  const { data: unreadCount = 0 } = trpc.notification.getUnreadCount.useQuery(
+  const { data: rawUnreadCount } = trpc.notification.getUnreadCount.useQuery(
     undefined,
     {
       refetchInterval: 60000,
     },
   );
 
+  const unreadCount =
+    typeof rawUnreadCount === "number"
+      ? rawUnreadCount
+      : typeof (rawUnreadCount as any)?.count === "number"
+      ? (rawUnreadCount as any).count
+      : 0;
+
   // Fetch recent notifications when the popover is opened
-  const { data: notifications = [], refetch } =
+  const { data: rawNotifications, refetch } =
     trpc.notification.getRecent.useQuery(undefined, {
       enabled: isOpen,
     });
+
+  const notifications: Notification[] = Array.isArray(rawNotifications)
+    ? rawNotifications
+    : Array.isArray((rawNotifications as any)?.notifications)
+    ? (rawNotifications as any).notifications
+    : Array.isArray((rawNotifications as any)?.items)
+    ? (rawNotifications as any).items
+    : [];
 
   const markAsReadMutation = trpc.notification.markAsRead.useMutation({
     onSuccess: () => {
@@ -95,36 +110,46 @@ export function NotificationBell() {
             </div>
           ) : (
             <div className="flex flex-col">
-              {notifications.map((notification) => (
-                <button
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`flex flex-col items-start px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 last:border-0 ${
-                    !notification.isRead
-                      ? "bg-blue-50/50 dark:bg-blue-900/10"
-                      : ""
-                  }`}
-                >
-                  <div className="flex justify-between items-start w-full mb-1">
-                    <span
-                      className={`text-sm font-medium ${!notification.isRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}
-                    >
-                      {notification.title}
+              {notifications.map((notification) => {
+                let timeAgo = "";
+                try {
+                  timeAgo = formatDistanceToNow(
+                    new Date(notification.createdAt),
+                    { addSuffix: true }
+                  );
+                } catch {
+                  timeAgo = "recently";
+                }
+
+                return (
+                  <button
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`flex flex-col items-start px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 last:border-0 ${
+                      !notification.isRead
+                        ? "bg-blue-50/50 dark:bg-blue-900/10"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex justify-between items-start w-full mb-1">
+                      <span
+                        className={`text-sm font-medium ${!notification.isRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}
+                      >
+                        {notification.title}
+                      </span>
+                      {!notification.isRead && (
+                        <span className="w-2 h-2 mt-1.5 bg-blue-500 rounded-full shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {notification.message}
+                    </p>
+                    <span className="text-[10px] text-gray-400 mt-2">
+                      {timeAgo}
                     </span>
-                    {!notification.isRead && (
-                      <span className="w-2 h-2 mt-1.5 bg-blue-500 rounded-full shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                    {notification.message}
-                  </p>
-                  <span className="text-[10px] text-gray-400 mt-2">
-                    {formatDistanceToNow(new Date(notification.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </span>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </ScrollArea>

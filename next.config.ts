@@ -8,6 +8,27 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  async rewrites() {
+    return [
+      {
+        source: "/api/trpc/:path*",
+        destination: "http://localhost:8080/api/trpc/:path*",
+      },
+      {
+        source: "/api/sessions/:path*",
+        destination: "http://localhost:8080/api/sessions/:path*",
+      },
+      {
+        source: "/api/v1/:path*",
+        destination: "http://localhost:8080/api/v1/:path*",
+      },
+      {
+        source: "/api/tracklog",
+        destination: "http://localhost:8080/api/tracklog",
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
@@ -22,73 +43,20 @@ const nextConfig: NextConfig = {
               "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' data: blob: https://*.clerk.com https://img.clerk.com https://clerk.pin-ltd.com https://images.unsplash.com https://lh3.googleusercontent.com",
-              "connect-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com https://clerk.pin-ltd.com wss://localhost:* ws://localhost:* https://va.vercel-scripts.com https://*.sentry.io https://*.ingest.sentry.io",
+              "img-src 'self' data: blob: https: http:",
+              "connect-src 'self' https: http: ws: wss:",
               "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.com https://*.clerk.accounts.dev https://clerk.pin-ltd.com",
               "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests",
             ].join("; "),
           },
         ],
       },
     ];
   },
-
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-      },
-      {
-        protocol: "https",
-        hostname: "img.clerk.com",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "github.com",
-      },
-    ],
-  },
 };
 
-export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
-  org: "openinfinity",
-
-  project: "javascript-nextjs",
-
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
-
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
-});
+export default nextConfig;

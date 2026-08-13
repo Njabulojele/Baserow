@@ -101,7 +101,8 @@ export function TaskForm({
       projectId: defaultProjectId || undefined,
       priority: "medium",
       type: "shallow_work",
-      scheduledDate: defaultDate,
+      dueDate: defaultDate || new Date(),
+      scheduledDate: defaultDate || new Date(),
     },
   });
 

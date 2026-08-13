@@ -1,5 +1,5 @@
 import { Webhook } from "svix";
-import { WebhookEvent } from "@clerk/nextjs/server";
+import { WebhookEvent } from "@clerk/react/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";

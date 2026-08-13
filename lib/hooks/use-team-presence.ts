@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/react";
 import { usePathname } from "next/navigation";
 
 interface UserPresence {

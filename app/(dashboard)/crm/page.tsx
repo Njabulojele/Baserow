@@ -345,7 +345,7 @@ function HealthPanel() {
           ) : (
             <>
               {/* If no scored at-risk, show stale clients from inactivity */}
-              {inactivityData && inactivityData.staleClients.length > 0 ? (
+              {inactivityData?.staleClients && inactivityData.staleClients.length > 0 ? (
                 inactivityData.staleClients.slice(0, 4).map((client) => (
                   <Link
                     key={client.id}

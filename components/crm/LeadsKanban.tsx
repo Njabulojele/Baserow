@@ -195,7 +195,14 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
         {STATUS_COLUMNS.filter(
           (col) => col.status !== "WON" && col.status !== "LOST",
         ).map((column) => {
-          const leads = filterLeads(leadsByStatus?.[column.status] || []);
+          const rawList =
+            leadsByStatus?.[column.status] ||
+            leadsByStatus?.[column.status.toLowerCase()] ||
+            (column.status === "PROPOSAL_SENT"
+              ? leadsByStatus?.["PROPOSAL"] || leadsByStatus?.["proposal"]
+              : []) ||
+            [];
+          const leads = filterLeads(rawList);
 
           return (
             <div key={column.status} className="min-w-[280px] shrink-0">
@@ -237,12 +244,14 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
                         <div className="flex items-start justify-between">
                           <div className="space-y-1">
                             <CardTitle className="text-sm font-medium">
-                              {lead.firstName} {lead.lastName}
+                              {lead.firstName} {lead.lastName || ""}
                             </CardTitle>
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              {lead.companyName}
-                            </div>
+                            {lead.companyName && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Building2 className="h-3 w-3 mr-1" />
+                                {lead.companyName}
+                              </div>
+                            )}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -292,10 +301,12 @@ export default function LeadsKanban({ onAddLead }: LeadsKanbanProps) {
                       <CardContent className="p-3 pt-0">
                         <div className="space-y-2">
                           {/* Contact info */}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            <span className="truncate">{lead.email}</span>
-                          </div>
+                          {lead.email && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{lead.email}</span>
+                            </div>
+                          )}
                           {lead.phone && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Phone className="h-3 w-3" />

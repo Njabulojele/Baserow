@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/react";
 import throttle from "lodash/throttle";
 
 export interface CursorPosition {

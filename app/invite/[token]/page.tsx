@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, RedirectToSignIn } from "@clerk/nextjs";
+import { useUser, RedirectToSignIn } from "@clerk/react";
 import { trpc } from "@/lib/trpc/client";
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";

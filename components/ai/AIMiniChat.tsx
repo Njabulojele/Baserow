@@ -19,7 +19,7 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/react";
 import { toast } from "sonner";
 
 interface ChatMessage {

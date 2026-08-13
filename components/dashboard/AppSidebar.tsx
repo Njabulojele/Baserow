@@ -7,18 +7,18 @@ import {
   FolderOpen,
   LayoutDashboard,
   LineChart,
-  Search,
+  PenTool,
   Settings,
   Target,
   Users,
   UserPlus,
-  TrendingUp,
-  Activity,
-  Zap,
-  PenTool,
-  User,
   Timer,
+  Activity,
+  Sun,
+  Moon,
+  Sparkles,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 import {
   Sidebar,
@@ -29,99 +29,39 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
   useSidebar,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const mainRoutes = [
+// Clement's Information Architecture as specified in redesign.md Section 2
+const sidebarRoutes = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Day Navigation", icon: Calendar, href: "/planning/day" },
-  { label: "Platform Leads", icon: Target, href: "/platform-lead" },
-  { label: "Strategy", icon: Target, href: "/strategy" },
-  { label: "Tasks", icon: CheckSquare, href: "/tasks" },
+  { label: "Clients & Pipeline", icon: Users, href: "/clients" },
+  { label: "Leads Kanban", icon: UserPlus, href: "/crm/leads" },
   { label: "Projects", icon: FolderOpen, href: "/projects" },
+  { label: "Tasks", icon: CheckSquare, href: "/tasks" },
+  { label: "Goals", icon: Target, href: "/goals" },
   { label: "Calendar", icon: Calendar, href: "/calendar" },
   { label: "Canvas", icon: PenTool, href: "/canvas" },
-  { label: "Team", icon: Users, href: "/team" },
-  { label: "Timer", icon: Timer, href: "/timer" },
-];
-
-const crmRoutes = [
-  { label: "Overview", icon: LayoutDashboard, href: "/crm" },
-  { label: "Leads", icon: UserPlus, href: "/crm/leads" },
-  { label: "Pipeline", icon: TrendingUp, href: "/crm/pipeline" },
-  { label: "Clients", icon: Users, href: "/clients" },
-  { label: "Activities", icon: Activity, href: "/crm/activities" },
-  { label: "Workflows", icon: Zap, href: "/crm/workflows" },
-];
-
-const otherRoutes = [
-  { label: "Analytics", icon: LineChart, href: "/analytics" },
+  { label: "Timer / Focus Mode", icon: Timer, href: "/timer" },
+  { label: "Tracklog", icon: Activity, href: "/tracklog" },
+  { label: "Reports & Analytics", icon: LineChart, href: "/analytics" },
   { label: "Settings", icon: Settings, href: "/settings" },
-  { label: "Research Agent", icon: Search, href: "/research" },
-  { label: "Profile", icon: User, href: "/user-profile" },
 ];
-
-function NavGroup({
-  label,
-  routes,
-  pathname,
-  onNavigate,
-}: {
-  label: string;
-  routes: typeof mainRoutes;
-  pathname: string;
-  onNavigate: () => void;
-}) {
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/40 px-3">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {routes.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive}
-                  tooltip={item.label}
-                  onClick={onNavigate}
-                  className={cn(
-                    "font-mono text-xs tracking-wide h-8 rounded-md transition-all",
-                    isActive
-                      ? "bg-card text-alabaster font-medium"
-                      : "text-muted-foreground hover:text-alabaster hover:bg-card/50",
-                  )}
-                >
-                  <Link href={item.href}>
-                    <item.icon className="w-3.5 h-3.5" />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
-}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { setOpenMobile, isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLinkClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -131,55 +71,103 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar
       collapsible="icon"
       {...props}
-      className="border-r border-border/30"
+      className="border-none bg-[#121316] text-[#e4e5e9] shadow-none"
     >
-      <SidebarHeader className="flex justify-between flex-row">
-        <div className="flex items-center p-2">
-          <Image
-            src="/logo.png"
-            alt="Baserow"
-            width={28}
-            height={28}
-            className="rounded"
-          />
-          <div className="ml-2 flex flex-col gap-0 leading-none group-data-[collapsible=icon]:hidden">
-            <span className="font-mono text-xs font-bold text-alabaster tracking-wide">
-              BaseRow
+      <SidebarHeader className="flex justify-between flex-row items-center p-4">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Baserow" className="w-8 h-8 rounded-xl object-contain shrink-0" />
+          <div className="flex flex-col gap-0 leading-none group-data-[collapsible=icon]:hidden">
+            <span className="text-sm font-extrabold tracking-tight text-white">
+              BASEROW
             </span>
-            <span className="font-mono text-[9px] text-muted-foreground/40">
-              v1.0
+            <span className="text-[10px] text-gray-400 font-medium">
+              Productivity OS
             </span>
           </div>
         </div>
-        <SidebarTrigger className="-ml-1 h-9 w-9 text-muted-foreground/40 hover:text-alabaster" />
+        <SidebarTrigger className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#202228] rounded-lg transition-all" />
       </SidebarHeader>
-      <SidebarContent className="px-1">
-        <NavGroup
-          label="General"
-          routes={mainRoutes}
-          pathname={pathname}
-          onNavigate={handleLinkClick}
-        />
-        <NavGroup
-          label="CRM"
-          routes={crmRoutes}
-          pathname={pathname}
-          onNavigate={handleLinkClick}
-        />
-        <NavGroup
-          label="Tools"
-          routes={otherRoutes}
-          pathname={pathname}
-          onNavigate={handleLinkClick}
-        />
+
+      <SidebarContent className="px-3 py-2">
+        <SidebarMenu className="gap-1.5">
+          {sidebarRoutes.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            return (
+              <SidebarMenuItem key={item.label}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.label}
+                  onClick={handleLinkClick}
+                  className={cn(
+                    "h-10 px-3.5 rounded-2xl text-xs font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-white text-black dark:bg-[#22242B] dark:text-white shadow-sm font-semibold"
+                      : "text-gray-400 hover:text-white hover:bg-[#1E2026]",
+                  )}
+                >
+                  <Link
+                    href={item.href}
+                    prefetch={true}
+                    className="flex items-center gap-3"
+                  >
+                    <item.icon
+                      className={cn(
+                        "w-4 h-4 transition-colors",
+                        isActive
+                          ? "text-black dark:text-white"
+                          : "text-gray-400",
+                      )}
+                    />
+                    <span className="tracking-normal">{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="border-t border-border/20">
-        <div className="p-2 flex items-center gap-2">
-          <UserButton showName={false} />
-          <div className="flex flex-col text-xs group-data-[collapsible=icon]:hidden">
-            <span className="font-mono text-[10px] text-muted-foreground/60">
-              Account
-            </span>
+
+      <SidebarFooter className="p-3 gap-3 border-none">
+        {/* Toota Theme Toggle Pill */}
+        {mounted && (
+          <div className="bg-[#1E2026] p-1 rounded-full flex items-center justify-between group-data-[collapsible=icon]:hidden shadow-inner">
+            <button
+              onClick={() => setTheme("light")}
+              className={cn(
+                "flex items-center justify-center gap-2 flex-1 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+                theme === "light"
+                  ? "bg-white text-black shadow-sm font-bold"
+                  : "text-gray-400 hover:text-white",
+              )}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              <span>Light</span>
+            </button>
+            <button
+              onClick={() => setTheme("dark")}
+              className={cn(
+                "flex items-center justify-center gap-2 flex-1 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+                theme === "dark"
+                  ? "bg-[#2A2D37] text-white shadow-sm font-bold"
+                  : "text-gray-400 hover:text-white",
+              )}
+            >
+              <Moon className="w-3.5 h-3.5" />
+              <span>Dark</span>
+            </button>
+          </div>
+        )}
+
+        <div className="p-2 flex items-center justify-between group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center gap-2">
+            <UserButton showName={false} />
+            <div className="flex flex-col text-xs group-data-[collapsible=icon]:hidden">
+              <span className="text-xs font-semibold text-white">Clement</span>
+              <span className="text-[10px] text-gray-400">Solo Founder</span>
+            </div>
           </div>
         </div>
       </SidebarFooter>
