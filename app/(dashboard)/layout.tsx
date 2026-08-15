@@ -79,11 +79,13 @@ export default async function DashboardLayout({
           <DashboardShell>
             <div className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-[1600px] mx-auto min-w-0 flex flex-col px-4 lg:px-8 py-2">
               <main className="flex-1 w-full min-h-0 pb-8">
-                <ErrorBoundary title="View rendering error">{children}</ErrorBoundary>
+                <ErrorBoundary title="View rendering error">
+                  {children}
+                </ErrorBoundary>
               </main>
               <footer className="py-4 text-center shrink-0">
                 <p className="text-[11px] font-medium text-muted-foreground/50 tracking-wide">
-                  Anchor OS — Solo Founder Command Center
+                  Command Center
                 </p>
               </footer>
             </div>

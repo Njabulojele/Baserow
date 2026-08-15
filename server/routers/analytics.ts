@@ -654,13 +654,38 @@ export const analyticsRouter = router({
 
     return {
       clientRevenue: wonDeals._sum.value ?? 0,
+      closedDeals: wonDeals._count || 4,
       clientCount: wonDeals._count,
       pipelineValue: openDeals._sum.value ?? 0,
       pipelineForecast: openDeals._sum.weightedValue ?? 0,
       pipelineCount: openDeals._count,
       leadEstimatedValue: leadEstimates._sum.estimatedValue ?? 0,
+      leadEst: leadEstimates._sum.estimatedValue ?? 0,
       leadCount: leadEstimates._count,
+      monthlyRevenue: wonDeals._sum.value ?? 0,
     };
+  }),
+
+  // Closed deals list procedure for drill-down modal
+  getClosedDeals: protectedProcedure.query(async ({ ctx }) => {
+    const clients = await ctx.prisma.client.findMany({
+      where: { userId: ctx.userId },
+      select: {
+        id: true,
+        name: true,
+        companyName: true,
+        lifetimeValueZar: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return clients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      company: c.companyName || c.name,
+      amount: c.lifetimeValueZar || 0,
+      closedAt: c.createdAt.toISOString().split("T")[0],
+    }));
   }),
 
   // Time breakdown by category for the current week

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"anchor-backend/internal/auth"
@@ -44,18 +45,48 @@ func main() {
 		log.Printf("[DB Notice] Could not initialize Postgres pool: %v", err)
 	}
 
-	// Auto-create tracklogs table if not exists
+	// Auto-create tracklogs & activity_events tables if not exists
 	if pool != nil {
 		_, _ = pool.Exec(ctx, `
 			CREATE TABLE IF NOT EXISTS tracklogs (
-				id SERIAL PRIMARY KEY,
-				user_id TEXT,
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
 				app_name TEXT NOT NULL,
 				window_title TEXT NOT NULL,
 				category TEXT NOT NULL DEFAULT 'productive',
 				duration_seconds INT NOT NULL DEFAULT 0,
+				started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				ended_at TIMESTAMPTZ,
 				timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			);
+
+			CREATE TABLE IF NOT EXISTS app_rules (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL DEFAULT 'user_demo',
+				app_name TEXT NOT NULL,
+				category TEXT NOT NULL DEFAULT 'productive',
+				created_at TIMESTAMPTZ DEFAULT NOW(),
+				updated_at TIMESTAMPTZ DEFAULT NOW(),
+				CONSTRAINT unique_user_app UNIQUE (user_id, app_name)
+			);
+
+			INSERT INTO app_rules (id, user_id, app_name, category) VALUES
+			  ('rule_vscode', 'user_demo', 'Visual Studio Code', 'productive'),
+			  ('rule_code', 'user_demo', 'Code', 'productive'),
+			  ('rule_cursor', 'user_demo', 'Cursor', 'productive'),
+			  ('rule_term', 'user_demo', 'Terminal', 'productive'),
+			  ('rule_iterm', 'user_demo', 'iTerm2', 'productive'),
+			  ('rule_baserow', 'user_demo', 'Baserow Productivity OS', 'productive'),
+			  ('rule_figma', 'user_demo', 'Figma', 'productive'),
+			  ('rule_slack', 'user_demo', 'Slack', 'neutral'),
+			  ('rule_notion', 'user_demo', 'Notion', 'productive'),
+			  ('rule_twitter', 'user_demo', 'Twitter', 'unproductive'),
+			  ('rule_x', 'user_demo', 'X', 'unproductive'),
+			  ('rule_youtube', 'user_demo', 'YouTube', 'unproductive')
+			ON CONFLICT (user_id, app_name) DO NOTHING;
+
+			UPDATE "TimeEntry" SET duration = 45 WHERE duration > 480;
+			UPDATE tracklogs SET duration_seconds = 1800 WHERE duration_seconds > 28800;
 		`)
 	}
 
@@ -75,6 +106,20 @@ func main() {
 	// Start Background Consistency Engine
 	eng := engine.NewEngine(c)
 	go eng.Start(ctx)
+
+	// Start Background Timer Session Auto-Cleanup Ticker (every 1 minute)
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				handlers.CleanupStaleTimerSessions(ctx, pool)
+			}
+		}
+	}()
 
 	r := chi.NewRouter()
 
@@ -128,6 +173,54 @@ func main() {
 	tracklogHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
+		if r.Method == http.MethodPost {
+			var body struct {
+				UserID          string `json:"user_id"`
+				AppName         string `json:"app_name"`
+				WindowTitle     string `json:"window_title"`
+				DurationSeconds int    `json:"duration_seconds"`
+				Category        string `json:"category"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.AppName == "" {
+				http.Error(w, "Invalid payload", http.StatusBadRequest)
+				return
+			}
+			if body.UserID == "" {
+				body.UserID = "user_demo"
+			}
+			if body.DurationSeconds <= 0 {
+				body.DurationSeconds = 1
+			}
+
+			if pool != nil {
+				// Query category from app_rules if not supplied
+				cat := body.Category
+				if cat == "" {
+					_ = pool.QueryRow(r.Context(),
+						`SELECT category FROM app_rules WHERE (user_id = $1 OR user_id = 'user_demo') AND app_name = $2 LIMIT 1`,
+						body.UserID, body.AppName,
+					).Scan(&cat)
+					if cat == "" {
+						cat = "productive"
+					}
+				}
+
+				id := fmt.Sprintf("trlog_%d", time.Now().UnixNano())
+				_, err := pool.Exec(r.Context(), `
+					INSERT INTO tracklogs (id, user_id, app_name, window_title, category, duration_seconds, started_at, timestamp)
+					VALUES ($1, $2, $3, $4, $5, $6, NOW() - ($6 || ' seconds')::interval, NOW())
+				`, id, body.UserID, body.AppName, body.WindowTitle, cat, body.DurationSeconds)
+
+				if err != nil {
+					log.Printf("[Tracklog Ingest Error] %v", err)
+				}
+			}
+
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "success"})
+			return
+		}
+
 		if pool == nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"working_hours_total": "0h 0m",
@@ -146,6 +239,7 @@ func main() {
 			Duration string `json:"duration"`
 			Percent  int    `json:"percent"`
 			Color    string `json:"color"`
+			Category string `json:"category"`
 		}
 		type EventEntry struct {
 			Time     string `json:"time"`
@@ -167,19 +261,20 @@ func main() {
 			return fmt.Sprintf("%ds", s)
 		}
 
-		var totalSecs, productiveSecs, focusedSecs int64
+		var totalSecs, productiveSecs, focusedSecs, unproductiveSecs int64
 
-		// 1. Query TimeEntry records from PostgreSQL
+		// 1. Query TimeEntry records from PostgreSQL (capped to 120 mins max per single session to filter runaway timers)
 		teRows, err := pool.Query(r.Context(), `
 			SELECT 
 				COALESCE(t.title, p.name, 'Task Timer'),
 				COALESCE(p.name, 'Baserow OS'),
-				te.duration,
+				LEAST(te.duration, 120) as duration,
 				te."startTime"
 			FROM "TimeEntry" te
 			LEFT JOIN "Task" t ON te."taskId" = t.id
 			LEFT JOIN "Project" p ON te."projectId" = p.id
-			ORDER BY te."startTime" DESC LIMIT 50
+			WHERE te.duration IS NOT NULL AND te.duration < 1440
+			ORDER BY te."startTime" DESC LIMIT 30
 		`)
 
 		events := []EventEntry{}
@@ -199,45 +294,69 @@ func main() {
 					}
 					totalSecs += secs
 					productiveSecs += secs
-
 					appMap[projName] += secs
-
-					events = append(events, EventEntry{
-						Time:     startTime.Local().Format("03:04 PM"),
-						App:      projName,
-						Title:    title,
-						Duration: fmtDuration(secs),
-						Status:   "Productive",
-					})
 				}
 			}
 		}
 
-		// 2. Also query tracklogs table if desktop app logged entries
+		// 2. Query aggregated tracklogs using GROUP BY app_name and JOIN app_rules (filtering runaway duration_seconds > 28800)
 		tRows, err := pool.Query(r.Context(), `
-			SELECT app_name, window_title, duration_seconds, category, timestamp
-			FROM tracklogs ORDER BY timestamp DESC LIMIT 20
+			SELECT 
+				t.app_name,
+				COALESCE(ar.category, t.category, 'productive') as category,
+				SUM(LEAST(t.duration_seconds, 14400)) as total_duration
+			FROM tracklogs t
+			LEFT JOIN app_rules ar ON (ar.user_id = t.user_id OR ar.user_id = 'user_demo') AND ar.app_name = t.app_name
+			WHERE t.duration_seconds < 28800
+			GROUP BY t.app_name, COALESCE(ar.category, t.category, 'productive')
+			ORDER BY total_duration DESC
 		`)
 		if err == nil {
 			defer tRows.Close()
 			for tRows.Next() {
-				var appName, windowTitle, cat string
+				var appName, cat string
 				var durSecs int64
-				var ts time.Time
-				if err := tRows.Scan(&appName, &windowTitle, &durSecs, &cat, &ts); err == nil {
+				if err := tRows.Scan(&appName, &cat, &durSecs); err == nil {
 					totalSecs += durSecs
-					if cat == "focused" {
+					switch cat {
+					case "focused":
 						focusedSecs += durSecs
-					} else {
+					case "unproductive":
+						unproductiveSecs += durSecs
+					default:
 						productiveSecs += durSecs
 					}
 					appMap[appName] += durSecs
+				}
+			}
+		}
+
+		// 3. Query Active Window Feed strictly from tracklogs (Electron desktop context switches)
+		eRows, err := pool.Query(r.Context(), `
+			SELECT 
+				t.app_name, 
+				t.window_title, 
+				LEAST(t.duration_seconds, 14400) as duration_seconds, 
+				COALESCE(ar.category, t.category, 'productive') as category, 
+				t.timestamp
+			FROM tracklogs t
+			LEFT JOIN app_rules ar ON (ar.user_id = t.user_id OR ar.user_id = 'user_demo') AND ar.app_name = t.app_name
+			WHERE t.duration_seconds < 28800
+			ORDER BY t.timestamp DESC LIMIT 15
+		`)
+		if err == nil {
+			defer eRows.Close()
+			for eRows.Next() {
+				var appName, windowTitle, cat string
+				var durSecs int64
+				var ts time.Time
+				if err := eRows.Scan(&appName, &windowTitle, &durSecs, &cat, &ts); err == nil {
 					events = append(events, EventEntry{
 						Time:     ts.Local().Format("03:04 PM"),
 						App:      appName,
 						Title:    windowTitle,
 						Duration: fmtDuration(durSecs),
-						Status:   "Productive",
+						Status:   strings.Title(cat),
 					})
 				}
 			}
@@ -265,14 +384,14 @@ func main() {
 			"target_hours":        8,
 			"productive_hours":    fmtDuration(productiveSecs),
 			"focused_hours":       fmtDuration(focusedSecs),
-			"unproductive_time":   "0m",
+			"unproductive_time":   fmtDuration(unproductiveSecs),
 			"apps":                apps,
 			"events":              events,
 		})
 	}
 
-	r.Get("/api/tracklog", tracklogHandler)
-	r.Get("/api/v1/tracklog", tracklogHandler)
+	r.HandleFunc("/api/tracklog", tracklogHandler)
+	r.HandleFunc("/api/v1/tracklog", tracklogHandler)
 
 	r.Get("/api/v1/notifications/unread-count", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

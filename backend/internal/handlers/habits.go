@@ -163,14 +163,6 @@ func GetDailyChecklist(ctx context.Context, pool *pgxpool.Pool, userID string, i
 	}, nil
 }
 
-func GetStreaks(ctx context.Context, pool *pgxpool.Pool, userID string) (interface{}, error) {
-	return map[string]interface{}{
-		"currentStreak": 5,
-		"bestStreak":    14,
-		"totalHabits":   12,
-	}, nil
-}
-
 func ToggleHabit(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
 	habitTemplateID, _ := input["habitTemplateId"].(string)
 	dateStr := time.Now().Format("2006-01-02")
@@ -192,8 +184,4 @@ func ToggleHabit(ctx context.Context, pool *pgxpool.Pool, userID string, input m
 		return nil, err
 	}
 	return map[string]interface{}{"completed": completed}, nil
-}
-
-func SeedDefaults(ctx context.Context, pool *pgxpool.Pool, userID string) (interface{}, error) {
-	return map[string]interface{}{"seeded": true}, nil
 }

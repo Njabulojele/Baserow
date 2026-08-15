@@ -48,7 +48,7 @@ const sidebarRoutes = [
   { label: "Calendar", icon: Calendar, href: "/calendar" },
   { label: "Canvas", icon: PenTool, href: "/canvas" },
   { label: "Timer / Focus Mode", icon: Timer, href: "/timer" },
-  { label: "Tracklog", icon: Activity, href: "/tracklog" },
+  // { label: "Tracklog", icon: Activity, href: "/tracklog" },
   { label: "Reports & Analytics", icon: LineChart, href: "/analytics" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ];
@@ -73,10 +73,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
       className="border-none bg-[#121316] text-[#e4e5e9] shadow-none"
     >
-      <SidebarHeader className="flex justify-between flex-row items-center p-4">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Baserow" className="w-8 h-8 rounded-xl object-contain shrink-0" />
-          <div className="flex flex-col gap-0 leading-none group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="flex justify-between flex-row items-center p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
+          <img
+            src="/logo.png"
+            alt="Baserow"
+            className="w-8 h-8 rounded-xl object-contain shrink-0"
+          />
+          <div className="flex flex-col gap-0 leading-none">
             <span className="text-sm font-extrabold tracking-tight text-white">
               BASEROW
             </span>

@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
       {/* Rows 3 & 4: Deep Dives (Full Width) */}
       <div className="space-y-6">
         <ProductivityChart />
-        <StrategyAnalytics />
+        {/* <StrategyAnalytics /> */}
         <TaskCompletionBar />
         <ProjectDistributionPie />
       </div>

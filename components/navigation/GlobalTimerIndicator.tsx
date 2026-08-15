@@ -14,7 +14,7 @@ import {
 
 export function GlobalTimerIndicator() {
   const isRunning = useTimerStore((s) => s.isRunning);
-  const activeSessionId = useTimerStore((s) => (s as any).activeSessionId || "session_default");
+  const activeSessionId = useTimerStore((s) => s.activeTimer?.sessionId || (s as any).activeSessionId || "session_default");
   const display = useTimerDisplay();
   const router = useRouter();
 

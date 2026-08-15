@@ -34,7 +34,8 @@ export default function PortalPage({ params }: PortalPageProps) {
             OpenInfinity Client Workspace
           </h1>
           <p className="text-xs text-muted-foreground">
-            Real-time project roadmap, milestone delivery tracker, and active task progress.
+            Real-time project roadmap, milestone delivery tracker, and active
+            task progress.
           </p>
         </div>
 
@@ -50,7 +51,9 @@ export default function PortalPage({ params }: PortalPageProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="toota-card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-foreground">Divine Essence Platform Redesign</h2>
+            <h2 className="text-base font-bold text-foreground">
+              Divine Essence Platform Redesign
+            </h2>
             <span className="bg-emerald-500/15 text-emerald-500 text-xs font-bold px-3 py-1 rounded-full">
               In Progress
             </span>
@@ -70,13 +73,16 @@ export default function PortalPage({ params }: PortalPageProps) {
             <p className="font-bold text-foreground">Delivered Milestones:</p>
             <div className="space-y-1.5 text-muted-foreground">
               <p className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Dark Luxury Visual UI Migration — Completed
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Dark
+                Luxury Visual UI Migration — Completed
               </p>
               <p className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> PayFast ITN Webhook & Wallet Settlement — Completed
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />{" "}
+                PayFast ITN Webhook & Wallet Settlement — Completed
               </p>
               <p className="flex items-center gap-2 text-amber-400">
-                <Clock className="w-3.5 h-3.5" /> Mobile Responsive Checkout Polish — In Review
+                <Clock className="w-3.5 h-3.5" /> Mobile Responsive Checkout
+                Polish — In Review
               </p>
             </div>
           </div>
@@ -84,7 +90,7 @@ export default function PortalPage({ params }: PortalPageProps) {
 
         <div className="toota-card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-foreground">Anchor OS Integration</h2>
+            <h2 className="text-base font-bold text-foreground">Integration</h2>
             <span className="bg-emerald-500/15 text-emerald-500 text-xs font-bold px-3 py-1 rounded-full">
               Phase 2 Active
             </span>
@@ -104,13 +110,16 @@ export default function PortalPage({ params }: PortalPageProps) {
             <p className="font-bold text-foreground">Delivered Milestones:</p>
             <div className="space-y-1.5 text-muted-foreground">
               <p className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Toota Borderless Design System — Completed
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Toota
+                Borderless Design System — Completed
               </p>
               <p className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Go Engine & Redis Caching Layer — Completed
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Go
+                Engine & Redis Caching Layer — Completed
               </p>
               <p className="flex items-center gap-2 text-emerald-500">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Client Portal Token Access — Completed
+                <CheckCircle2 className="w-3.5 h-3.5" /> Client Portal Token
+                Access — Completed
               </p>
             </div>
           </div>

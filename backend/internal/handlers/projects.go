@@ -3,91 +3,77 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"time"
+	"math"
 
-	"github.com/jackc/pgx/v5"
+	"anchor-backend/internal/auth"
+	"anchor-backend/internal/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// GetProjects returns all projects for a given user/org.
+// GetProjects lists every project owned by the calling user.
 func GetProjects(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
-	status, _ := input["status"].(string)
-
-	query := `
-		SELECT 
-			p.id, p.name, p.description, p."type", p.status, p.priority, 
-			p.billable, p."hourlyRate", p."budgetHours", p."estimatedHours", 
-			p."actualHoursSpent", p."completionPercentage", p.color, p."createdAt", p.deadline,
-			p."clientId", c.name as client_name,
-			(SELECT COUNT(*) FROM "Task" t WHERE t."projectId" = p.id AND t."deletedAt" IS NULL) as task_count
-		FROM "Project" p
-		LEFT JOIN "Client" c ON p."clientId" = c.id
-		WHERE (p."userId" = $1 OR $1 = 'dev_user' OR true) AND p."archivedAt" IS NULL AND p."deletedAt" IS NULL
-	`
-	args := []interface{}{userID}
-
-	if status != "" && status != "all" {
-		query += fmt.Sprintf(" AND p.status = $%d", len(args)+1)
-		args = append(args, status)
-	}
-
-	query += ` ORDER BY p.priority ASC, p."createdAt" DESC`
-
-	rows, err := pool.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query projects: %w", err)
-	}
-	defer rows.Close()
+	userID = auth.UserIDFromContext(ctx)
 
 	var projects []map[string]interface{}
-	for rows.Next() {
-		var id, name, pType, pStatus, priority string
-		var description, color, clientID, clientName *string
-		var billable bool
-		var hourlyRate, budgetHours, estimatedHours *float64
-		var actualHours, completionPct float64
-		var createdAt time.Time
-		var deadline *time.Time
-		var taskCount int64
+	if pool != nil {
+		query := `
+			SELECT p.id, p.client_id, p.name, p.description, p.status, p.priority, p.color,
+			       p.completion_percentage, p.actual_hours_spent, p.revenue_zar, p.created_at, p.updated_at,
+			       COALESCE(tc.total_tasks, 0) AS total_tasks,
+			       COALESCE(tc.completed_tasks, 0) AS completed_tasks
+			FROM projects p
+			LEFT JOIN (
+				SELECT project_id,
+				       COUNT(*) AS total_tasks,
+				       COUNT(*) FILTER (WHERE status IN ('done', 'completed')) AS completed_tasks
+				FROM tasks
+				WHERE user_id = $1 AND deleted_at IS NULL
+				GROUP BY project_id
+			) tc ON tc.project_id = p.id
+			WHERE p.user_id = $1 AND p.deleted_at IS NULL
+			ORDER BY p.updated_at DESC
+		`
 
-		err := rows.Scan(
-			&id, &name, &description, &pType, &pStatus, &priority,
-			&billable, &hourlyRate, &budgetHours, &estimatedHours,
-			&actualHours, &completionPct, &color, &createdAt, &deadline,
-			&clientID, &clientName, &taskCount,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan project row: %w", err)
-		}
+		rows, err := pool.Query(ctx, query, userID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var id, name, status, priority, color string
+				var description *string
+				var clientID *string
+				var completionPct, actualHours, revenueZAR float64
+				var createdAt, updatedAt interface{}
+				var totalTasks, completedTasks int64
 
-		pMap := map[string]interface{}{
-			"id":                   id,
-			"name":                 name,
-			"description":          description,
-			"type":                 pType,
-			"status":               pStatus,
-			"priority":             priority,
-			"billable":             billable,
-			"hourlyRate":           hourlyRate,
-			"budgetHours":          budgetHours,
-			"estimatedHours":       estimatedHours,
-			"actualHoursSpent":     actualHours,
-			"completionPercentage": completionPct,
-			"color":                color,
-			"createdAt":            createdAt,
-			"deadline":             deadline,
-			"clientId":             clientID,
-			"_count": map[string]interface{}{
-				"tasks": taskCount,
-			},
-		}
-		if clientID != nil && clientName != nil {
-			pMap["client"] = map[string]interface{}{
-				"id":   *clientID,
-				"name": *clientName,
+				if err := rows.Scan(&id, &clientID, &name, &description, &status, &priority, &color,
+					&completionPct, &actualHours, &revenueZAR, &createdAt, &updatedAt,
+					&totalTasks, &completedTasks); err == nil {
+
+					pct := completionPct
+					if totalTasks > 0 {
+						pct = math.Round((float64(completedTasks) / float64(totalTasks)) * 100)
+					}
+
+					projects = append(projects, map[string]interface{}{
+						"id":                   id,
+						"clientId":             clientID,
+						"name":                 name,
+						"description":          description,
+						"status":               status,
+						"priority":             priority,
+						"color":                color,
+						"completionPercentage": pct,
+						"actualHoursSpent":     actualHours,
+						"revenueZar":           revenueZAR,
+						"createdAt":            createdAt,
+						"updatedAt":            updatedAt,
+						"totalTasks":           totalTasks,
+						"completedTasks":       completedTasks,
+						"_count":               map[string]interface{}{"tasks": totalTasks},
+					})
+				}
 			}
 		}
-		projects = append(projects, pMap)
 	}
 
 	if projects == nil {
@@ -96,215 +82,213 @@ func GetProjects(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, 
 	return projects, nil
 }
 
-// GetProject returns a single project with tasks.
+// GetProject fetches a single project. The old version had no userID filter at all —
+// any authenticated user could fetch any project by id.
 func GetProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
 	id, _ := input["id"].(string)
 	if id == "" {
-		return nil, fmt.Errorf("project id required")
+		return nil, fmt.Errorf("id is required")
 	}
-
-	pQuery := `
-		SELECT 
-			p.id, p.name, p.description, p."type", p.status, p.priority, 
-			p.billable, p."hourlyRate", p."budgetHours", p."estimatedHours", 
-			p."actualHoursSpent", p."completionPercentage", p.color, p."createdAt", p.deadline
-		FROM "Project" p
-		WHERE p.id = $1 AND p."deletedAt" IS NULL
-	`
-	var pId, name, pType, pStatus, priority string
-	var description, color *string
-	var billable bool
-	var hourlyRate, budgetHours, estimatedHours *float64
-	var actualHours, completionPct float64
-	var createdAt time.Time
-	var deadline *time.Time
-
-	err := pool.QueryRow(ctx, pQuery, id).Scan(
-		&pId, &name, &description, &pType, &pStatus, &priority,
-		&billable, &hourlyRate, &budgetHours, &estimatedHours,
-		&actualHours, &completionPct, &color, &createdAt, &deadline,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("project not found")
-		}
+	if err := db.RequireOwner(ctx, pool, "projects", id, userID, true); err != nil {
 		return nil, err
 	}
 
-	// Fetch tasks
-	tQuery := `
-		SELECT id, title, description, status, priority, "type", "estimatedMinutes", "actualMinutes", "dueDate", "scheduledDate"
-		FROM "Task"
-		WHERE "projectId" = $1 AND "deletedAt" IS NULL
-		ORDER BY priority ASC, "createdAt" DESC
-	`
-	tRows, err := pool.Query(ctx, tQuery, id)
-	if err == nil {
-		defer tRows.Close()
+	var pid, name, status, priority, color string
+	var description *string
+	var clientID *string
+	var completionPct, actualHours, revenueZAR float64
+	var createdAt, updatedAt interface{}
+
+	err := pool.QueryRow(ctx, `
+		SELECT id, client_id, name, description, status, priority, color,
+		       completion_percentage, actual_hours_spent, revenue_zar, created_at, updated_at
+		FROM projects WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+		id, userID,
+	).Scan(&pid, &clientID, &name, &description, &status, &priority, &color,
+		&completionPct, &actualHours, &revenueZAR, &createdAt, &updatedAt)
+	if err != nil {
+		return nil, db.ErrNotFound
 	}
 
+	// Fetch tasks for this project
+	tRows, _ := pool.Query(ctx, `
+		SELECT id, title, description, status, priority, estimated_minutes, actual_minutes, due_date, scheduled_date
+		FROM tasks WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL
+		ORDER BY created_at DESC`, id, userID)
 	var tasks []map[string]interface{}
-	if err == nil {
+	if tRows != nil {
+		defer tRows.Close()
 		for tRows.Next() {
-			var tid, title, tStatus, tPriority, tType string
-			var tDesc *string
+			var tid, ttitle, tstatus, tpriority string
+			var tdesc *string
 			var estMin, actMin int
-			var dueDate, schedDate *time.Time
-
-			if err := tRows.Scan(&tid, &title, &tDesc, &tStatus, &tPriority, &tType, &estMin, &actMin, &dueDate, &schedDate); err == nil {
+			var dueDate, schedDate interface{}
+			if err := tRows.Scan(&tid, &ttitle, &tdesc, &tstatus, &tpriority, &estMin, &actMin, &dueDate, &schedDate); err == nil {
 				tasks = append(tasks, map[string]interface{}{
-					"id":               tid,
-					"title":            title,
-					"description":      tDesc,
-					"status":           tStatus,
-					"priority":         tPriority,
-					"type":             tType,
-					"estimatedMinutes": estMin,
-					"actualMinutes":    actMin,
-					"dueDate":          dueDate,
-					"scheduledDate":    schedDate,
+					"id": tid, "title": ttitle, "description": tdesc,
+					"status": tstatus, "priority": tpriority,
+					"estimatedMinutes": estMin, "actualMinutes": actMin,
+					"dueDate": dueDate, "scheduledDate": schedDate,
 				})
 			}
 		}
 	}
-
 	if tasks == nil {
 		tasks = []map[string]interface{}{}
 	}
 
 	return map[string]interface{}{
-		"id":                   pId,
-		"name":                 name,
-		"description":          description,
-		"type":                 pType,
-		"status":               pStatus,
-		"priority":             priority,
-		"billable":             billable,
-		"hourlyRate":           hourlyRate,
-		"budgetHours":          budgetHours,
-		"estimatedHours":       estimatedHours,
-		"actualHoursSpent":     actualHours,
-		"completionPercentage": completionPct,
-		"color":                color,
-		"createdAt":            createdAt,
-		"deadline":             deadline,
-		"tasks":                tasks,
+		"id": pid, "clientId": clientID, "name": name, "description": description,
+		"status": status, "priority": priority, "color": color,
+		"completionPercentage": completionPct, "actualHoursSpent": actualHours,
+		"revenueZar": revenueZAR, "createdAt": createdAt, "updatedAt": updatedAt,
+		"tasks": tasks,
 	}, nil
 }
 
-// CreateProject inserts a new project record.
 func CreateProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
 	name, _ := input["name"].(string)
-	if name == "" {
-		return nil, fmt.Errorf("project name required")
-	}
-
-	desc, _ := input["description"].(string)
-	pType, _ := input["type"].(string)
-	if pType == "" {
-		pType = "personal"
-	}
+	description, _ := input["description"].(string)
+	color, _ := input["color"].(string)
+	clientID, _ := input["clientId"].(string)
 	status, _ := input["status"].(string)
+	priority, _ := input["priority"].(string)
+
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+	if err := validateMaxLen("name", name, 255); err != nil {
+		return nil, err
+	}
+	if color == "" {
+		color = "#10B981"
+	}
 	if status == "" {
 		status = "active"
+	} else if err := validateEnum("status", status, ProjectStatuses); err != nil {
+		return nil, err
 	}
-	priority, _ := input["priority"].(string)
 	if priority == "" {
 		priority = "medium"
 	}
-	clientID, _ := input["clientId"].(string)
-	color, _ := input["color"].(string)
-	if color == "" {
-		color = "#3b82f6"
-	}
 
-	id := fmt.Sprintf("proj_%d", time.Now().UnixNano())
-
-	query := `
-		INSERT INTO "Project" (id, "userId", name, description, "type", status, priority, "clientId", color, "createdAt", "updatedAt")
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), $9, NOW(), NOW())
-		RETURNING id, name, status, priority, "createdAt"
-	`
-	var newID, newName, newStatus, newPriority string
-	var createdAt time.Time
-
-	err := pool.QueryRow(ctx, query, id, userID, name, desc, pType, status, priority, clientID, color).Scan(&newID, &newName, &newStatus, &newPriority, &createdAt)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create project: %w", err)
-	}
-
-	return map[string]interface{}{
-		"id":        newID,
-		"name":      newName,
-		"status":    newStatus,
-		"priority":  newPriority,
-		"createdAt": createdAt,
-	}, nil
-}
-
-// UpdateProject updates an existing project.
-func UpdateProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
-	id, _ := input["id"].(string)
-	if id == "" {
-		return nil, fmt.Errorf("project id required")
-	}
-
-	status, hasStatus := input["status"].(string)
-	name, hasName := input["name"].(string)
-
-	query := `UPDATE "Project" SET "updatedAt" = NOW()`
-	args := []interface{}{id, userID}
-
-	if hasStatus {
-		query += fmt.Sprintf(", status = $%d", len(args)+1)
-		args = append(args, status)
-	}
-	if hasName {
-		query += fmt.Sprintf(", name = $%d", len(args)+1)
-		args = append(args, name)
-	}
-
-	query += ` WHERE id = $1 AND ("userId" = $2 OR $2 = 'dev_user' OR true) RETURNING id, status, "updatedAt"`
-
-	var updatedID, updatedStatus string
-	var updatedAt time.Time
-
-	err := pool.QueryRow(ctx, query, args...).Scan(&updatedID, &updatedStatus, &updatedAt)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update project: %w", err)
-	}
-
-	return map[string]interface{}{
-		"id":        updatedID,
-		"status":    updatedStatus,
-		"updatedAt": updatedAt,
-	}, nil
-}
-
-// DeleteProject soft-deletes a project.
-func DeleteProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
-	id, _ := input["id"].(string)
-	if id == "" {
-		return nil, fmt.Errorf("project id required")
-	}
-
-	_, err := pool.Exec(ctx, `UPDATE "Project" SET "deletedAt" = NOW() WHERE id = $1 AND ("userId" = $2 OR $2 = 'dev_user' OR true)`, id, userID)
+	var newID string
+	err := pool.QueryRow(ctx, `
+		INSERT INTO projects (user_id, client_id, name, description, color, status, priority)
+		VALUES ($1, NULLIF($2,'')::uuid, $3, $4, $5, $6, $7)
+		RETURNING id`,
+		userID, clientID, name, description, color, status, priority,
+	).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"id": id, "success": true}, nil
+	return map[string]interface{}{"id": newID}, nil
 }
 
-// GetProjectStats returns project summary statistics.
-func GetProjectStats(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
-	var total, active, completed int64
-	_ = pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Project" WHERE ("userId" = $1 OR $1 = 'dev_user' OR true) AND "deletedAt" IS NULL`, userID).Scan(&total)
-	_ = pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Project" WHERE ("userId" = $1 OR $1 = 'dev_user' OR true) AND status = 'active' AND "deletedAt" IS NULL`, userID).Scan(&active)
-	_ = pool.QueryRow(ctx, `SELECT COUNT(*) FROM "Project" WHERE ("userId" = $1 OR $1 = 'dev_user' OR true) AND status = 'completed' AND "deletedAt" IS NULL`, userID).Scan(&completed)
+// UpdateProject builds a dynamic SET clause. Unlike the old version, it refuses to run
+// a no-op UPDATE and always scopes to the owning user.
+func UpdateProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
+	id, _ := input["id"].(string)
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	if err := db.RequireOwner(ctx, pool, "projects", id, userID, true); err != nil {
+		return nil, err
+	}
 
-	return map[string]interface{}{
-		"total":     total,
-		"active":    active,
-		"completed": completed,
-	}, nil
+	setClauses := []string{`updated_at = NOW()`}
+	args := []interface{}{id, userID}
+	nextParam := 3
+
+	if status, ok := input["status"].(string); ok && status != "" {
+		if err := validateEnum("status", status, ProjectStatuses); err != nil {
+			return nil, err
+		}
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", nextParam))
+		args = append(args, status)
+		nextParam++
+	}
+	if name, ok := input["name"].(string); ok && name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", nextParam))
+		args = append(args, name)
+		nextParam++
+	}
+	if description, ok := input["description"].(string); ok {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", nextParam))
+		args = append(args, description)
+		nextParam++
+	}
+	if completionPct, ok := input["completionPercentage"].(float64); ok {
+		setClauses = append(setClauses, fmt.Sprintf("completion_percentage = $%d", nextParam))
+		args = append(args, completionPct)
+		nextParam++
+	}
+
+	if len(setClauses) == 1 {
+		return nil, fmt.Errorf("no fields to update")
+	}
+
+	query := fmt.Sprintf(`UPDATE projects SET %s WHERE id = $1 AND user_id = $2 RETURNING id, updated_at`,
+		joinClauses(setClauses))
+
+	var updatedID string
+	var updatedAt interface{}
+	if err := pool.QueryRow(ctx, query, args...).Scan(&updatedID, &updatedAt); err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"id": updatedID, "updatedAt": updatedAt}, nil
+}
+
+// DeleteProject soft-deletes the project AND cascades the soft delete to its tasks.
+func DeleteProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
+	id, _ := input["id"].(string)
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	if err := db.RequireOwner(ctx, pool, "projects", id, userID, true); err != nil {
+		return nil, err
+	}
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `UPDATE projects SET deleted_at = NOW() WHERE id = $1 AND user_id = $2`, id, userID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE tasks SET deleted_at = NOW() WHERE project_id = $1 AND user_id = $2`, id, userID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"success": true}, nil
+}
+
+func GetProjectStats(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
+	var total, active, completed int64
+	_ = pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) as total,
+			COUNT(*) FILTER (WHERE status = 'active') as active,
+			COUNT(*) FILTER (WHERE status = 'completed') as completed
+		FROM projects WHERE user_id = $1 AND deleted_at IS NULL`, userID,
+	).Scan(&total, &active, &completed)
+
+	return map[string]interface{}{"total": total, "active": active, "completed": completed}, nil
+}
+
+func joinClauses(clauses []string) string {
+	out := clauses[0]
+	for _, c := range clauses[1:] {
+		out += ", " + c
+	}
+	return out
 }

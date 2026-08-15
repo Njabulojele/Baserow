@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TaskForm } from "@/components/tasks/TaskForm";
+import { TaskCalendarGrid } from "@/components/calendar/TaskCalendarGrid";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -500,88 +501,10 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
         </div>
       )}
 
-      {/* VIEW 2: CALENDAR SCHEDULE */}
+      {/* VIEW 2: 7-DAY TASK & GOAL CALENDAR GRID */}
       {viewMode === "calendar" && (
-        <div className="toota-card p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-foreground">
-                Week of {format(weekStart, "MMMM d, yyyy")}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentCalendarDate(addDays(currentCalendarDate, -7))}
-                className="toota-pill p-2 text-xs hover:bg-secondary"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentCalendarDate(new Date())}
-                className="toota-pill text-xs px-3 py-1.5"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setCurrentCalendarDate(addDays(currentCalendarDate, 7))}
-                className="toota-pill p-2 text-xs hover:bg-secondary"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-3">
-            {weekDays.map((day, idx) => {
-              const isToday = isSameDay(day, new Date());
-              const dayTasks = (taskList || []).filter((t: Task) =>
-                t && t.dueDate ? isSameDay(new Date(t.dueDate), day) : false,
-              );
-
-              return (
-                <div
-                  key={idx}
-                  className={cn(
-                    "p-3 rounded-2xl border min-h-[220px] flex flex-col gap-2 transition-all",
-                    isToday
-                      ? "bg-emerald-500/10 border-emerald-500/30"
-                      : "bg-secondary/30 border-secondary/50",
-                  )}
-                >
-                  <div className="flex justify-between items-center pb-2 border-b border-secondary/50">
-                    <span className="text-xs font-bold text-muted-foreground">{format(day, "EEE")}</span>
-                    <span
-                      className={cn(
-                        "text-xs font-mono font-bold w-6 h-6 rounded-full flex items-center justify-center",
-                        isToday ? "bg-emerald-500 text-white" : "text-foreground",
-                      )}
-                    >
-                      {format(day, "d")}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 overflow-y-auto max-h-[160px] custom-scrollbar">
-                    {dayTasks.length === 0 ? (
-                      <p className="text-[10px] text-muted-foreground/60 text-center py-4">No tasks</p>
-                    ) : (
-                      dayTasks.map((t: Task, tIdx: number) => (
-                        <div
-                          key={t.id || tIdx}
-                          className="bg-secondary p-2 rounded-xl text-xs space-y-1 hover:border-emerald-500/40 border border-transparent transition-colors"
-                        >
-                          <p className="font-semibold text-foreground truncate text-[11px]">{t.title}</p>
-                          <span className="text-[9px] font-mono text-emerald-500 block">
-                            {t.estimatedMinutes ? `${t.estimatedMinutes}m` : "Task"}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="toota-card p-6 border border-secondary/50 rounded-2xl shadow-xl">
+          <TaskCalendarGrid />
         </div>
       )}
 

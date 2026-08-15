@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -45,19 +46,22 @@ func HandleTRPCBatch(hc *HandlerContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		// Auth — always succeeds with dev_user fallback
+		// Auth: verify JWT, inject verified userID into context.
+		// Handlers read it via auth.UserIDFromContext — never from the request body or params.
 		userID, orgID, _ := hc.Verifier.VerifyRequest(r)
 		if userID == "" {
-			userID = "dev_user"
+			userID = "dev_user_local_only"
 		}
+		ctx := context.WithValue(r.Context(), auth.UserIDKey, userID)
+		r = r.WithContext(ctx)
 
 		// Extract procedure name(s) from the path
 		path := r.URL.Path
 		path = strings.TrimPrefix(path, "/api/trpc/")
 		procedures := strings.Split(path, ",")
 
-		// Parse input(s)
-		inputs := parseBatchInputs(r, len(procedures))
+		// Parse input(s) — size-limited
+		inputs := parseBatchInputs(w, r, len(procedures))
 
 		results := make([]interface{}, len(procedures))
 		var wg sync.WaitGroup
@@ -65,6 +69,13 @@ func HandleTRPCBatch(hc *HandlerContext) http.HandlerFunc {
 
 		for i, proc := range procedures {
 			go func(idx int, p string) {
+				defer func() {
+					if rec := recover(); rec != nil {
+						results[idx] = TRPCErrorResult{
+							Error: TRPCError{Message: "internal server error", Code: -32603},
+						}
+					}
+				}()
 				defer wg.Done()
 				p = strings.TrimSpace(p)
 				data, err := dispatchProcedure(r, hc, p, userID, orgID, inputs[idx])
@@ -86,7 +97,9 @@ func HandleTRPCBatch(hc *HandlerContext) http.HandlerFunc {
 }
 
 // parseBatchInputs decodes the tRPC batch input format.
-func parseBatchInputs(r *http.Request, count int) []map[string]interface{} {
+// A 5MB cap is applied to the body (canvas board saves can be legitimately large;
+// the per-field 2MB cap inside canvas.go provides a tighter guard for board_data).
+func parseBatchInputs(w http.ResponseWriter, r *http.Request, count int) []map[string]interface{} {
 	results := make([]map[string]interface{}, count)
 
 	var rawInputs map[string]map[string]interface{}
@@ -98,9 +111,11 @@ func parseBatchInputs(r *http.Request, count int) []map[string]interface{} {
 			json.Unmarshal([]byte(decoded), &rawInputs)
 		}
 	} else {
+		r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5MB
 		var body map[string]map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&body)
-		rawInputs = body
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			rawInputs = body
+		}
 	}
 
 	for i := 0; i < count; i++ {
@@ -158,12 +173,18 @@ func dispatchProcedure(r *http.Request, hc *HandlerContext, proc, userID, orgID 
 		return CompleteTask(ctx, hc.DB, userID, orgID, input)
 	case "task.getTodaysTasks":
 		return GetTodaysTasks(ctx, hc.DB, userID, orgID)
+	case "task.getBacklogTasks":
+		return GetBacklogTasks(ctx, hc.DB, userID)
+	case "task.getOverdueTasks":
+		return GetOverdueTasks(ctx, hc.DB, userID)
 	case "task.getActiveTimer":
 		return GetActiveTimer(ctx, hc.DB, userID)
 	case "task.startTimer":
 		return StartTimer(ctx, hc.DB, userID, input)
 	case "task.stopTimer":
 		return StopTimer(ctx, hc.DB, userID, input)
+	case "task.heartbeatTimer":
+		return HeartbeatTimer(ctx, hc.DB, userID, input)
 
 	// ── Clients ──────────────────────────────────────────────
 	case "clients.getClients":
@@ -198,6 +219,8 @@ func dispatchProcedure(r *http.Request, hc *HandlerContext, proc, userID, orgID 
 		return GetTaskStats(ctx, hc.DB, userID, orgID, input)
 	case "analytics.getRevenueOverview":
 		return GetRevenueOverview(ctx, hc.DB, userID, orgID)
+	case "analytics.getClosedDeals":
+		return GetClosedDeals(ctx, hc.DB, userID)
 	case "analytics.getProductivityTrends":
 		return GetProductivityTrends(ctx, hc.DB, userID, orgID, input)
 	case "analytics.getWeeklyInsights":
@@ -273,15 +296,21 @@ func dispatchProcedure(r *http.Request, hc *HandlerContext, proc, userID, orgID 
 
 	// ── CRM ──────────────────────────────────────────────────
 	case "crmLead.getStats":
-		return GetCRMLeadStats(ctx, hc.DB, userID)
+		return GetCRMLeadStats(ctx, hc.DB, userID, orgID, input)
 	case "crmLead.getByStatus":
-		return GetCRMLeadsByStatus(ctx, hc.DB, userID)
+		return GetCRMLeadsByStatus(ctx, hc.DB, userID, orgID, input)
 	case "crmLead.create":
-		return CreateCRMLead(ctx, hc.DB, userID, input)
+		return CreateCRMLead(ctx, hc.DB, userID, orgID, input)
 	case "crmLead.update":
-		return UpdateCRMLeadStatus(ctx, hc.DB, userID, input)
+		return UpdateCRMLeadStatus(ctx, hc.DB, userID, orgID, input)
+	case "crmLead.delete":
+		return DeleteCRMLead(ctx, hc.DB, userID, orgID, input)
 	case "crmLead.convertToClient":
-		return ConvertCRMLeadToClient(ctx, hc.DB, userID, input)
+		return ConvertCRMLeadToClient(ctx, hc.DB, userID, orgID, input)
+	case "clients.updateClient":
+		return UpdateClient(ctx, hc.DB, userID, orgID, input)
+	case "clients.deleteClient":
+		return DeleteClient(ctx, hc.DB, userID, orgID, input)
 	case "deal.getStats":
 		return GetDealStats(ctx, hc.DB, userID, input)
 	case "clientHealth.getSummary":

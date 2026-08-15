@@ -4,23 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
+	"anchor-backend/internal/auth"
+	"anchor-backend/internal/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ListCanvas(ctx context.Context, pool *pgxpool.Pool, userID string) (interface{}, error) {
-	if pool == nil {
-		return []map[string]interface{}{}, nil
-	}
+// maxBoardDataBytes is the API-layer cap the audit flagged as missing.
+// Postgres will happily store an enormous JSONB document — this stops it before
+// the INSERT/UPDATE runs.
+const maxBoardDataBytes = 2 << 20 // 2MB
 
-	query := `
-		SELECT id, name, emoji, type, color, "boardData", "isFavorited", "createdAt", "updatedAt"
-		FROM "CanvasBoard"
-		WHERE ("userId" = $1 OR "userId" = 'dev_user' OR "userId" IS NULL OR $1 = 'dev_user' OR true) AND "deletedAt" IS NULL
-		ORDER BY "updatedAt" DESC
-	`
-	rows, err := pool.Query(ctx, query, userID)
+func ListCanvas(ctx context.Context, pool *pgxpool.Pool, userID string) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
+	rows, err := pool.Query(ctx, `
+		SELECT id, title, board_type, is_favorited, created_at, updated_at
+		FROM canvas_boards WHERE user_id = $1 AND deleted_at IS NULL
+		ORDER BY updated_at DESC`, userID)
 	if err != nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -28,202 +28,186 @@ func ListCanvas(ctx context.Context, pool *pgxpool.Pool, userID string) (interfa
 
 	var boards []map[string]interface{}
 	for rows.Next() {
-		var id, name, cType string
-		var emoji, color *string
-		var boardDataBytes []byte
-		var isFavorited bool
-		var createdAt, updatedAt time.Time
-
-		err := rows.Scan(&id, &name, &emoji, &cType, &color, &boardDataBytes, &isFavorited, &createdAt, &updatedAt)
-		if err != nil {
-			continue
+		var id, title, boardType string
+		var favorited bool
+		var createdAt, updatedAt interface{}
+		if err := rows.Scan(&id, &title, &boardType, &favorited, &createdAt, &updatedAt); err != nil {
+			return nil, err
 		}
-
-		var boardData interface{}
-		if len(boardDataBytes) > 0 {
-			_ = json.Unmarshal(boardDataBytes, &boardData)
-		}
-
 		boards = append(boards, map[string]interface{}{
-			"id":          id,
-			"name":        name,
-			"emoji":       emoji,
-			"type":        cType,
-			"color":       color,
-			"boardData":   boardData,
-			"isFavorited": isFavorited,
-			"createdAt":   createdAt,
-			"updatedAt":   updatedAt,
+			"id": id, "name": title, "title": title, "boardType": boardType,
+			"type":        boardType,
+			"isFavorited": favorited, "createdAt": createdAt, "updatedAt": updatedAt,
 		})
 	}
-
 	if boards == nil {
 		boards = []map[string]interface{}{}
 	}
-	return boards, nil
+	return boards, rows.Err()
 }
 
+// GetCanvasById previously had no user filter — any user who knew or guessed a board
+// id could read its full contents including all board_data.
 func GetCanvasById(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
 	id, _ := input["id"].(string)
-	if id == "" || pool == nil {
-		return nil, fmt.Errorf("canvas id required")
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
 	}
-
-	query := `
-		SELECT id, name, emoji, type, color, "boardData", "isFavorited", "createdAt", "updatedAt"
-		FROM "CanvasBoard"
-		WHERE id = $1 AND "deletedAt" IS NULL
-	`
-	var cid, name, cType string
-	var emoji, color *string
-	var boardDataBytes []byte
-	var isFavorited bool
-	var createdAt, updatedAt time.Time
-
-	err := pool.QueryRow(ctx, query, id).Scan(&cid, &name, &emoji, &cType, &color, &boardDataBytes, &isFavorited, &createdAt, &updatedAt)
+	if err := db.RequireOwner(ctx, pool, "canvas_boards", id, userID, true); err != nil {
+		return nil, err
+	}
+	var title, boardType string
+	var boardData []byte
+	err := pool.QueryRow(ctx, `
+		SELECT title, board_type, board_data FROM canvas_boards
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`, id, userID,
+	).Scan(&title, &boardType, &boardData)
 	if err != nil {
-		return nil, fmt.Errorf("canvas board not found")
+		return nil, db.ErrNotFound
 	}
-
-	var boardData interface{}
-	if len(boardDataBytes) > 0 {
-		_ = json.Unmarshal(boardDataBytes, &boardData)
-	}
-
+	var parsed interface{}
+	_ = json.Unmarshal(boardData, &parsed)
 	return map[string]interface{}{
-		"id":          cid,
-		"name":        name,
-		"emoji":       emoji,
-		"type":        cType,
-		"color":       color,
-		"boardData":   boardData,
-		"isFavorited": isFavorited,
-		"createdAt":   createdAt,
-		"updatedAt":   updatedAt,
+		"id": id, "name": title, "title": title, "boardType": boardType, "type": boardType,
+		"boardData": parsed,
 	}, nil
 }
 
 func CreateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
-	name, _ := input["name"].(string)
-	if name == "" {
-		name = "Untitled Board"
+	userID = auth.UserIDFromContext(ctx)
+	title, _ := input["name"].(string)
+	if t, ok := input["title"].(string); ok && t != "" {
+		title = t
 	}
-	emoji, _ := input["emoji"].(string)
-	if emoji == "" {
-		emoji = "🧠"
+	boardType, _ := input["type"].(string)
+	if bt, ok := input["boardType"].(string); ok && bt != "" {
+		boardType = bt
 	}
-	cType, _ := input["type"].(string)
-	if cType == "" {
-		cType = "brainstorm"
+	if title == "" {
+		title = "Untitled board"
 	}
-	color, _ := input["color"].(string)
-	if color == "" {
-		color = "#6EE7B7"
-	}
-
-	id := fmt.Sprintf("canvas_%d", time.Now().UnixNano())
-	boardDataJson := `{"nodes":[],"drawings":[],"viewport":{"x":0,"y":0,"zoom":1},"connections":[]}`
-
-	query := `
-		INSERT INTO "CanvasBoard" (id, "userId", name, emoji, type, color, "boardData", "isFavorited", "createdAt", "updatedAt")
-		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, false, NOW(), NOW())
-		RETURNING id, name, "createdAt"
-	`
-	var newID, newName string
-	var createdAt time.Time
-
-	err := pool.QueryRow(ctx, query, id, userID, name, emoji, cType, color, boardDataJson).Scan(&newID, &newName, &createdAt)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create canvas: %w", err)
+	if boardType == "" {
+		boardType = "brainstorm"
 	}
 
-	return map[string]interface{}{
-		"id":        newID,
-		"name":      newName,
-		"createdAt": createdAt,
-	}, nil
-}
-
-func UpdateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
-	id, _ := input["id"].(string)
-	if id == "" || pool == nil {
-		return nil, fmt.Errorf("canvas id required")
-	}
-
-	boardDataObj, hasBoardData := input["boardData"]
-	name, hasName := input["name"].(string)
-
-	query := `UPDATE "CanvasBoard" SET "updatedAt" = NOW()`
-	args := []interface{}{id}
-
-	if hasName {
-		query += fmt.Sprintf(`, name = $%d`, len(args)+1)
-		args = append(args, name)
-	}
-	if hasBoardData {
-		bBytes, _ := json.Marshal(boardDataObj)
-		query += fmt.Sprintf(`, "boardData" = $%d::jsonb`, len(args)+1)
-		args = append(args, string(bBytes))
-	}
-
-	query += ` WHERE id = $1 RETURNING id, "updatedAt"`
-
-	var updatedID string
-	var updatedAt time.Time
-
-	err := pool.QueryRow(ctx, query, args...).Scan(&updatedID, &updatedAt)
+	var newID string
+	err := pool.QueryRow(ctx, `
+		INSERT INTO canvas_boards (user_id, title, board_type) VALUES ($1, $2, $3) RETURNING id`,
+		userID, title, boardType).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}
+	return map[string]interface{}{"id": newID, "name": title, "title": title}, nil
+}
 
-	return map[string]interface{}{
-		"id":        updatedID,
-		"updatedAt": updatedAt,
-	}, nil
+// UpdateCanvas previously had no ownership check — any user could overwrite any other
+// user's board. It also had no size guard on board_data.
+func UpdateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
+	id, _ := input["id"].(string)
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	if err := db.RequireOwner(ctx, pool, "canvas_boards", id, userID, true); err != nil {
+		return nil, err
+	}
+
+	name, _ := input["name"].(string)
+	if t, ok := input["title"].(string); ok && t != "" {
+		name = t
+	}
+
+	if boardDataRaw, ok := input["boardData"]; ok {
+		boardData, err := json.Marshal(boardDataRaw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid boardData")
+		}
+		if len(boardData) > maxBoardDataBytes {
+			return nil, fmt.Errorf("board data exceeds %d byte limit", maxBoardDataBytes)
+		}
+		_, err = pool.Exec(ctx, `
+			UPDATE canvas_boards SET board_data = $3, title = COALESCE(NULLIF($4,''), title), updated_at = NOW()
+			WHERE id = $1 AND user_id = $2`, id, userID, boardData, name)
+		if err != nil {
+			return nil, err
+		}
+	} else if name != "" {
+		_, err := pool.Exec(ctx, `
+			UPDATE canvas_boards SET title = $3, updated_at = NOW()
+			WHERE id = $1 AND user_id = $2`, id, userID, name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return map[string]interface{}{"id": id, "success": true}, nil
 }
 
 func DeleteCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
 	id, _ := input["id"].(string)
-	if id == "" || pool == nil {
-		return map[string]interface{}{"success": true}, nil
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
 	}
-	_, err := pool.Exec(ctx, `UPDATE "CanvasBoard" SET "deletedAt" = NOW() WHERE id = $1`, id)
+	if err := db.RequireOwner(ctx, pool, "canvas_boards", id, userID, true); err != nil {
+		return nil, err
+	}
+	_, err := pool.Exec(ctx, `UPDATE canvas_boards SET deleted_at = NOW() WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]interface{}{"id": id, "success": true}, nil
 }
 
+// DuplicateCanvas previously read the source board with no ownership check, meaning a
+// user could duplicate someone else's private board into their own account.
 func DuplicateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
-	id, _ := input["id"].(string)
-	if id == "" || pool == nil {
-		return nil, fmt.Errorf("canvas id required")
+	userID = auth.UserIDFromContext(ctx)
+	sourceID, _ := input["id"].(string)
+	if sourceID == "" {
+		return nil, fmt.Errorf("id is required")
 	}
-	newID := fmt.Sprintf("canvas_%d", time.Now().UnixNano())
-	query := `
-		INSERT INTO "CanvasBoard" (id, "userId", name, emoji, type, color, "boardData", "isFavorited", "createdAt", "updatedAt")
-		SELECT $1, $2, name || ' (Copy)', emoji, type, color, "boardData", false, NOW(), NOW()
-		FROM "CanvasBoard" WHERE id = $3
-		RETURNING id, name
-	`
-	var dID, dName string
-	err := pool.QueryRow(ctx, query, newID, userID, id).Scan(&dID, &dName)
+	if err := db.RequireOwner(ctx, pool, "canvas_boards", sourceID, userID, true); err != nil {
+		return nil, err
+	}
+
+	var title, boardType string
+	var boardData []byte
+	err := pool.QueryRow(ctx, `
+		SELECT title, board_type, board_data FROM canvas_boards
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`, sourceID, userID,
+	).Scan(&title, &boardType, &boardData)
+	if err != nil {
+		return nil, db.ErrNotFound
+	}
+
+	var newID string
+	err = pool.QueryRow(ctx, `
+		INSERT INTO canvas_boards (user_id, title, board_type, board_data)
+		VALUES ($1, $2, $3, $4) RETURNING id`,
+		userID, title+" (copy)", boardType, boardData).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"id": dID, "name": dName}, nil
+	return map[string]interface{}{"id": newID, "name": title + " (copy)"}, nil
 }
 
 func ToggleCanvasFavorite(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	userID = auth.UserIDFromContext(ctx)
 	id, _ := input["id"].(string)
-	if id == "" || pool == nil {
-		return map[string]interface{}{"success": true}, nil
+	if id == "" {
+		return nil, fmt.Errorf("id is required")
 	}
-	query := `UPDATE "CanvasBoard" SET "isFavorited" = NOT "isFavorited", "updatedAt" = NOW() WHERE id = $1 RETURNING "isFavorited"`
-	var isFav bool
-	err := pool.QueryRow(ctx, query, id).Scan(&isFav)
+	if err := db.RequireOwner(ctx, pool, "canvas_boards", id, userID, true); err != nil {
+		return nil, err
+	}
+	var favorited bool
+	err := pool.QueryRow(ctx, `
+		UPDATE canvas_boards SET is_favorited = NOT is_favorited, updated_at = NOW()
+		WHERE id = $1 AND user_id = $2 RETURNING is_favorited`, id, userID).Scan(&favorited)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"id": id, "isFavorited": isFav}, nil
+	return map[string]interface{}{"id": id, "isFavorited": favorited}, nil
 }
