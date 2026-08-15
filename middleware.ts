@@ -16,9 +16,11 @@ const isProtectedRoute = createRouteMatcher([
   "/invite(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect();
-});
+export default clerkMiddleware(
+  async (auth: { protect: () => any }, req: any) => {
+    if (isProtectedRoute(req)) await auth.protect();
+  },
+);
 
 export const config = {
   matcher: [
