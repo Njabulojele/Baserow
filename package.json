@@ -71,7 +71,7 @@
     "embla-carousel-react": "^8.6.0",
     "express": "^5.2.1",
     "html2canvas": "^1.4.1",
-    "inngest": "^3.50.0",
+    "inngest": "^3.54.0",
     "input-otp": "^1.4.2",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
