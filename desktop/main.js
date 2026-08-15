@@ -28,13 +28,13 @@ function createWindow() {
   // Start Edge-Triggered Active Window Tracking Loop
   startActiveWindowTracker();
 
-  // Dispatch 30s Heartbeat Ping
+  // Dispatch 13s Heartbeat Keep-Alive Ping
   setInterval(() => {
     const idleState = powerMonitor.getSystemIdleState(300);
     if (idleState !== "idle") {
       sendHeartbeatPing();
     }
-  }, 30000);
+  }, 13000);
 }
 
 /**

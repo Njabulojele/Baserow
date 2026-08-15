@@ -121,12 +121,51 @@ func main() {
 		}
 	}()
 
+	// 13-Second Keep-Alive Self-Ping Routine (Prevents Render & Cloud instances from sleeping)
+	go func() {
+		ticker := time.NewTicker(13 * time.Second)
+		defer ticker.Stop()
+		client := &http.Client{Timeout: 4 * time.Second}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				target := os.Getenv("RENDER_EXTERNAL_URL")
+				if target == "" {
+					target = os.Getenv("SELF_PING_URL")
+				}
+				if target == "" {
+					target = fmt.Sprintf("http://localhost:%s/health", port)
+				} else {
+					target = strings.TrimRight(target, "/") + "/health"
+				}
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+				if err == nil {
+					resp, err := client.Do(req)
+					if err == nil && resp != nil {
+						_ = resp.Body.Close()
+					}
+				}
+			}
+		}
+	}()
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	corsOrigin := os.Getenv("CORS_ORIGIN")
+	allowedOrigins := []string{"http://localhost:3000", "http://localhost:3001", "https://*.vercel.app"}
+	if corsOrigin != "" {
+		allowedOrigins = append(allowedOrigins, corsOrigin)
+	} else {
+		allowedOrigins = append(allowedOrigins, "*")
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", "*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
