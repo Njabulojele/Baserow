@@ -1,3 +1,4 @@
+import { useAuth } from "@clerk/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
@@ -8,6 +9,8 @@ import type { AppRouter } from "@/server/routers/_app";
 export const trpc = createTRPCReact<AppRouter>();
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
+  const { getToken } = useAuth();
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -26,6 +29,19 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         httpBatchLink({
           url: `${import.meta.env.VITE_API_URL ?? "https://baserow-go-backend.onrender.com"}/api/trpc`,
           transformer: superjson,
+          async headers() {
+            try {
+              const token = await getToken();
+              if (token) {
+                return {
+                  Authorization: `Bearer ${token}`,
+                };
+              }
+            } catch (err) {
+              console.error("[tRPC Auth Error]", err);
+            }
+            return {};
+          },
         }),
       ],
     })
