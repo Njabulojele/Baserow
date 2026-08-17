@@ -1,31 +1,24 @@
-import { Webhook } from "svix";
-import { prisma } from "../../lib/prisma";
+const { Webhook } = require("svix");
+const { PrismaClient } = require("@prisma/client");
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-async function getRawBody(req: any): Promise<string> {
-  if (typeof req.body === "string") return req.body;
-  if (req.body && Buffer.isBuffer(req.body)) return req.body.toString("utf-8");
-
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf-8"));
-    });
-    req.on("error", (err: any) => {
-      reject(err);
-    });
-  });
+let prisma;
+if (global.prisma) {
+  prisma = global.prisma;
+} else {
+  prisma = new PrismaClient();
+  if (process.env.NODE_ENV !== "production") {
+    global.prisma = prisma;
+  }
 }
 
-export default async function handler(req: any, res: any) {
+function parseBody(req) {
+  if (typeof req.body === "string") return req.body;
+  if (req.body && Buffer.isBuffer(req.body)) return req.body.toString("utf-8");
+  if (req.body && typeof req.body === "object") return JSON.stringify(req.body);
+  return "";
+}
+
+module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
       return res
@@ -52,28 +45,18 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const svix_id = (req.headers["svix-id"] ||
-      req.headers["Svix-Id"]) as string;
-    const svix_timestamp = (req.headers["svix-timestamp"] ||
-      req.headers["Svix-Timestamp"]) as string;
-    const svix_signature = (req.headers["svix-signature"] ||
-      req.headers["Svix-Signature"]) as string;
+    const svix_id = req.headers["svix-id"] || req.headers["Svix-Id"];
+    const svix_timestamp = req.headers["svix-timestamp"] || req.headers["Svix-Timestamp"];
+    const svix_signature = req.headers["svix-signature"] || req.headers["Svix-Signature"];
 
     if (!svix_id || !svix_timestamp || !svix_signature) {
       console.warn("⚠️ Missing svix headers in request");
       return res.status(400).json({ error: "Missing svix headers" });
     }
 
-    let body = "";
-    try {
-      body = await getRawBody(req);
-    } catch (err: any) {
-      console.error("Error reading raw request body:", err);
-      return res.status(400).json({ error: "Could not read raw request body" });
-    }
-
+    const body = parseBody(req);
     const wh = new Webhook(WEBHOOK_SECRET);
-    let evt: any;
+    let evt;
 
     try {
       evt = wh.verify(body, {
@@ -81,7 +64,7 @@ export default async function handler(req: any, res: any) {
         "svix-timestamp": svix_timestamp,
         "svix-signature": svix_signature,
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("❌ Svix signature verification failed:", err.message);
       return res.status(400).json({
         error: "Verification failed",
@@ -92,15 +75,17 @@ export default async function handler(req: any, res: any) {
     const { id } = evt.data;
     const eventType = evt.type;
 
-    console.log(`Webhook received successfully: ID ${id}, Type ${eventType}`);
+    console.log(`Webhook received: ID ${id}, Type ${eventType}`);
 
     if (eventType === "user.created" || eventType === "user.updated") {
       const { id, email_addresses, image_url, first_name, last_name } = evt.data;
-      const email = email_addresses?.[0]?.email_address;
+      const email =
+        email_addresses && email_addresses[0]
+          ? email_addresses[0].email_address
+          : null;
       const displayName =
         `${first_name || ""} ${last_name || ""}`.trim() ||
-        email?.split("@")[0] ||
-        "User";
+        (email ? email.split("@")[0] : "User");
 
       if (!email) {
         return res.status(400).json({ error: "No email found in event data" });
@@ -137,7 +122,7 @@ export default async function handler(req: any, res: any) {
           }
         }
         console.log(`✅ User ${id} synced successfully to Neon database`);
-      } catch (error: any) {
+      } catch (error) {
         console.error("❌ Error syncing user to Neon database:", error);
       }
     }
@@ -157,11 +142,11 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(200).json({ success: true });
-  } catch (globalErr: any) {
+  } catch (globalErr) {
     console.error("💥 Unhandled error in Clerk webhook handler:", globalErr);
     return res.status(200).json({
       status: "error_handled",
-      message: globalErr?.message || "Internal server error handled",
+      message: globalErr ? globalErr.message : "Internal server error handled",
     });
   }
-}
+};
