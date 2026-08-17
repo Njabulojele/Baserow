@@ -14,7 +14,7 @@ export function LandingPage() {
     "landing",
   );
 
-  // If user clicked Sign In or Sign Up, show our custom modern split auth page!
+  // If user clicked pages, show our custom modern split auth page!
   if (authView !== "landing") {
     return (
       <CustomAuthPage
