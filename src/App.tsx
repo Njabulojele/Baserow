@@ -1,10 +1,5 @@
-/**
- * Clerk + React (Vite) Quickstart Integration:
- * https://clerk.com/docs/react/getting-started/quickstart
- */
-
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { Show } from "@clerk/react";
+import { AuthenticateWithRedirectCallback, Show } from "@clerk/react";
 
 import { TRPCProvider } from "@/src/lib/trpc";
 import { ViteDashboardLayout } from "@/src/components/layout/ViteDashboardLayout";
@@ -62,13 +57,36 @@ function ClientDetailPageWrapper() {
   return <ClientDetailPage params={Promise.resolve({ id: id || "" })} />;
 }
 
+function SSOCallback() {
+  return (
+    <div className="min-h-screen bg-[#08090C] flex flex-col items-center justify-center text-white">
+      <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
+        <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-gray-300">Completing sign in...</p>
+        <AuthenticateWithRedirectCallback
+          signInForceRedirectUrl="/"
+          signUpForceRedirectUrl="/"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <TRPCProvider>
       <BrowserRouter>
+        {/* ── SSO Callback — must be outside auth guards so it runs during pending OAuth state ── */}
+        <Routes>
+          <Route path="/sso-callback" element={<SSOCallback />} />
+          <Route path="/sso_callback" element={<SSOCallback />} />
+        </Routes>
+
         {/* ── Signed Out ───────────────────────────────────────── */}
         <Show when="signed-out">
-          <LandingPage />
+          <Routes>
+            <Route path="*" element={<LandingPage />} />
+          </Routes>
         </Show>
 
         {/* ── Signed In ────────────────────────────────────────── */}
