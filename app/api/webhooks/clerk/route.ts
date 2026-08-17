@@ -20,11 +20,12 @@ export async function POST(req: Request) {
   ).trim();
 
   if (!WEBHOOK_SECRET) {
-    console.error("Missing WEBHOOK_SECRET in .env");
+    console.warn("Missing WEBHOOK_SECRET in environment variables");
     return new Response(
-      "Please add WEBHOOK_SECRET from Clerk Dashboard to .env",
+      JSON.stringify({ status: "ignored", message: "Missing WEBHOOK_SECRET" }),
       {
-        status: 500,
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       },
     );
   }
