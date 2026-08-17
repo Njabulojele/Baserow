@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { AuthenticateWithRedirectCallback, Show } from "@clerk/react";
+import { AuthenticateWithRedirectCallback, useAuth } from "@clerk/react";
 
 import { TRPCProvider } from "@/src/lib/trpc";
 import { ViteDashboardLayout } from "@/src/components/layout/ViteDashboardLayout";
@@ -72,50 +72,60 @@ function SSOCallback() {
   );
 }
 
+function AppContent() {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#08090C] flex items-center justify-center text-white">
+        <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isSignedIn) {
+    return (
+      <ViteDashboardLayout>
+        <Routes>
+          <Route path="/" element={<DashboardClient />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/sso-callback" element={<Navigate to="/" replace />} />
+          <Route path="/sso_callback" element={<Navigate to="/" replace />} />
+          <Route path="/projects" element={<ProjectsClient />} />
+          <Route path="/projects/:id" element={<ProjectDetailPageWrapper />} />
+          <Route path="/tasks" element={<TasksClient />} />
+          <Route path="/calendar" element={<CalendarClient />} />
+          <Route path="/canvas" element={<CanvasClient />} />
+          <Route path="/tracklog" element={<TracklogView />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/:id" element={<ClientDetailPageWrapper />} />
+          <Route path="/crm" element={<CRMPage />} />
+          <Route path="/crm/leads" element={<LeadsPage />} />
+          <Route path="/timer" element={<TimerPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/team" element={<TeamClient />} />
+          <Route path="*" element={<DashboardClient />} />
+        </Routes>
+      </ViteDashboardLayout>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/sso-callback" element={<SSOCallback />} />
+      <Route path="/sso_callback" element={<SSOCallback />} />
+      <Route path="*" element={<LandingPage />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <TRPCProvider>
       <BrowserRouter>
-        {/* ── SSO Callback — must be outside auth guards so it runs during pending OAuth state ── */}
-        <Routes>
-          <Route path="/sso-callback" element={<SSOCallback />} />
-          <Route path="/sso_callback" element={<SSOCallback />} />
-        </Routes>
-
-        {/* ── Signed Out ───────────────────────────────────────── */}
-        <Show when="signed-out">
-          <Routes>
-            <Route path="*" element={<LandingPage />} />
-          </Routes>
-        </Show>
-
-        {/* ── Signed In ────────────────────────────────────────── */}
-        <Show when="signed-in">
-          <ViteDashboardLayout>
-            <Routes>
-              <Route path="/" element={<DashboardClient />} />
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
-              <Route path="/projects" element={<ProjectsClient />} />
-              <Route path="/projects/:id" element={<ProjectDetailPageWrapper />} />
-              <Route path="/tasks" element={<TasksClient />} />
-              <Route path="/calendar" element={<CalendarClient />} />
-              <Route path="/canvas" element={<CanvasClient />} />
-              <Route path="/tracklog" element={<TracklogView />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/goals" element={<GoalsPage />} />
-              <Route path="/clients" element={<ClientsPage />} />
-              <Route path="/clients/:id" element={<ClientDetailPageWrapper />} />
-              <Route path="/crm" element={<CRMPage />} />
-              <Route path="/crm/leads" element={<LeadsPage />} />
-              <Route path="/timer" element={<TimerPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/team" element={<TeamClient />} />
-              {/* fallback — show dashboard but don't hard-redirect so the
-                  URL stays in place; avoids redirect loops on unimplemented routes */}
-              <Route path="*" element={<DashboardClient />} />
-            </Routes>
-          </ViteDashboardLayout>
-        </Show>
+        <AppContent />
       </BrowserRouter>
     </TRPCProvider>
   );
