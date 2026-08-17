@@ -81,10 +81,11 @@ func CreateGoal(ctx context.Context, pool *pgxpool.Pool, userID string, input ma
 		category = "General"
 	}
 
+	goalID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO goals (user_id, title, category) VALUES ($1, $2, $3) RETURNING id`,
-		userID, title, category).Scan(&newID)
+		INSERT INTO goals (id, user_id, title, category) VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, $3, $4) RETURNING id`,
+		goalID, userID, title, category).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}

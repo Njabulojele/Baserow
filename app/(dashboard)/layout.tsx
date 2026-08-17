@@ -32,20 +32,38 @@ export default async function DashboardLayout({
   try {
     const email = user.emailAddresses[0]?.emailAddress;
     if (email) {
-      await prisma.user.upsert({
-        where: { email: email },
-        create: {
-          id: user.id,
-          email: email,
-          name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-          avatar: user.imageUrl,
-          timezone: "Africa/Johannesburg", // Default as per requirement
-        },
-        update: {
-          name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-          avatar: user.imageUrl,
-        },
+      const displayName =
+        `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+        email.split("@")[0];
+      const existingById = await prisma.user.findUnique({
+        where: { id: user.id },
       });
+      if (existingById) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { email, name: displayName, avatar: user.imageUrl },
+        });
+      } else {
+        const existingByEmail = await prisma.user.findUnique({
+          where: { email },
+        });
+        if (existingByEmail) {
+          await prisma.user.update({
+            where: { email },
+            data: { id: user.id, name: displayName, avatar: user.imageUrl },
+          });
+        } else {
+          await prisma.user.create({
+            data: {
+              id: user.id,
+              email,
+              name: displayName,
+              avatar: user.imageUrl,
+              timezone: "Africa/Johannesburg",
+            },
+          });
+        }
+      }
     }
   } catch (error) {
     console.error("Failed to sync user:", error);

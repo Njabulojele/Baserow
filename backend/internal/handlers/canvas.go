@@ -91,10 +91,11 @@ func CreateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, input 
 		boardType = "brainstorm"
 	}
 
+	boardID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO canvas_boards (user_id, title, board_type) VALUES ($1, $2, $3) RETURNING id`,
-		userID, title, boardType).Scan(&newID)
+		INSERT INTO canvas_boards (id, user_id, title, board_type) VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, $3, $4) RETURNING id`,
+		boardID, userID, title, boardType).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +185,8 @@ func DuplicateCanvas(ctx context.Context, pool *pgxpool.Pool, userID string, inp
 
 	var newID string
 	err = pool.QueryRow(ctx, `
-		INSERT INTO canvas_boards (user_id, title, board_type, board_data)
-		VALUES ($1, $2, $3, $4) RETURNING id`,
+		INSERT INTO canvas_boards (id, user_id, title, board_type, board_data)
+		VALUES (gen_random_uuid()::text, $1, $2, $3, $4) RETURNING id`,
 		userID, title+" (copy)", boardType, boardData).Scan(&newID)
 	if err != nil {
 		return nil, err

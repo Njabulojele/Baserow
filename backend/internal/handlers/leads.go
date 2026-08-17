@@ -78,12 +78,13 @@ func CreateCRMLead(ctx context.Context, pool *pgxpool.Pool, userID, orgID string
 		return nil, err
 	}
 
+	leadID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO crm_leads (user_id, first_name, last_name, email, company_name, source, status, score)
-		VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), 'NEW', 50)
+		INSERT INTO crm_leads (id, user_id, first_name, last_name, email, company_name, source, status, score)
+		VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), NULLIF($7,''), 'NEW', 50)
 		RETURNING id`,
-		userID, firstName, lastName, email, companyName, source).Scan(&newID)
+		leadID, userID, firstName, lastName, email, companyName, source).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}
@@ -158,8 +159,8 @@ func ConvertCRMLeadToClient(ctx context.Context, pool *pgxpool.Pool, userID, org
 
 	var clientID string
 	err = tx.QueryRow(ctx, `
-		INSERT INTO clients (user_id, name, company_name, email, status, lifetime_value_zar)
-		VALUES ($1, $2, $3, $4, 'active', $5) RETURNING id`,
+		INSERT INTO clients (id, user_id, name, company_name, email, status, lifetime_value_zar)
+		VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'active', $5) RETURNING id`,
 		userID, fullName, companyName, email, estValue).Scan(&clientID)
 	if err != nil {
 		return nil, err

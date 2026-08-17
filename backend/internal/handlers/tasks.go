@@ -158,12 +158,13 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, userID, orgID string, i
 		}
 	}
 
+	taskID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO tasks (user_id, project_id, title, description, status, priority, due_date, scheduled_date)
-		VALUES ($1, NULLIF($2,''), $3, $4, $5, $6, $7, $8)
+		INSERT INTO tasks (id, user_id, project_id, title, description, status, priority, due_date, scheduled_date)
+		VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, NULLIF($3,''), $4, $5, $6, $7, $8, $9)
 		RETURNING id`,
-		userID, projectID, title, description, status, priority, dueDate, scheduledDate,
+		taskID, userID, projectID, title, description, status, priority, dueDate, scheduledDate,
 	).Scan(&newID)
 	if err != nil {
 		return nil, err

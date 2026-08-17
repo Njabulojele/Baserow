@@ -174,12 +174,13 @@ func CreateProject(ctx context.Context, pool *pgxpool.Pool, userID, orgID string
 		priority = "medium"
 	}
 
+	projectID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO projects (user_id, client_id, name, description, color, status, priority)
-		VALUES ($1, NULLIF($2,'')::uuid, $3, $4, $5, $6, $7)
+		INSERT INTO projects (id, user_id, client_id, name, description, color, status, priority)
+		VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, NULLIF($3,''), $4, $5, $6, $7, $8)
 		RETURNING id`,
-		userID, clientID, name, description, color, status, priority,
+		projectID, userID, clientID, name, description, color, status, priority,
 	).Scan(&newID)
 	if err != nil {
 		return nil, err

@@ -92,24 +92,40 @@ export async function POST(req: Request) {
     }
 
     try {
-      await prisma.user.upsert({
-        where: { email: email },
-        create: {
-          id: id,
-          email: email,
-          name: name,
-          avatar: image_url,
-          timezone: "Africa/Johannesburg", // Default as per schema
-        },
-        update: {
-          name: name,
-          avatar: image_url,
-        },
+      const displayName = name || email.split("@")[0];
+      const existingById = await prisma.user.findUnique({
+        where: { id: id },
       });
-      console.log(`User ${id} upserted successfully`);
+      if (existingById) {
+        await prisma.user.update({
+          where: { id: id },
+          data: { email, name: displayName, avatar: image_url },
+        });
+      } else {
+        const existingByEmail = await prisma.user.findUnique({
+          where: { email },
+        });
+        if (existingByEmail) {
+          await prisma.user.update({
+            where: { email },
+            data: { id: id, name: displayName, avatar: image_url },
+          });
+        } else {
+          await prisma.user.create({
+            data: {
+              id: id,
+              email,
+              name: displayName,
+              avatar: image_url,
+              timezone: "Africa/Johannesburg",
+            },
+          });
+        }
+      }
+      console.log(`User ${id} synced successfully via Clerk webhook`);
     } catch (error) {
-      console.error("Error upserting user:", error);
-      return new Response("Error upserting user", { status: 500 });
+      console.error("Error syncing user:", error);
+      return new Response("Error syncing user", { status: 500 });
     }
   }
 

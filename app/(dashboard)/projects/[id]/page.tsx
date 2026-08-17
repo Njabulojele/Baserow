@@ -152,7 +152,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
     // Optimistic update
     setLocalTasks(
-      tasks.map((t: any) => (t.id === taskId ? { ...t, status: col } : t))
+      tasks.map((t: any) => (t.id === taskId ? { ...t, status: col } : t)),
     );
 
     updateTask.mutate({ id: taskId, status: col });
@@ -294,7 +294,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                   <span
                     className={cn(
                       "text-xs font-bold px-2 py-0.5 rounded-full",
-                      col.badgeColor
+                      col.badgeColor,
                     )}
                   >
                     {colTasks.length}
@@ -318,48 +318,58 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                   "flex flex-col gap-3 min-h-[220px] rounded-2xl p-2 border-2 transition-all duration-150",
                   isOver
                     ? cn("border-dashed", col.dropBg)
-                    : "border-transparent"
+                    : "border-transparent",
                 )}
               >
                 {/* Inline add-task form */}
                 {addingInCol === col.key && (
-                  <div className="toota-card p-3 space-y-2 border border-primary/30">
-                    <input
+                  <div className="toota-card p-3 space-y-2 border border-primary/30 animate-in fade-in slide-in-from-top-1">
+                    <textarea
                       autoFocus
-                      type="text"
-                      placeholder="Task title..."
+                      rows={3}
+                      placeholder="Task title or details... (e.g. 100-word scope)"
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAddTask(col.key);
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAddTask(col.key);
+                        }
                         if (e.key === "Escape") {
                           setAddingInCol(null);
                           setNewTaskTitle("");
                         }
                       }}
-                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                      className="w-full bg-secondary/30 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none rounded-lg p-2.5 resize-y min-h-[72px] leading-relaxed border border-white/5 focus:border-primary/40 transition-all font-sans"
                     />
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleAddTask(col.key)}
-                        disabled={!newTaskTitle.trim() || createTask.isPending}
-                        className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50 flex items-center gap-1"
-                      >
-                        {createTask.isPending ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          "Add"
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAddingInCol(null);
-                          setNewTaskTitle("");
-                        }}
-                        className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-lg"
-                      >
-                        Cancel
-                      </button>
+                    <div className="flex flex-col items-center justify-between gap-2 pt-1">
+                      <span className="text-[10px] text-muted-foreground/70">
+                        Enter to add • Shift+Enter for new line
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAddTask(col.key)}
+                          disabled={
+                            !newTaskTitle.trim() || createTask.isPending
+                          }
+                          className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50 flex items-center gap-1 shadow-sm hover:opacity-90 transition-opacity"
+                        >
+                          {createTask.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            "Add Task"
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAddingInCol(null);
+                            setNewTaskTitle("");
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -376,7 +386,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                       "hover:translate-y-[-2px] hover:shadow-lg transition-all duration-150 group",
                       updateTask.isPending && draggingId.current === task.id
                         ? "opacity-50"
-                        : "opacity-100"
+                        : "opacity-100",
                     )}
                   >
                     {/* Top row: priority + drag handle */}
@@ -385,7 +395,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                         className={cn(
                           "text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider",
                           PRIORITY_COLORS[task.priority] ??
-                            "bg-secondary text-muted-foreground"
+                            "bg-secondary text-muted-foreground",
                         )}
                       >
                         {task.priority ?? "medium"}
@@ -393,44 +403,68 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.preventDefault()}
+                          >
                             <button className="p-0.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary">
                               <MoreHorizontal className="w-4 h-4" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel className="text-[11px] text-muted-foreground">Move to...</DropdownMenuLabel>
+                          <DropdownMenuContent
+                            align="end"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <DropdownMenuLabel className="text-[11px] text-muted-foreground">
+                              Move to...
+                            </DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => {
-                                updateTask.mutate({ id: task.id, status: "not_started" });
+                                updateTask.mutate({
+                                  id: task.id,
+                                  status: "not_started",
+                                });
                               }}
                               className="text-xs font-semibold cursor-pointer"
                             >
-                              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" /> To Do
+                              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2" />{" "}
+                              To Do
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                updateTask.mutate({ id: task.id, status: "in_progress" });
+                                updateTask.mutate({
+                                  id: task.id,
+                                  status: "in_progress",
+                                });
                               }}
                               className="text-xs font-semibold cursor-pointer"
                             >
-                              <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" /> In Progress
+                              <span className="w-2 h-2 rounded-full bg-amber-500 mr-2" />{" "}
+                              In Progress
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                updateTask.mutate({ id: task.id, status: "in_review" });
+                                updateTask.mutate({
+                                  id: task.id,
+                                  status: "in_review",
+                                });
                               }}
                               className="text-xs font-semibold cursor-pointer"
                             >
-                              <span className="w-2 h-2 rounded-full bg-purple-500 mr-2" /> In Review
+                              <span className="w-2 h-2 rounded-full bg-purple-500 mr-2" />{" "}
+                              In Review
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                updateTask.mutate({ id: task.id, status: "done" });
+                                updateTask.mutate({
+                                  id: task.id,
+                                  status: "done",
+                                });
                               }}
                               className="text-xs font-semibold cursor-pointer"
                             >
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2" /> Complete
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />{" "}
+                              Complete
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -442,7 +476,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                               }}
                               className="text-xs font-semibold cursor-pointer text-rose-500"
                             >
-                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Task
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                              Task
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -450,7 +485,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                     </div>
 
                     {/* Title */}
-                    <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                    <p className="text-sm font-medium text-foreground leading-relaxed break-words whitespace-pre-wrap max-h-[180px] overflow-y-auto pr-1 group-hover:text-primary transition-colors selection:bg-primary/20">
                       {task.title}
                     </p>
 
@@ -463,8 +498,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                             const curTasks = localTasks ?? project.tasks ?? [];
                             setLocalTasks(
                               curTasks.map((t: any) =>
-                                t.id === task.id ? { ...t, status: c.key } : t
-                              )
+                                t.id === task.id ? { ...t, status: c.key } : t,
+                              ),
                             );
                             updateTask.mutate({ id: task.id, status: c.key });
                           }}
@@ -472,7 +507,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                             "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all",
                             "opacity-0 group-hover:opacity-100",
                             c.badgeColor,
-                            "hover:scale-105"
+                            "hover:scale-105",
                           )}
                           title={`Move to ${c.title}`}
                         >
@@ -505,7 +540,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                       "flex-1 flex items-center justify-center rounded-xl border-2 border-dashed min-h-[120px] text-xs font-medium transition-all",
                       isOver
                         ? cn("border-opacity-100", col.dropBg)
-                        : "border-secondary/40 text-muted-foreground"
+                        : "border-secondary/40 text-muted-foreground",
                     )}
                   >
                     {isOver ? "Drop here" : "No tasks yet"}

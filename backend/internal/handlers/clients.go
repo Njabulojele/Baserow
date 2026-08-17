@@ -189,11 +189,12 @@ func CreateClient(ctx context.Context, pool *pgxpool.Pool, userID, orgID string,
 		return nil, err
 	}
 
+	clientID, _ := input["id"].(string)
 	var newID string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO clients (user_id, name, company_name, email, phone, industry, status)
-		VALUES ($1, $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), 'active')
-		RETURNING id`, userID, name, companyName, email, phone, industry).Scan(&newID)
+		INSERT INTO clients (id, user_id, name, company_name, email, phone, industry, status)
+		VALUES (COALESCE(NULLIF($1, ''), gen_random_uuid()::text), $2, $3, NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), NULLIF($7,''), 'active')
+		RETURNING id`, clientID, userID, name, companyName, email, phone, industry).Scan(&newID)
 	if err != nil {
 		return nil, err
 	}

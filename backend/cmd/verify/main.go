@@ -44,7 +44,17 @@ func main() {
 	_, _ = pool.Exec(ctx, `DELETE FROM tasks WHERE user_id IN ($1, $2)`, userA, userB)
 	_, _ = pool.Exec(ctx, `DELETE FROM activity_events WHERE user_id IN ($1, $2)`, userA, userB)
 
-	// 1. Insert sample data for User A
+	// Test CreateTask without passing an ID (ensures no NOT NULL constraint violation on id)
+	newTask, err := handlers.CreateTask(ctx, pool, userA, "", map[string]interface{}{
+		"title": "New Auto Generated ID Task",
+		"status": "not_started",
+	})
+	if err != nil {
+		log.Fatalf("❌ CreateTask without explicit ID failed: %v", err)
+	}
+	mNewTask := newTask.(map[string]interface{})
+	fmt.Printf("✅ [CreateTask Verification] Successfully created task with generated ID: %v\n", mNewTask["id"])
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO tasks (id, user_id, title, status) VALUES 
 		('task_a1', $1, 'User A Task 1', 'completed'),

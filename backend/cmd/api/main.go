@@ -48,8 +48,17 @@ func main() {
 	// Auto-create tracklogs & activity_events tables if not exists
 	if pool != nil {
 		_, _ = pool.Exec(ctx, `
+			CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+			ALTER TABLE tasks ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+			ALTER TABLE projects ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+			ALTER TABLE goals ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+			ALTER TABLE crm_leads ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+			ALTER TABLE clients ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+			ALTER TABLE canvas_boards ALTER COLUMN id SET DEFAULT gen_random_uuid()::text;
+
 			CREATE TABLE IF NOT EXISTS tracklogs (
-				id TEXT PRIMARY KEY,
+				id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
 				user_id TEXT NOT NULL,
 				app_name TEXT NOT NULL,
 				window_title TEXT NOT NULL,

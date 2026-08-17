@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. CLIENTS TABLE
 CREATE TABLE IF NOT EXISTS clients (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
     company_name TEXT,
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_clients_user_status ON clients(user_id, status) W
 
 -- 2. PROJECTS TABLE
 CREATE TABLE IF NOT EXISTS projects (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     client_id TEXT REFERENCES clients(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_user_status ON projects(user_id, status)
 
 -- 3. TASKS TABLE
 CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(user_id, due_date) WHERE 
 
 -- 4. GOALS TABLE
 CREATE TABLE IF NOT EXISTS goals (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     title TEXT NOT NULL,
     category TEXT DEFAULT 'General',
@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
 
 -- 5. TIMER SESSIONS TABLE
 CREATE TABLE IF NOT EXISTS timer_sessions (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
     project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
@@ -107,7 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_timer_sessions_user_status ON timer_sessions(user
 
 -- 6. TRACKLOGS TABLE
 CREATE TABLE IF NOT EXISTS tracklogs (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id TEXT NOT NULL,
     app_name TEXT NOT NULL,
     window_title TEXT,
