@@ -1,6 +1,5 @@
 import { Webhook } from "svix";
-import { WebhookEvent } from "@clerk/react/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../../../lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,7 @@ export async function POST(req: Request) {
   // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET);
 
-  let evt: WebhookEvent;
+  let evt: any;
 
   // Verify the payload with the headers
   try {
@@ -57,7 +56,7 @@ export async function POST(req: Request) {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    }) as WebhookEvent;
+    });
   } catch (err: any) {
     console.error("❌ Webhook verification failed:", err.message);
     const errorBody = {

@@ -1,5 +1,4 @@
 import { Webhook } from "svix";
-import { WebhookEvent } from "@clerk/react/server";
 import { prisma } from "../../lib/prisma";
 
 export const config = {
@@ -60,14 +59,14 @@ export default async function handler(req: any, res: any) {
   }
 
   const wh = new Webhook(WEBHOOK_SECRET);
-  let evt: WebhookEvent;
+  let evt: any;
 
   try {
     evt = wh.verify(body, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    }) as WebhookEvent;
+    });
   } catch (err: any) {
     console.error("❌ Webhook verification failed:", err.message);
     return res.status(400).json({
