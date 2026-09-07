@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { auth, currentUser } from "@clerk/react/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const dynamic = "force-dynamic";
 

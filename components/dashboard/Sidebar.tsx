@@ -17,7 +17,7 @@ import {
   Search,
   LogOut,
 } from "lucide-react";
-import { UserButton } from "@clerk/react";
+import { UserButton } from "@clerk/nextjs";
 import Image from "next/image";
 
 const routes = [

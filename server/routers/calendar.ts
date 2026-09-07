@@ -261,4 +261,63 @@ export const calendarRouter = router({
 
       throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
     }),
+
+  createEvent: protectedProcedure
+    .input(
+      z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        start: z.date(),
+        end: z.date(),
+        type: z.enum(["event", "task", "time_block", "appointment", "background"]).default("event"),
+        allDay: z.boolean().optional(),
+        isRecurring: z.boolean().optional(),
+        recurrenceRule: z.string().optional(),
+        priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+        location: z.string().optional(),
+        color: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const event = await ctx.prisma.calendarEvent.create({
+        data: {
+          userId: ctx.userId,
+          title: input.title,
+          description: input.description,
+          startTime: input.start,
+          endTime: input.end,
+          type: input.type,
+          allDay: input.allDay ?? false,
+          isRecurring: input.isRecurring ?? false,
+          recurrenceRule: input.recurrenceRule,
+          location: input.location,
+          color: input.color || (input.type === "task" ? "#a9927d" : "#3b82f6"),
+          timezone: "Africa/Johannesburg",
+        },
+      });
+      return { success: true, id: event.id, type: input.type };
+    }),
+
+  deleteEvent: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.prisma.calendarEvent.deleteMany({
+          where: { id: input.id },
+        });
+      } catch (e) {}
+
+      try {
+        await ctx.prisma.task.updateMany({
+          where: { id: input.id },
+          data: { deletedAt: new Date() },
+        });
+      } catch (e) {}
+
+      return { success: true };
+    }),
 });

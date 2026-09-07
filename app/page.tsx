@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,10 +11,12 @@ import {
   Workflow,
   Heart,
 } from "lucide-react";
-import { SignedIn, SignedOut } from "@clerk/react";
+import { useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 
 export default function LandingPage() {
+  const { isSignedIn } = useAuth();
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       {/* Header */}
@@ -34,28 +38,29 @@ export default function LandingPage() {
             Baserow
           </div>
           <div className="flex items-center gap-3">
-            <SignedOut>
-              <Link
-                href="/login"
-                className="text-sm font-medium hover:text-primary transition-colors hidden sm:block"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
-              >
-                Get Started
-              </Link>
-            </SignedOut>
-            <SignedIn>
+            {isSignedIn ? (
               <Link
                 href="/dashboard"
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md border border-primary/20 active:scale-95"
               >
                 Dashboard
               </Link>
-            </SignedIn>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium hover:text-primary transition-colors hidden sm:block"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

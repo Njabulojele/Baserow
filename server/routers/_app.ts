@@ -54,6 +54,9 @@ import { contentIdeaRouter } from "./contentIdea";
 import { proposalTemplateRouter } from "./proposalTemplate";
 import { prospectingRouter } from "./prospecting";
 
+// Goals (personal tracking — proxied to Go backend at runtime)
+import { goalsRouter } from "./goals";
+
 export const appRouter = router({
   task: taskRouter,
   project: projectRouter,
@@ -109,6 +112,9 @@ export const appRouter = router({
   contentIdea: contentIdeaRouter,
   proposalTemplate: proposalTemplateRouter,
   prospecting: prospectingRouter,
+
+  // Goals
+  goals: goalsRouter,
 });
 
 export type AppRouter = typeof appRouter;

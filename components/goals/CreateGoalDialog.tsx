@@ -43,7 +43,6 @@ const PILLARS = [
 
 export function CreateGoalDialog({ open, onOpenChange, editGoal }: CreateGoalDialogProps) {
   const utils = trpc.useUtils();
-  const addGoalLocal = useGoalStore((s) => s.addGoal);
   const updateGoalLocal = useGoalStore((s) => s.updateGoal);
 
   const createGoalMutation = trpc.goals.create.useMutation({
@@ -136,9 +135,12 @@ export function CreateGoalDialog({ open, onOpenChange, editGoal }: CreateGoalDia
       updateGoalMutation.mutate({ id: editGoal.id, ...payload } as any);
       toast.success("Goal updated & synced to database ⚡");
     } else {
-      addGoalLocal(payload);
+      // Don't addGoalLocal here — it creates a client-generated ID that
+      // never matches the backend UUID, causing phantom duplicates.
+      // Instead, fire the mutation; onSuccess invalidates goals.list so
+      // the page re-fetches and syncs the new goal (with correct UUID).
       createGoalMutation.mutate(payload as any);
-      toast.success("New goal created & synced to database!");
+      toast.success("Goal created — syncing to database...");
     }
 
     onOpenChange(false);
