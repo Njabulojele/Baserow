@@ -80,7 +80,7 @@ export function FloatingGoalTimer() {
         );
         const goalId = activeSession.goalId;
         const minsTracked = stopAndSaveGoalSession();
-        logSessionMutation.mutate({ goalId, durationMinutes: minsTracked });
+        logSessionMutation.mutate({ goalId, durationSeconds: minsTracked * 60 });
         return;
       }
 
@@ -135,7 +135,7 @@ export function FloatingGoalTimer() {
     const minutesTracked = stopAndSaveGoalSession();
     logSessionMutation.mutate({
       goalId,
-      durationMinutes: minutesTracked,
+      durationSeconds: minutesTracked * 60,
     });
     toast.success(
       `Goal completed! Logged ${minutesTracked} mins & synced to database ⚡`

@@ -1,78 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import { createPortal } from "react-dom";
-import {
-  format,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
-  addDays,
-  subDays,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfDay,
-  endOfDay,
-} from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  X,
-  Clock,
-  Tag,
-  FolderKanban,
-  Activity,
-} from "lucide-react";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  useSensor,
-  useSensors,
-  MouseSensor,
-  TouchSensor,
-} from "@dnd-kit/core";
+import React, { useState, useMemo, useRef, useCallback } from "react";
+import { subMonths, addMonths } from "date-fns";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { trpc } from "@/lib/trpc/client";
-import { CalendarView } from "@/components/calendar/CalendarView";
-import { UnscheduledSidebar } from "@/components/calendar/UnscheduledSidebar";
-import { TaskCalendarGrid } from "@/components/calendar/TaskCalendarGrid";
+import { AppCalendar, AppCalendarRef } from "@/components/calendar/AppCalendar";
+import { GoogleCalendarHeader, CalendarViewType } from "@/components/calendar/GoogleCalendarHeader";
+import {
+  GoogleCalendarSidebar,
+  CalendarCategoryFilter,
+} from "@/components/calendar/GoogleCalendarSidebar";
+import { EventDetailPopover } from "@/components/calendar/EventDetailPopover";
+import { GoogleCreateEventDialog } from "@/components/calendar/GoogleCreateEventDialog";
 import { CalendarEvent } from "@/types/calendar";
 
-type ViewMode = "grid" | "month" | "week" | "day";
-
 export function CalendarClient() {
-  const [date, setDate] = useState(new Date());
-  const [view, setView] = useState<ViewMode>("grid");
-  const [activeDragItem, setActiveDragItem] = useState<any>(null);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-    null,
-  );
+  const calendarRef = useRef<AppCalendarRef>(null);
+
+  // Layout & View States
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [currentView, setCurrentView] = useState<CalendarViewType>("dayGridMonth");
+  const [calendarTitle, setCalendarTitle] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Popover State (Google-style positioned popup)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedAnchorRect, setSelectedAnchorRect] = useState<DOMRect | null>(null);
+
+  // Create / Edit Dialog State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [createSlot, setCreateSlot] = useState<{
+    start: Date;
+    end: Date;
+    allDay?: boolean;
+    resourceId?: string;
+  } | null>(null);
+
+  // Category Filters (My Calendars checkboxes)
+  const [categories, setCategories] = useState<CalendarCategoryFilter[]>([
+    { id: "task", name: "Tasks", color: "#a9927d", enabled: true },
+    { id: "event", name: "Meetings & Events", color: "#34d399", enabled: true },
+    { id: "time_block", name: "Time Blocks", color: "#818cf8", enabled: true },
+    { id: "background", name: "Focus Zones (Background)", color: "#6366f1", enabled: true },
+    { id: "resources", name: "Auditoriums & Rooms (Demo)", color: "#f59e0b", enabled: true },
+    { id: "holidays", name: "Holidays & Observances", color: "#10b981", enabled: true },
+  ]);
+
+  // Query Date Range
+  const [dateRange, setDateRange] = useState({
+    start: subMonths(new Date(), 2),
+    end: addMonths(new Date(), 6),
+  });
 
   const utils = trpc.useUtils();
+
+  // Mutations
   const updateEvent = trpc.calendar.updateEvent.useMutation({
     onSuccess: () => {
       utils.calendar.getEvents.invalidate();
       utils.task.getBacklogTasks.invalidate();
+      toast.success("Schedule updated! 📅");
+    },
+    onError: (err) => {
+      toast.error(`Update failed: ${err.message}`);
+    },
+  });
+
+  const createCalendarEventMutation = trpc.calendar.createEvent.useMutation({
+    onSuccess: () => {
+      utils.calendar.getEvents.invalidate();
+      toast.success("Event created & scheduled! 📅");
+      setIsEditDialogOpen(false);
+      setEditingEvent(null);
+      setCreateSlot(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to create event: ${err.message}`);
+    },
+  });
+
+  const createTaskMutation = trpc.task.createTask.useMutation({
+    onSuccess: () => {
+      utils.calendar.getEvents.invalidate();
+      utils.task.getTasks.invalidate();
+      toast.success("Task created successfully!");
+      setIsEditDialogOpen(false);
+      setEditingEvent(null);
+      setCreateSlot(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to create task: ${err.message}`);
     },
   });
 
   const startTimerMutation = trpc.task.startTimer.useMutation({
     onSuccess: () => {
       utils.task.getActiveTimer.invalidate();
-      toast.success("Timer started! ⚡");
+      toast.success("Focus timer started! ⚡");
     },
   });
 
@@ -82,6 +109,7 @@ export function CalendarClient() {
       utils.task.getTasks.invalidate();
       toast.success("Marked as complete!");
       setSelectedEvent(null);
+      setSelectedAnchorRect(null);
     },
   });
 
@@ -91,288 +119,287 @@ export function CalendarClient() {
       utils.task.getTasks.invalidate();
       toast.success("Event deleted.");
       setSelectedEvent(null);
+      setSelectedAnchorRect(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to delete: ${err.message}`);
     },
   });
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
-    }),
+  const deleteCalendarEventMutation = trpc.calendar.deleteEvent.useMutation({
+    onSuccess: () => {
+      utils.calendar.getEvents.invalidate();
+      utils.task.getTasks.invalidate();
+      toast.success("Event deleted.");
+      setSelectedEvent(null);
+      setSelectedAnchorRect(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to delete: ${err.message}`);
+    },
+  });
+
+  // Query events from backend database
+  const { data: rawEvents, isLoading } = trpc.calendar.getEvents.useQuery({
+    start: dateRange.start,
+    end: dateRange.end,
+  });
+
+  // Real events only — from database. No mock/demo events.
+  const visibleEvents: CalendarEvent[] = useMemo(() => {
+    const dbEvents = (rawEvents as unknown as CalendarEvent[]) || [];
+
+    const enabledCategories = new Set(
+      categories.filter((c) => c.enabled).map((c) => c.id),
+    );
+
+    return dbEvents.filter((ev) => {
+      // Category filter
+      if (ev.type === "background") {
+        return enabledCategories.has("background");
+      }
+      if (ev.resourceId && !enabledCategories.has("resources")) return false;
+      if (!enabledCategories.has(ev.type)) return false;
+
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = ev.title.toLowerCase().includes(q);
+        const matchesDesc = ev.description?.toLowerCase().includes(q);
+        const matchesResource = ev.resourceTitle?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesDesc && !matchesResource) return false;
+      }
+
+      return true;
+    });
+  }, [rawEvents, categories, searchQuery]);
+
+  // Header Toolbar Handlers
+  const handleToday = useCallback(() => {
+    calendarRef.current?.today();
+    setSelectedDate(new Date());
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    calendarRef.current?.prev();
+  }, []);
+
+  const handleNext = useCallback(() => {
+    calendarRef.current?.next();
+  }, []);
+
+  const handleViewChange = useCallback((newView: CalendarViewType) => {
+    setCurrentView(newView);
+    calendarRef.current?.changeView(newView);
+  }, []);
+
+  // Mini-Calendar Date Click
+  const handleSelectMiniDate = useCallback((date: Date) => {
+    setSelectedDate(date);
+    calendarRef.current?.gotoDate(date);
+  }, []);
+
+  // Event Click Handler (triggers Google Calendar-style popup)
+  const handleEventClick = useCallback(
+    (event: CalendarEvent, anchorRect?: DOMRect) => {
+      setSelectedEvent(event);
+      setSelectedAnchorRect(anchorRect || null);
+    },
+    [],
   );
 
-  const navigate = (direction: "prev" | "next" | "today") => {
-    if (direction === "today") {
-      setDate(new Date());
-      return;
-    }
+  // Date Slot Drag / Select Handler (selectable-dates.png)
+  const handleSelectSlot = useCallback(
+    (slot: { start: Date; end: Date; allDay: boolean; resourceId?: string }) => {
+      setCreateSlot(slot);
+      setEditingEvent(null);
+      setIsEditDialogOpen(true);
+    },
+    [],
+  );
 
-    if (view === "month") {
-      setDate(direction === "next" ? addMonths(date, 1) : subMonths(date, 1));
-    } else if (view === "week") {
-      setDate(direction === "next" ? addWeeks(date, 1) : subWeeks(date, 1));
-    } else {
-      setDate(direction === "next" ? addDays(date, 1) : subDays(date, 1));
-    }
-  };
-
-  const getRange = () => {
-    if (view === "month") {
-      return { start: startOfMonth(date), end: endOfMonth(date) };
-    } else if (view === "week") {
-      return { start: startOfWeek(date), end: endOfWeek(date) };
-    } else {
-      return { start: startOfDay(date), end: endOfDay(date) };
-    }
-  };
-
-  const { start, end } = getRange();
-
-  const { data: events, isLoading } = trpc.calendar.getEvents.useQuery({
-    start,
-    end,
-  });
-  const calendarEvents = (events as unknown as CalendarEvent[]) || [];
-
-  const handleDragStart = (event: any) => {
-    setActiveDragItem(event.active.data.current);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDragItem(null);
-
-    if (!over) return;
-
-    const activeId = String(active.id);
-    const overId = String(over.id);
-
-    if (activeId.startsWith("task-") && overId.startsWith("slot-")) {
-      const taskId = activeId.replace("task-", "");
-      const slotData = overId.replace("slot-", "");
-      const lastDashIndex = slotData.lastIndexOf("-");
-      const dateStr = slotData.substring(0, lastDashIndex);
-      const hourStr = slotData.substring(lastDashIndex + 1);
-
-      if (!dateStr || !hourStr) return;
-
-      const newDate = new Date(dateStr);
-      newDate.setHours(parseInt(hourStr), 0, 0, 0);
-
-      updateEvent.mutate({
-        id: taskId,
-        start: newDate,
-        end: new Date(newDate.getTime() + 30 * 60000),
+  // Drag & Drop / Resize Handler (drag-n-drop.png)
+  const handleEventChange = useCallback(
+    async (updated: { id: string; start: Date; end: Date; resourceId?: string }) => {
+      await updateEvent.mutateAsync({
+        id: updated.id,
+        start: updated.start,
+        end: updated.end,
       });
-    }
-  };
+    },
+    [updateEvent],
+  );
 
-  const eventTypeConfig: Record<string, { label: string; color: string }> = {
-    task: { label: "Task", color: "#a9927d" },
-    time_block: { label: "Time Block", color: "#818cf8" },
-    event: { label: "Event", color: "#34d399" },
-  };
+  // Save from Edit / Create Dialog
+  const handleSaveEvent = useCallback(
+    (data: {
+      id?: string;
+      title: string;
+      type: "event" | "task" | "appointment" | "background";
+      start: Date;
+      end: Date;
+      allDay?: boolean;
+      isRecurring?: boolean;
+      recurrenceRule?: string;
+      description?: string;
+      location?: string;
+      attendees?: string[];
+      meetingLink?: string;
+      resourceId?: string;
+      resourceTitle?: string;
+      priority?: "low" | "medium" | "high" | "critical";
+    }) => {
+      const durationMinutes = Math.max(
+        15,
+        Math.round((data.end.getTime() - data.start.getTime()) / 60000),
+      );
+
+      if (data.id) {
+        // Update existing
+        updateEvent.mutate({
+          id: data.id,
+          start: data.start,
+          end: data.end,
+        });
+        setIsEditDialogOpen(false);
+        setSelectedEvent(null);
+      } else if (data.type === "task" && !data.isRecurring) {
+        // Single task
+        createTaskMutation.mutate({
+          title: data.title,
+          scheduledDate: data.start,
+          estimatedMinutes: durationMinutes,
+          priority: data.priority || "medium",
+        });
+      } else {
+        // Calendar Event (or recurring event/task)
+        createCalendarEventMutation.mutate({
+          title: data.title,
+          description: data.description,
+          start: data.start,
+          end: data.end,
+          type: data.type,
+          allDay: data.allDay,
+          isRecurring: data.isRecurring,
+          recurrenceRule: data.recurrenceRule,
+          priority: data.priority,
+          location: data.location,
+        });
+      }
+    },
+    [updateEvent, createTaskMutation, createCalendarEventMutation],
+  );
+
+  // Category Toggle Handler
+  const handleToggleCategory = useCallback((id: string) => {
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c)),
+    );
+  }, []);
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex flex-col">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#2f3e46] bg-[#0a0c10] gap-3 shrink-0">
-          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 bg-[#0a0c10] border-[#2f3e46] text-gray-400 hover:text-white hover:border-[#a9927d]/50 transition-colors"
-                onClick={() => navigate("prev")}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 text-[10px] font-mono uppercase tracking-widest bg-[#0a0c10] border-[#2f3e46] text-gray-400 hover:text-white hover:border-[#a9927d]/50 transition-colors"
-                onClick={() => navigate("today")}
-              >
-                Today
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 bg-[#0a0c10] border-[#2f3e46] text-gray-400 hover:text-white hover:border-[#a9927d]/50 transition-colors"
-                onClick={() => navigate("next")}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <h2 className="text-sm font-mono font-medium truncate text-white">
-              {format(date, view === "day" ? "EEEE, MMMM do" : "MMMM yyyy")}
-            </h2>
-          </div>
+    <div className="h-full w-full flex flex-col bg-[#0a0c10] overflow-hidden select-none">
+      {/* 1. Google-Style Top Navigation Header */}
+      <GoogleCalendarHeader
+        title={calendarTitle}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onToday={handleToday}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        isSidebarOpen={isSidebarOpen}
+        isLoading={isLoading}
+      />
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
-              <SelectTrigger className="w-full sm:w-[120px] h-8 bg-[#0a0c10] border-[#2f3e46] text-white text-[10px] font-mono uppercase tracking-wider">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1a252f] border-[#2f3e46] text-gray-300">
-                <SelectItem
-                  value="grid"
-                  className="focus:bg-[#0a0c10] focus:text-white cursor-pointer text-xs font-bold text-emerald-400"
-                >
-                  7-Day Schedule Grid
-                </SelectItem>
-                <SelectItem
-                  value="week"
-                  className="focus:bg-[#0a0c10] focus:text-white cursor-pointer text-xs"
-                >
-                  Timeline Week
-                </SelectItem>
-                <SelectItem
-                  value="month"
-                  className="focus:bg-[#0a0c10] focus:text-white cursor-pointer text-xs"
-                >
-                  Month View
-                </SelectItem>
-                <SelectItem
-                  value="day"
-                  className="focus:bg-[#0a0c10] focus:text-white cursor-pointer text-xs"
-                >
-                  Day View
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* 2. Main Workspace: Sidebar + FullCalendar Grid */}
+      <div className="flex-1 flex overflow-hidden min-h-0 relative">
+        {/* Google Calendar Left Sidebar */}
+        <GoogleCalendarSidebar
+          selectedDate={selectedDate}
+          onSelectDate={handleSelectMiniDate}
+          onCreateClick={() => {
+            setCreateSlot(null);
+            setEditingEvent(null);
+            setIsEditDialogOpen(true);
+          }}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          categories={categories}
+          onToggleCategory={handleToggleCategory}
+          isOpen={isSidebarOpen}
+          onToggleOpen={() => setIsSidebarOpen((prev) => !prev)}
+        />
+
+        {/* Calendar Grid Container */}
+        <div className="flex-1 p-2 sm:p-3 overflow-hidden relative flex flex-col min-h-0 bg-[#0a0c10]">
+          <AppCalendar
+            ref={calendarRef}
+            events={visibleEvents}
+            initialView="dayGridMonth"
+            isLoading={isLoading}
+            onEventClick={handleEventClick}
+            onEventChange={handleEventChange}
+            onSelectSlot={handleSelectSlot}
+            onDatesSet={(arg) => {
+              setCalendarTitle(arg.view.title);
+              if (arg.start && arg.end) {
+                setDateRange({
+                  start: subMonths(new Date(arg.start), 1),
+                  end: addMonths(new Date(arg.end), 1),
+                });
+              }
+            }}
+          />
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
-          {/* Main Calendar Grid */}
-          <div className="flex-1 overflow-auto bg-[#0a0c10] relative min-w-0 transition-all duration-300">
-            {view === "grid" ? (
-              <div className="p-4 sm:p-6 h-full overflow-y-auto">
-                <TaskCalendarGrid />
-              </div>
-            ) : (
-              <CalendarView
-                view={view}
-                date={date}
-                events={calendarEvents}
-                isLoading={isLoading}
-                onEventClick={(event) => setSelectedEvent(event)}
-              />
-            )}
-          </div>
+        {/* 3. Google Calendar-Style Event Detail Popover */}
+        {selectedEvent && (
+          <EventDetailPopover
+            event={selectedEvent}
+            anchorRect={selectedAnchorRect}
+            onClose={() => {
+              setSelectedEvent(null);
+              setSelectedAnchorRect(null);
+            }}
+            onDelete={(id) => {
+              if (selectedEvent?.type === "task") {
+                deleteTaskMutation.mutate({ id });
+              } else {
+                deleteCalendarEventMutation.mutate({ id });
+              }
+            }}
+            onComplete={(id) => completeTaskMutation.mutate({ id })}
+            onStartTimer={(id) => startTimerMutation.mutate({ id })}
+            onEdit={(ev) => {
+              setEditingEvent(ev);
+              setIsEditDialogOpen(true);
+              setSelectedEvent(null);
+            }}
+          />
+        )}
 
-          {/* Event Detail Panel — Slide-out on right */}
-          {selectedEvent && (
-            <div className="w-full lg:w-96 border-l border-[#2f3e46] bg-[#0a0c10] flex flex-col overflow-hidden shrink-0 animate-in slide-in-from-right-5 duration-300">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#2f3e46]">
-                <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a9927d]">
-                  Event Details
-                </h3>
-                <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2f3e46] transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                <div>
-                  <div
-                    className="w-full h-1 rounded-full mb-4"
-                    style={{ backgroundColor: selectedEvent.color }}
-                  />
-                  <h2 className="text-lg font-medium text-white leading-tight">
-                    {selectedEvent.title}
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5 text-gray-500" />
-                  <span
-                    className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-full border"
-                    style={{
-                      color: eventTypeConfig[selectedEvent.type]?.color || "#a9927d",
-                      borderColor: `${eventTypeConfig[selectedEvent.type]?.color || "#a9927d"}30`,
-                      backgroundColor: `${eventTypeConfig[selectedEvent.type]?.color || "#a9927d"}10`,
-                    }}
-                  >
-                    {eventTypeConfig[selectedEvent.type]?.label || selectedEvent.type}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-[#1a252f] border border-[#2f3e46]">
-                  <Clock className="h-4 w-4 text-[#a9927d] mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm text-white">
-                      {format(new Date(selectedEvent.start), "EEEE, MMMM d")}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                      {format(new Date(selectedEvent.start), "h:mm a")} –{" "}
-                      {format(new Date(selectedEvent.end), "h:mm a")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#2f3e46] space-y-2.5">
-                  <button
-                    onClick={() => {
-                      startTimerMutation.mutate({ taskId: selectedEvent.id });
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs font-mono flex items-center justify-center gap-2 shadow-lg transition-all"
-                  >
-                    Start Focus Session ⚡
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        completeTaskMutation.mutate({ id: selectedEvent.id });
-                      }}
-                      className="py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-bold text-xs font-mono border border-emerald-500/30 transition-all text-center"
-                    >
-                      Mark Complete
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (confirm("Delete this event/task?")) {
-                          deleteTaskMutation.mutate({ id: selectedEvent.id });
-                        }
-                      }}
-                      className="py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-xs font-mono border border-rose-500/30 transition-all text-center"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Unscheduled Tasks Bar - Positioned at bottom of calendar container */}
-        <UnscheduledSidebar />
+        {/* 4. Google Calendar Event & Task Creator Dialog */}
+        <GoogleCreateEventDialog
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) {
+              setEditingEvent(null);
+              setCreateSlot(null);
+            }
+          }}
+          eventToEdit={editingEvent}
+          initialSlot={createSlot}
+          existingEvents={visibleEvents}
+          onSave={handleSaveEvent}
+          isSaving={
+            createTaskMutation.isPending ||
+            createCalendarEventMutation.isPending ||
+            updateEvent.isPending
+          }
+        />
       </div>
-      {/* Drag Overlay */}
-      {createPortal(
-        <DragOverlay>
-          {activeDragItem ? (
-            <div className="p-3 bg-[#1a252f] border border-[#a9927d]/40 rounded-xl shadow-2xl w-64 opacity-90 rotate-2 cursor-grabbing">
-              <div className="font-light text-sm text-white">
-                {activeDragItem.title}
-              </div>
-            </div>
-          ) : null}
-        </DragOverlay>,
-        document.body,
-      )}
-    </DndContext>
+    </div>
   );
 }

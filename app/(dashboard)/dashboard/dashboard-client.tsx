@@ -106,19 +106,38 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const { data: revenueData } = trpc.analytics.getRevenueOverview.useQuery();
   const { data: closedDealsList } = trpc.analytics.getClosedDeals.useQuery();
   const { data: streakData } = trpc.habit.getStreaks.useQuery();
-  const { data: remoteGoals } = (trpc as any).goals?.list?.useQuery?.(
+  const { data: remoteGoals, isSuccess: goalsLoaded } = (trpc as any).goals?.list?.useQuery?.(
     undefined,
-    {
-      refetchOnWindowFocus: false,
-    },
-  ) ?? { data: null };
+    { refetchOnWindowFocus: false },
+  ) ?? { data: null, isSuccess: false };
 
-  // Sync backend goals into Zustand goalStore
+  // Sync backend goals into Zustand goalStore.
+  // Always replace — even empty array clears stale local defaults.
+  // Merges backend-authoritative fields with frontend-only config defaults.
   useEffect(() => {
-    if (Array.isArray(remoteGoals) && remoteGoals.length > 0) {
-      useGoalStore.setState({ goals: remoteGoals as any });
-    }
-  }, [remoteGoals]);
+    if (!goalsLoaded || !Array.isArray(remoteGoals)) return;
+    const currentGoals = useGoalStore.getState().goals;
+    const merged = (remoteGoals as any[]).map((remote: any) => {
+      const existing = currentGoals.find((g: any) => g.id === remote.id);
+      return {
+        frequency: "daily",
+        scheduledDays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+        targetMinutes: remote.targetHours ? Math.round(remote.targetHours * 60) : 60,
+        mode: "standard",
+        pomodoroWorkMinutes: 25,
+        pomodoroBreakMinutes: 5,
+        autoStartBreaks: true,
+        ...(existing ?? {}),
+        id: remote.id,
+        title: remote.title,
+        pillar: remote.pillar || remote.category || "General",
+        streak: remote.streak ?? 0,
+        completedDates: Array.isArray(remote.completedDates) ? remote.completedDates : [],
+        createdAt: remote.createdAt ?? new Date().toISOString(),
+      };
+    });
+    useGoalStore.setState({ goals: merged as any });
+  }, [remoteGoals, goalsLoaded]);
 
   const { data: projectsData, isLoading: projectsLoading } =
     trpc.project.getProjects.useQuery();

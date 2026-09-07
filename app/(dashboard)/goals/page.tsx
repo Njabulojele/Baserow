@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useGoalStore, Goal, DayOfWeek } from "@/lib/goalStore";
+import { useGoalStore, Goal, DayOfWeek, GoalFrequency, GoalMode } from "@/lib/goalStore";
 import { CreateGoalDialog } from "@/components/goals/CreateGoalDialog";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
@@ -59,16 +59,42 @@ export default function GoalsPage() {
   const startGoalSession = useGoalStore((s) => s.startGoalSession);
 
   // Fetch real goals from Go backend DB
-  const { data: remoteGoals } = trpc.goals.list.useQuery(undefined, {
+  const { data: remoteGoals, isSuccess: goalsLoaded } = trpc.goals.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
 
-  // Sync DB goals into Zustand store when fetched
+  // Sync DB goals into Zustand store when fetched.
+  // Always replace — even an empty array clears stale defaults.
+  // Merge backend data with frontend-only fields (frequency, mode, etc.)
+  // that the Go schema doesn't persist yet.
   useEffect(() => {
-    if (Array.isArray(remoteGoals) && remoteGoals.length > 0) {
-      useGoalStore.setState({ goals: remoteGoals as unknown as Goal[] });
-    }
-  }, [remoteGoals]);
+    if (!goalsLoaded || !Array.isArray(remoteGoals)) return;
+    const currentGoals = useGoalStore.getState().goals;
+    const merged: Goal[] = (remoteGoals as any[]).map((remote: any) => {
+      // Try to match an existing local goal by ID to preserve timer config
+      const existing = currentGoals.find((g) => g.id === remote.id);
+      return {
+        // Frontend-only defaults (not stored in Go DB yet)
+        frequency: "daily" as GoalFrequency,
+        scheduledDays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as DayOfWeek[],
+        targetMinutes: remote.targetHours ? Math.round(remote.targetHours * 60) : 60,
+        mode: "standard" as GoalMode,
+        pomodoroWorkMinutes: 25,
+        pomodoroBreakMinutes: 5,
+        autoStartBreaks: true,
+        // Preserve any existing local timer config if IDs match
+        ...(existing ?? {}),
+        // Backend-authoritative fields always win
+        id: remote.id,
+        title: remote.title,
+        pillar: remote.pillar || remote.category || "General",
+        streak: remote.streak ?? 0,
+        completedDates: Array.isArray(remote.completedDates) ? remote.completedDates : [],
+        createdAt: remote.createdAt ?? new Date().toISOString(),
+      };
+    });
+    useGoalStore.setState({ goals: merged });
+  }, [remoteGoals, goalsLoaded]);
 
   const deleteGoalMutation = trpc.goals.delete.useMutation({
     onSuccess: () => utils.goals.list.invalidate(),

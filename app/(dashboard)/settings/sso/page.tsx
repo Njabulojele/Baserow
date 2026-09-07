@@ -1,8 +1,8 @@
 "use client";
 
-import { OrganizationProfile } from "@clerk/react";
+import { OrganizationProfile } from "@clerk/nextjs";
 import { Key, Webhook, User, Globe, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../../../components/ui/button";
 import Link from "next/link";
 import { dark } from "@clerk/themes";
 

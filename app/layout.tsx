@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/react";
+import { ClerkProvider } from "@clerk/nextjs";
 import { TRPCProvider } from "@/lib/trpc/client";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";

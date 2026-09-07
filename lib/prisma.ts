@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const softDeleteModels = [
   "User",
@@ -11,7 +13,9 @@ const softDeleteModels = [
 
 // Standard Prisma client for Vercel deployment
 const prismaClientSingleton = () => {
-  const baseClient = new PrismaClient();
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+  const baseClient = new PrismaClient({ adapter });
 
   return baseClient.$extends({
     query: {

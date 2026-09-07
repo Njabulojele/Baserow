@@ -154,7 +154,7 @@ export function TaskCalendarGrid({
   });
 
   const handleStartTimer = (item: CalendarTaskItem) => {
-    startTimerMutation.mutate({ taskId: item.id });
+    startTimerMutation.mutate({ id: item.id });
   };
 
   return (

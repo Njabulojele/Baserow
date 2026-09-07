@@ -32,7 +32,7 @@ import {
   useSidebar,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { UserButton } from "@clerk/react";
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";

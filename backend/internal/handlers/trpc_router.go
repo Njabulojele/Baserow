@@ -269,6 +269,12 @@ func dispatchProcedure(r *http.Request, hc *HandlerContext, proc, userID, orgID 
 	// ── Calendar ─────────────────────────────────────────────
 	case "calendar.getEvents":
 		return GetCalendarEvents(ctx, hc.DB, userID, input)
+	case "calendar.createEvent":
+		return CreateCalendarEvent(ctx, hc.DB, userID, input)
+	case "calendar.updateEvent":
+		return UpdateCalendarEvent(ctx, hc.DB, userID, input)
+	case "calendar.deleteEvent":
+		return DeleteCalendarEvent(ctx, hc.DB, userID, input)
 
 	// ── Strategy ─────────────────────────────────────────────
 	case "strategy.getYearPlan":

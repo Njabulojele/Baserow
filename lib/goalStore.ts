@@ -41,6 +41,7 @@ export interface ActiveGoalSession {
 interface GoalState {
   goals: Goal[];
   activeSession: ActiveGoalSession | null;
+  setGoals: (goals: Goal[]) => void;
   addGoal: (goal: Omit<Goal, "id" | "streak" | "completedDates" | "createdAt">) => Goal;
   updateGoal: (id: string, updatedFields: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
@@ -107,8 +108,12 @@ function getTodayStr(): string {
 export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
-      goals: DEFAULT_GOALS,
+      // Start empty — backend is the source of truth. Goals/dashboard pages
+      // sync from the Go backend on mount and replace this array.
+      goals: [],
       activeSession: null,
+
+      setGoals: (goals) => set({ goals }),
 
       addGoal: (newGoalData) => {
         const newGoal: Goal = {
@@ -264,6 +269,15 @@ export const useGoalStore = create<GoalState>()(
     }),
     {
       name: "baserow-goals-store",
+      version: 2,
+      // Version 1 had hardcoded DEFAULT_GOALS. Version 2 always defers to backend.
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          // Clear the stale default goals — backend is now the source of truth.
+          return { ...persistedState, goals: [] };
+        }
+        return persistedState;
+      },
     }
   )
 );

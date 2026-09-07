@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/react/server";
+import { auth } from "@clerk/nextjs/server";
 import { createServerCaller } from "@/lib/trpc/server";
 import { ProspectingClient } from "./client";
 
