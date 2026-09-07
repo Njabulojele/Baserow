@@ -81,12 +81,18 @@ export default function TimerPage() {
     logVisitMutation.mutate({ page: "timer" });
   }, []);
 
-  const projects = (projectsData as any[]) || [];
-  const goals = (goalsData as any[]) || [];
-  const tasks = ((tasksData as any[]) || []).filter(
-    (t: any) => t.status !== "done" && t.status !== "completed"
-  );
-  const recentSessions = (recentSessionsData as any[]) || [];
+  const projects = Array.isArray(projectsData) ? projectsData : [];
+  const goals = Array.isArray(goalsData) ? goalsData : [];
+  const tasks = Array.isArray(tasksData)
+    ? tasksData.filter(
+        (t: any) => t.status !== "done" && t.status !== "completed"
+      )
+    : [];
+  const recentSessions = Array.isArray(recentSessionsData)
+    ? (recentSessionsData as any[])
+    : Array.isArray((recentSessionsData as any)?.json)
+    ? (recentSessionsData as any).json
+    : [];
 
   // Sync active timer fields if already running
   useEffect(() => {

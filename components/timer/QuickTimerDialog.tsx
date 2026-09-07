@@ -79,11 +79,13 @@ export function QuickTimerDialog({
     },
   });
 
-  const projects = (projectsData as any[]) || [];
-  const goals = (goalsData as any[]) || [];
-  const tasks = ((tasksData as any[]) || []).filter(
-    (t: any) => t.status !== "done" && t.status !== "completed"
-  );
+  const projects = Array.isArray(projectsData) ? projectsData : [];
+  const goals = Array.isArray(goalsData) ? goalsData : [];
+  const tasks = Array.isArray(tasksData)
+    ? tasksData.filter(
+        (t: any) => t.status !== "done" && t.status !== "completed"
+      )
+    : [];
 
   // Sync state if active timer already exists
   useEffect(() => {
