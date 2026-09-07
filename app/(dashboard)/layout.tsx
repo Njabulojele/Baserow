@@ -22,9 +22,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await currentUser();
+  let user: any = null;
+  let hasClerkMiddleware = true;
+  try {
+    user = await currentUser();
+  } catch (err) {
+    hasClerkMiddleware = false;
+  }
 
-  if (!user) {
+  if (hasClerkMiddleware && !user) {
     redirect("/login");
   }
 

@@ -9,16 +9,26 @@ import * as Sentry from "@sentry/nextjs";
  * Context for tRPC procedures
  */
 export const createTRPCContext = async () => {
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const authData = await auth();
+    userId = authData.userId;
+  } catch (e) {
+    userId = null;
+  }
 
   let activeOrgId: string | null = null;
 
   if (userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { activeOrgId: true },
-    });
-    activeOrgId = user?.activeOrgId || null;
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { activeOrgId: true },
+      });
+      activeOrgId = user?.activeOrgId || null;
+    } catch {
+      activeOrgId = null;
+    }
   }
 
   return {
