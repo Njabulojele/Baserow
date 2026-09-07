@@ -56,6 +56,7 @@ import { prospectingRouter } from "./prospecting";
 
 // Goals (personal tracking — proxied to Go backend at runtime)
 import { goalsRouter } from "./goals";
+import { timerRouter } from "./timer";
 
 export const appRouter = router({
   task: taskRouter,
@@ -115,6 +116,9 @@ export const appRouter = router({
 
   // Goals
   goals: goalsRouter,
+
+  // Timer & Activity Tracking
+  timer: timerRouter,
 });
 
 export type AppRouter = typeof appRouter;

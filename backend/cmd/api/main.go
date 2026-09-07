@@ -69,6 +69,40 @@ func main() {
 				timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 			);
 
+			CREATE TABLE IF NOT EXISTS activity_events (
+				id BIGSERIAL PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				event_type TEXT NOT NULL,
+				entity_type TEXT DEFAULT '',
+				entity_id TEXT DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT NOW()
+			);
+			CREATE INDEX IF NOT EXISTS idx_activity_events_user_day ON activity_events(user_id, created_at);
+
+			DO $$
+			BEGIN
+				IF NOT EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_name = 'timer_sessions' AND column_name = 'session_type'
+				) THEN
+					ALTER TABLE timer_sessions ADD COLUMN session_type TEXT DEFAULT 'focus';
+				END IF;
+
+				IF NOT EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_name = 'timer_sessions' AND column_name = 'title'
+				) THEN
+					ALTER TABLE timer_sessions ADD COLUMN title TEXT DEFAULT '';
+				END IF;
+
+				IF NOT EXISTS (
+					SELECT 1 FROM information_schema.columns
+					WHERE table_name = 'timer_sessions' AND column_name = 'notes'
+				) THEN
+					ALTER TABLE timer_sessions ADD COLUMN notes TEXT DEFAULT '';
+				END IF;
+			END $$;
+
 			CREATE TABLE IF NOT EXISTS app_rules (
 				id TEXT PRIMARY KEY,
 				user_id TEXT NOT NULL DEFAULT 'user_demo',

@@ -241,20 +241,34 @@ func LogGoalSession(ctx context.Context, pool *pgxpool.Pool, userID string, inpu
 }
 
 func LogTimerSession(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
-	userID = auth.UserIDFromContext(ctx)
+	if u := auth.UserIDFromContext(ctx); u != "" && u != "dev_user_local_only" {
+		userID = u
+	}
+	if pool == nil {
+		return map[string]interface{}{"success": true}, nil
+	}
+
 	durationFloat, _ := input["durationSeconds"].(float64)
 	durationSec := int(durationFloat)
-	if durationSec <= 0 || durationSec > 12*3600 {
-		return nil, fmt.Errorf("durationSeconds must be between 1 and 43200")
+	if durationSec <= 0 || durationSec > 24*3600 {
+		return nil, fmt.Errorf("durationSeconds must be between 1 and 86400")
 	}
 
 	taskID, _ := input["taskId"].(string)
 	projectID, _ := input["projectId"].(string)
+	goalID, _ := input["goalId"].(string)
+	sessionType, _ := input["sessionType"].(string)
+	if sessionType == "" {
+		sessionType = "focus"
+	}
+	title, _ := input["title"].(string)
+	notes, _ := input["notes"].(string)
+	completed, _ := input["completed"].(bool)
 
-	// Validate ownership of referenced task/project if provided
+	// Validate ownership if provided
 	if taskID != "" {
 		if err := db.RequireOwner(ctx, pool, "tasks", taskID, userID, true); err != nil {
-			taskID = "" // just drop the reference rather than fail the whole insert
+			taskID = ""
 		}
 	}
 	if projectID != "" {
@@ -262,14 +276,210 @@ func LogTimerSession(ctx context.Context, pool *pgxpool.Pool, userID string, inp
 			projectID = ""
 		}
 	}
+	if goalID != "" {
+		if err := db.RequireOwner(ctx, pool, "goals", goalID, userID, true); err != nil {
+			goalID = ""
+		}
+	}
 
 	_, err := pool.Exec(ctx, `
-		INSERT INTO timer_sessions (user_id, task_id, project_id, duration_seconds, status, started_at, ended_at)
-		VALUES ($1, NULLIF($2,'')::uuid, NULLIF($3,'')::uuid, $4, 'completed', NOW() - ($4 * interval '1 second'), NOW())`,
-		userID, taskID, projectID, durationSec)
+		INSERT INTO timer_sessions (id, user_id, task_id, project_id, goal_id, duration_seconds, status, session_type, title, notes, started_at, ended_at)
+		VALUES (gen_random_uuid()::text, $1, NULLIF($2::text,''), NULLIF($3::text,''), NULLIF($4::text,''), $5::int, 'completed', $6, $7, $8, NOW() - ($5::int * interval '1 second'), NOW())`,
+		userID, taskID, projectID, goalID, durationSec, sessionType, title, notes)
 	if err != nil {
 		return nil, err
 	}
+
+	// Dual-write into activity_events
+	entityType := "session"
+	entityID := sessionType
+	if projectID != "" {
+		entityType = "project"
+		entityID = projectID
+	} else if goalID != "" {
+		entityType = "goal"
+		entityID = goalID
+	} else if taskID != "" {
+		entityType = "task"
+		entityID = taskID
+	}
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO activity_events (user_id, event_type, entity_type, entity_id, created_at)
+		VALUES ($1, 'timer_logged', $2, $3, NOW())`, userID, entityType, entityID)
+
+	// Handle goal completion / hours accumulation
+	if goalID != "" {
+		_, _ = pool.Exec(ctx, `
+			UPDATE goals SET completed_hours = completed_hours + $2, last_logged_at = NOW(), updated_at = NOW()
+			WHERE id = $1 AND (user_id = $3 OR user_id = 'dev_user')`, goalID, float64(durationSec)/3600.0, userID)
+		if completed {
+			dateStr := time.Now().Format("2006-01-02")
+			_, _ = pool.Exec(ctx, `
+				UPDATE goals 
+				SET streak_days = streak_days + 1,
+				    status = 'completed',
+				    completed_dates = array_to_json(array_append(ARRAY(SELECT json_array_elements_text(COALESCE(NULLIF(completed_dates::text, ''), '[]')::json)), $2))
+				WHERE id = $1 AND (user_id = $3 OR user_id = 'dev_user')`, goalID, dateStr, userID)
+		}
+	}
+
+	// Handle task completion / actual minutes
+	if taskID != "" {
+		actMin := int(durationSec / 60)
+		if actMin < 1 {
+			actMin = 1
+		}
+		if completed {
+			_, _ = pool.Exec(ctx, `
+				UPDATE tasks 
+				SET status = 'done', completed_at = NOW(), timer_running = false,
+				    actual_minutes = COALESCE(actual_minutes, 0) + $2, updated_at = NOW()
+				WHERE id = $1 AND (user_id = $3 OR user_id = 'dev_user')`, taskID, actMin, userID)
+		} else {
+			_, _ = pool.Exec(ctx, `
+				UPDATE tasks 
+				SET actual_minutes = COALESCE(actual_minutes, 0) + $2, updated_at = NOW()
+				WHERE id = $1 AND (user_id = $3 OR user_id = 'dev_user')`, taskID, actMin, userID)
+		}
+	}
+
+	return map[string]interface{}{"success": true}, nil
+}
+
+func GetTimerStats(ctx context.Context, pool *pgxpool.Pool, userID string) (interface{}, error) {
+	if u := auth.UserIDFromContext(ctx); u != "" && u != "dev_user_local_only" {
+		userID = u
+	}
+	if pool == nil {
+		return map[string]interface{}{
+			"todayFocusSeconds":  0,
+			"todayBreakSeconds":  0,
+			"weekFocusSeconds":   0,
+			"todaySessionsCount": 0,
+			"streakDays":         0,
+			"completedGoals":     0,
+			"daysActive":         0,
+		}, nil
+	}
+
+	var todayFocus, todayBreak, weekFocus, totalSessions int64
+	var completedGoals, streakDays, visitsCount int64
+
+	// 1. Focus vs Break seconds today
+	_ = pool.QueryRow(ctx, `
+		SELECT 
+			COALESCE(SUM(CASE WHEN session_type NOT IN ('break', 'short_break', 'long_break') THEN duration_seconds ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN session_type IN ('break', 'short_break', 'long_break') THEN duration_seconds ELSE 0 END), 0),
+			COALESCE(COUNT(*), 0)
+		FROM timer_sessions 
+		WHERE (user_id = $1 OR user_id = 'dev_user' OR user_id = 'dev_user_local_only' OR $1 = 'dev_user')
+		  AND started_at >= date_trunc('day', NOW())`, userID).Scan(&todayFocus, &todayBreak, &totalSessions)
+
+	// 2. Week focus
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(duration_seconds), 0)
+		FROM timer_sessions 
+		WHERE (user_id = $1 OR user_id = 'dev_user' OR user_id = 'dev_user_local_only' OR $1 = 'dev_user')
+		  AND started_at >= date_trunc('week', NOW())
+		  AND session_type NOT IN ('break', 'short_break', 'long_break')`, userID).Scan(&weekFocus)
+
+	// 3. Completed goals & streak
+	_ = pool.QueryRow(ctx, `
+		SELECT 
+			COALESCE(COUNT(CASE WHEN status = 'completed' THEN 1 END), 0),
+			COALESCE(MAX(streak_days), 0)
+		FROM goals 
+		WHERE (user_id = $1 OR user_id = 'dev_user' OR $1 = 'dev_user')`, userID).Scan(&completedGoals, &streakDays)
+
+	// 4. Visits / Activity count ("how often i come on")
+	_ = pool.QueryRow(ctx, `
+		SELECT COALESCE(COUNT(DISTINCT date_trunc('day', created_at)), 0)
+		FROM activity_events 
+		WHERE (user_id = $1 OR user_id = 'dev_user' OR $1 = 'dev_user')`, userID).Scan(&visitsCount)
+
+	return map[string]interface{}{
+		"todayFocusSeconds":  todayFocus,
+		"todayBreakSeconds":  todayBreak,
+		"weekFocusSeconds":   weekFocus,
+		"todaySessionsCount": totalSessions,
+		"streakDays":         streakDays,
+		"completedGoals":     completedGoals,
+		"daysActive":         visitsCount,
+	}, nil
+}
+
+func GetTimerRecentSessions(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	if u := auth.UserIDFromContext(ctx); u != "" && u != "dev_user_local_only" {
+		userID = u
+	}
+	if pool == nil {
+		return []map[string]interface{}{}, nil
+	}
+
+	limit := 25
+	rows, err := pool.Query(ctx, `
+		SELECT s.id, s.duration_seconds, COALESCE(s.session_type, 'focus'), 
+		       COALESCE(s.title, ''), COALESCE(s.notes, ''), s.started_at,
+		       COALESCE(p.id, ''), COALESCE(p.name, ''), COALESCE(p.color, '#a9927d'),
+		       COALESCE(t.id, ''), COALESCE(t.title, ''),
+		       COALESCE(g.id, ''), COALESCE(g.title, '')
+		FROM timer_sessions s
+		LEFT JOIN projects p ON s.project_id = p.id
+		LEFT JOIN tasks t ON s.task_id = t.id
+		LEFT JOIN goals g ON s.goal_id = g.id
+		WHERE (s.user_id = $1 OR s.user_id = 'dev_user' OR s.user_id = 'dev_user_local_only' OR $1 = 'dev_user')
+		ORDER BY s.started_at DESC
+		LIMIT $2`, userID, limit)
+	if err != nil {
+		return []map[string]interface{}{}, nil
+	}
+	defer rows.Close()
+
+	var sessions []map[string]interface{}
+	for rows.Next() {
+		var id, sessionType, title, notes, projID, projName, projColor, taskID, taskTitle, goalID, goalTitle string
+		var durationSec int
+		var startedAt time.Time
+
+		if err := rows.Scan(&id, &durationSec, &sessionType, &title, &notes, &startedAt,
+			&projID, &projName, &projColor, &taskID, &taskTitle, &goalID, &goalTitle); err == nil {
+			sessions = append(sessions, map[string]interface{}{
+				"id":              id,
+				"durationSeconds": durationSec,
+				"sessionType":     sessionType,
+				"title":           title,
+				"notes":           notes,
+				"startedAt":       startedAt.Format(time.RFC3339),
+				"projectId":       projID,
+				"projectName":     projName,
+				"projectColor":    projColor,
+				"taskId":          taskID,
+				"taskTitle":       taskTitle,
+				"goalId":          goalID,
+				"goalTitle":       goalTitle,
+			})
+		}
+	}
+	if sessions == nil {
+		sessions = []map[string]interface{}{}
+	}
+	return sessions, nil
+}
+
+func LogActivityVisit(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
+	if u := auth.UserIDFromContext(ctx); u != "" && u != "dev_user_local_only" {
+		userID = u
+	}
+	if pool == nil {
+		return map[string]interface{}{"success": true}, nil
+	}
+	page, _ := input["page"].(string)
+	if page == "" {
+		page = "dashboard"
+	}
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO activity_events (user_id, event_type, entity_type, entity_id, created_at)
+		VALUES ($1, 'user_visit', 'page', $2, NOW())`, userID, page)
 	return map[string]interface{}{"success": true}, nil
 }
 

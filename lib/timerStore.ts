@@ -1,222 +1,411 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+export type TimerSessionType =
+  | "focus"
+  | "break"
+  | "pomodoro"
+  | "short_break"
+  | "long_break";
+
+export type TimerMode =
+  | "pomodoro"
+  | "deep_work"
+  | "sprint"
+  | "stopwatch"
+  | "custom";
 
 export interface ActiveTimer {
   sessionId?: string;
   taskId?: string;
+  taskTitle?: string;
   goalId?: string;
+  goalTitle?: string;
   projectId?: string;
+  projectName?: string;
+  projectColor?: string;
   title: string;
+  notes?: string;
+  sessionType: TimerSessionType;
+  mode: TimerMode;
+  targetSeconds: number; // 0 for stopwatch, 1500 (25m), 3600 (1h), 1800 (30m), 300 (5m)
   startedAt: string; // ISO string
   isRunning: boolean;
   elapsedSeconds: number;
+  pomodoroPhase?: "work" | "break";
+}
+
+export interface StartSessionOptions {
+  projectId?: string;
+  projectName?: string;
+  projectColor?: string;
+  taskId?: string;
+  taskTitle?: string;
+  goalId?: string;
+  goalTitle?: string;
+  title?: string;
+  notes?: string;
+  sessionType?: TimerSessionType;
+  mode?: TimerMode;
+  targetSeconds?: number;
 }
 
 interface TimerStoreState {
-  // New Active Timer backend state
   activeTimer: ActiveTimer | null;
   heartbeatIntervalId: any | null;
+  isQuickModalOpen: boolean;
 
-  // Legacy state getters for compatibility across UI components
+  // Compatibility fields
   isRunning: boolean;
   startTime: number | null;
   accumulatedMs: number;
 
-  // Actions
+  // Modal control
+  setQuickModalOpen: (open: boolean) => void;
+
+  // Primary Actions
+  startSession: (options?: StartSessionOptions) => void;
+  switchToBreak: (durationMinutes?: number) => void;
+  switchToFocus: (targetMinutes?: number) => void;
+  togglePause: () => void;
+  resume: () => void;
+  pause: () => void;
+  stopAndReset: () => ActiveTimer | null;
+  updateNotes: (notes: string) => void;
+  setTargetSeconds: (seconds: number) => void;
+
+  // Legacy actions
   setActiveTimer: (timer: ActiveTimer | null) => void;
   hydrateFromBackend: (data: any) => void;
   startHeartbeat: () => void;
   stopHeartbeat: () => void;
   tick: () => void;
   clearTimer: () => void;
-
-  // Legacy API compatibility actions
   start: () => void;
   stop: () => void;
   reset: () => void;
   getElapsedMs: () => number;
 }
 
-export const useTimerStore = create<TimerStoreState>()((set, get) => ({
-  activeTimer: null,
-  heartbeatIntervalId: null,
+export const useTimerStore = create<TimerStoreState>()(
+  persist(
+    (set, get) => ({
+      activeTimer: null,
+      heartbeatIntervalId: null,
+      isQuickModalOpen: false,
 
-  isRunning: false,
-  startTime: null,
-  accumulatedMs: 0,
+      isRunning: false,
+      startTime: null,
+      accumulatedMs: 0,
 
-  setActiveTimer: (timer) => {
-    const isRunning = !!timer?.isRunning;
-    set({
-      activeTimer: timer,
-      isRunning,
-      startTime: timer ? new Date(timer.startedAt).getTime() : null,
-    });
+      setQuickModalOpen: (open) => set({ isQuickModalOpen: open }),
 
-    if (isRunning) {
-      get().startHeartbeat();
-    } else {
-      get().stopHeartbeat();
-    }
-  },
+      startSession: (options = {}) => {
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const mode = options.mode || "pomodoro";
+        const sessionType = options.sessionType || (mode === "pomodoro" ? "pomodoro" : "focus");
 
-  hydrateFromBackend: (data) => {
-    if (!data || !data.startedAt) {
-      set({
-        activeTimer: null,
-        isRunning: false,
-        startTime: null,
-        accumulatedMs: 0,
-      });
-      get().stopHeartbeat();
-      return;
-    }
+        let targetSeconds = options.targetSeconds ?? 1500;
+        if (options.targetSeconds === undefined) {
+          if (mode === "pomodoro") targetSeconds = 25 * 60;
+          else if (mode === "deep_work") targetSeconds = 60 * 60;
+          else if (mode === "sprint") targetSeconds = 30 * 60;
+          else if (mode === "stopwatch") targetSeconds = 0;
+        }
 
-    const startedEpoch = new Date(data.startedAt).getTime();
-    const nowEpoch = Date.now();
-    const elapsedSeconds = Math.max(0, Math.floor((nowEpoch - startedEpoch) / 1000));
+        const title =
+          options.title ||
+          options.taskTitle ||
+          options.projectName ||
+          (sessionType === "break" ? "Rest & Recharge" : "Deep Work Focus");
 
-    const activeTimer: ActiveTimer = {
-      sessionId: data.sessionId || data.id,
-      taskId: data.taskId,
-      goalId: data.goalId,
-      projectId: data.projectId,
-      title: data.title || "Active Session",
-      startedAt: data.startedAt,
-      isRunning: true,
-      elapsedSeconds,
-    };
+        const activeTimer: ActiveTimer = {
+          sessionId: `sess_${Date.now()}`,
+          taskId: options.taskId,
+          taskTitle: options.taskTitle,
+          goalId: options.goalId,
+          goalTitle: options.goalTitle,
+          projectId: options.projectId,
+          projectName: options.projectName,
+          projectColor: options.projectColor,
+          title,
+          notes: options.notes || "",
+          sessionType,
+          mode,
+          targetSeconds,
+          startedAt: nowIso,
+          isRunning: true,
+          elapsedSeconds: 0,
+          pomodoroPhase: sessionType === "break" ? "break" : "work",
+        };
 
-    set({
-      activeTimer,
-      isRunning: true,
-      startTime: startedEpoch,
-      accumulatedMs: elapsedSeconds * 1000,
-    });
-
-    get().startHeartbeat();
-  },
-
-  tick: () => {
-    const { activeTimer, isRunning, accumulatedMs } = get();
-    if (activeTimer && activeTimer.isRunning) {
-      set({
-        activeTimer: {
-          ...activeTimer,
-          elapsedSeconds: activeTimer.elapsedSeconds + 1,
-        },
-        accumulatedMs: (activeTimer.elapsedSeconds + 1) * 1000,
-      });
-    } else if (isRunning && get().startTime) {
-      const elapsed = Date.now() - (get().startTime || Date.now());
-      set({ accumulatedMs: elapsed });
-    }
-  },
-
-  startHeartbeat: () => {
-    const state = get();
-    if (state.heartbeatIntervalId) return;
-
-    // Send 30s heartbeat ping
-    const interval = setInterval(async () => {
-      const current = get().activeTimer;
-      if (!current || !current.isRunning) {
-        get().stopHeartbeat();
-        return;
-      }
-      try {
-        await fetch("/api/trpc/task.heartbeatTimer?batch=1", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            "0": {
-              json: { sessionId: current.sessionId, id: current.sessionId },
-            },
-          }),
+        set({
+          activeTimer,
+          isRunning: true,
+          startTime: now.getTime(),
+          accumulatedMs: 0,
         });
-      } catch (err) {
-        // silent fail
-      }
-    }, 30000);
 
-    set({ heartbeatIntervalId: interval });
-  },
+        get().startHeartbeat();
+      },
 
-  stopHeartbeat: () => {
-    const { heartbeatIntervalId } = get();
-    if (heartbeatIntervalId) {
-      clearInterval(heartbeatIntervalId);
-      set({ heartbeatIntervalId: null });
-    }
-  },
+      switchToBreak: (durationMinutes = 5) => {
+        const current = get().activeTimer;
+        const now = new Date();
+        const activeTimer: ActiveTimer = {
+          sessionId: `sess_${Date.now()}`,
+          projectId: current?.projectId,
+          projectName: current?.projectName,
+          projectColor: current?.projectColor,
+          taskId: current?.taskId,
+          taskTitle: current?.taskTitle,
+          goalId: current?.goalId,
+          goalTitle: current?.goalTitle,
+          title: "Coffee & Rest Break",
+          notes: "Resting eyes and stretching",
+          sessionType: durationMinutes >= 15 ? "long_break" : "short_break",
+          mode: current?.mode || "pomodoro",
+          targetSeconds: durationMinutes * 60,
+          startedAt: now.toISOString(),
+          isRunning: true,
+          elapsedSeconds: 0,
+          pomodoroPhase: "break",
+        };
 
-  clearTimer: () => {
-    get().stopHeartbeat();
-    set({
-      activeTimer: null,
-      isRunning: false,
-      startTime: null,
-      accumulatedMs: 0,
-    });
-  },
+        set({
+          activeTimer,
+          isRunning: true,
+          startTime: now.getTime(),
+          accumulatedMs: 0,
+        });
+        get().startHeartbeat();
+      },
 
-  // Backward compatibility actions
-  start: () => {
-    const now = Date.now();
-    const state = get();
-    if (!state.isRunning) {
-      set({
-        isRunning: true,
-        startTime: now,
-        activeTimer: state.activeTimer
-          ? { ...state.activeTimer, isRunning: true }
-          : {
-              title: "Focus Session",
-              startedAt: new Date(now).toISOString(),
-              isRunning: true,
-              elapsedSeconds: Math.floor(state.accumulatedMs / 1000),
+      switchToFocus: (targetMinutes = 25) => {
+        const current = get().activeTimer;
+        const now = new Date();
+        const activeTimer: ActiveTimer = {
+          sessionId: `sess_${Date.now()}`,
+          projectId: current?.projectId,
+          projectName: current?.projectName,
+          projectColor: current?.projectColor,
+          taskId: current?.taskId,
+          taskTitle: current?.taskTitle,
+          goalId: current?.goalId,
+          goalTitle: current?.goalTitle,
+          title: current?.taskTitle || current?.projectName || "Deep Work Focus",
+          notes: current?.notes || "",
+          sessionType: "focus",
+          mode: current?.mode || "pomodoro",
+          targetSeconds: targetMinutes * 60,
+          startedAt: now.toISOString(),
+          isRunning: true,
+          elapsedSeconds: 0,
+          pomodoroPhase: "work",
+        };
+
+        set({
+          activeTimer,
+          isRunning: true,
+          startTime: now.getTime(),
+          accumulatedMs: 0,
+        });
+        get().startHeartbeat();
+      },
+
+      togglePause: () => {
+        const { isRunning, pause, resume } = get();
+        if (isRunning) pause();
+        else resume();
+      },
+
+      resume: () => {
+        const { activeTimer } = get();
+        const now = Date.now();
+        if (!activeTimer) {
+          get().startSession();
+          return;
+        }
+        set({
+          activeTimer: { ...activeTimer, isRunning: true },
+          isRunning: true,
+          startTime: now - activeTimer.elapsedSeconds * 1000,
+        });
+        get().startHeartbeat();
+      },
+
+      pause: () => {
+        const { activeTimer } = get();
+        get().stopHeartbeat();
+        if (activeTimer) {
+          set({
+            activeTimer: { ...activeTimer, isRunning: false },
+            isRunning: false,
+            startTime: null,
+            accumulatedMs: activeTimer.elapsedSeconds * 1000,
+          });
+        } else {
+          set({ isRunning: false, startTime: null });
+        }
+      },
+
+      stopAndReset: () => {
+        const { activeTimer } = get();
+        get().stopHeartbeat();
+        set({
+          activeTimer: null,
+          isRunning: false,
+          startTime: null,
+          accumulatedMs: 0,
+        });
+        return activeTimer;
+      },
+
+      updateNotes: (notes: string) => {
+        const current = get().activeTimer;
+        if (current) {
+          set({ activeTimer: { ...current, notes } });
+        }
+      },
+
+      setTargetSeconds: (seconds: number) => {
+        const current = get().activeTimer;
+        if (current) {
+          set({ activeTimer: { ...current, targetSeconds: seconds } });
+        }
+      },
+
+      setActiveTimer: (timer) => {
+        const isRunning = !!timer?.isRunning;
+        set({
+          activeTimer: timer,
+          isRunning,
+          startTime: timer ? new Date(timer.startedAt).getTime() : null,
+        });
+        if (isRunning) get().startHeartbeat();
+        else get().stopHeartbeat();
+      },
+
+      hydrateFromBackend: (data) => {
+        if (!data || !data.startedAt) {
+          get().clearTimer();
+          return;
+        }
+
+        const startedEpoch = new Date(data.startedAt).getTime();
+        const nowEpoch = Date.now();
+        const elapsedSeconds = Math.max(0, Math.floor((nowEpoch - startedEpoch) / 1000));
+
+        const activeTimer: ActiveTimer = {
+          sessionId: data.sessionId || data.id,
+          taskId: data.taskId,
+          goalId: data.goalId,
+          projectId: data.projectId,
+          title: data.title || "Active Session",
+          sessionType: data.sessionType || "focus",
+          mode: data.mode || "pomodoro",
+          targetSeconds: data.targetSeconds || 1500,
+          startedAt: data.startedAt,
+          isRunning: true,
+          elapsedSeconds,
+        };
+
+        set({
+          activeTimer,
+          isRunning: true,
+          startTime: startedEpoch,
+          accumulatedMs: elapsedSeconds * 1000,
+        });
+
+        get().startHeartbeat();
+      },
+
+      tick: () => {
+        const { activeTimer, isRunning } = get();
+        if (activeTimer && activeTimer.isRunning) {
+          set({
+            activeTimer: {
+              ...activeTimer,
+              elapsedSeconds: activeTimer.elapsedSeconds + 1,
             },
-      });
-      get().startHeartbeat();
-    }
-  },
+            accumulatedMs: (activeTimer.elapsedSeconds + 1) * 1000,
+          });
+        } else if (isRunning && get().startTime) {
+          const elapsed = Date.now() - (get().startTime || Date.now());
+          set({ accumulatedMs: elapsed });
+        }
+      },
 
-  stop: () => {
-    const state = get();
-    get().stopHeartbeat();
-    if (state.isRunning && state.startTime) {
-      const elapsed = Date.now() - state.startTime;
-      set({
-        isRunning: false,
-        startTime: null,
-        accumulatedMs: state.accumulatedMs + elapsed,
-        activeTimer: state.activeTimer
-          ? { ...state.activeTimer, isRunning: false }
-          : null,
-      });
-    } else {
-      set({ isRunning: false, startTime: null });
-    }
-  },
+      startHeartbeat: () => {
+        const state = get();
+        if (state.heartbeatIntervalId) return;
 
-  reset: () => {
-    get().stopHeartbeat();
-    set({
-      activeTimer: null,
-      isRunning: false,
-      startTime: null,
-      accumulatedMs: 0,
-    });
-  },
+        const interval = setInterval(async () => {
+          const current = get().activeTimer;
+          if (!current || !current.isRunning) {
+            get().stopHeartbeat();
+            return;
+          }
+          try {
+            await fetch("/api/trpc/task.heartbeatTimer?batch=1", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                "0": {
+                  json: { sessionId: current.sessionId, id: current.sessionId },
+                },
+              }),
+            });
+          } catch {
+            // silent fail
+          }
+        }, 30000);
 
-  getElapsedMs: () => {
-    const state = get();
-    if (state.activeTimer && state.activeTimer.isRunning) {
-      const started = new Date(state.activeTimer.startedAt).getTime();
-      return Math.max(0, Date.now() - started);
+        set({ heartbeatIntervalId: interval });
+      },
+
+      stopHeartbeat: () => {
+        const { heartbeatIntervalId } = get();
+        if (heartbeatIntervalId) {
+          clearInterval(heartbeatIntervalId);
+          set({ heartbeatIntervalId: null });
+        }
+      },
+
+      clearTimer: () => {
+        get().stopHeartbeat();
+        set({
+          activeTimer: null,
+          isRunning: false,
+          startTime: null,
+          accumulatedMs: 0,
+        });
+      },
+
+      start: () => get().resume(),
+      stop: () => get().pause(),
+      reset: () => get().clearTimer(),
+
+      getElapsedMs: () => {
+        const state = get();
+        if (state.activeTimer && state.activeTimer.isRunning) {
+          const started = new Date(state.activeTimer.startedAt).getTime();
+          return Math.max(0, Date.now() - started);
+        }
+        if (state.isRunning && state.startTime !== null) {
+          return state.accumulatedMs + (Date.now() - state.startTime);
+        }
+        return state.accumulatedMs;
+      },
+    }),
+    {
+      name: "baserow_active_timer",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        activeTimer: state.activeTimer,
+        accumulatedMs: state.accumulatedMs,
+      }),
     }
-    if (state.isRunning && state.startTime !== null) {
-      return state.accumulatedMs + (Date.now() - state.startTime);
-    }
-    return state.accumulatedMs;
-  },
-}));
+  )
+);
