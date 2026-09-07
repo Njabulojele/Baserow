@@ -265,6 +265,12 @@ func dispatchProcedure(r *http.Request, hc *HandlerContext, proc, userID, orgID 
 		return DeleteGoal(ctx, hc.DB, userID, input)
 	case "timer.logSession":
 		return LogTimerSession(ctx, hc.DB, userID, input)
+	case "timer.getStats":
+		return GetTimerStats(ctx, hc.DB, userID)
+	case "timer.getRecentSessions":
+		return GetTimerRecentSessions(ctx, hc.DB, userID, input)
+	case "timer.logVisit":
+		return LogActivityVisit(ctx, hc.DB, userID, input)
 
 	// ── Calendar ─────────────────────────────────────────────
 	case "calendar.getEvents":
