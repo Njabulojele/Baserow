@@ -20,7 +20,7 @@ interface EventDetailPopoverProps {
   event: CalendarEvent;
   anchorRect: DOMRect | null;
   onClose: () => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string, event: CalendarEvent) => void;
   onComplete?: (id: string) => void;
   onStartTimer?: (id: string) => void;
   onEdit?: (event: CalendarEvent) => void;
@@ -136,7 +136,7 @@ export function EventDetailPopover({
           {onDelete && (
             <button
               onClick={() => {
-                onDelete(event.id);
+                onDelete(event.id, event);
                 onClose();
               }}
               title="Delete event"

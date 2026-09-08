@@ -109,21 +109,25 @@ export const AppCalendar = forwardRef<AppCalendarRef, AppCalendarProps>(
       const raw = info.event.extendedProps?.rawEvent as CalendarEvent;
       const rect = info.el.getBoundingClientRect();
 
-      const eventData: CalendarEvent = raw || {
+      const eventData: CalendarEvent = {
+        ...(raw || {}),
         id: info.event.id,
         title: info.event.title,
-        start: info.event.start?.toISOString() || "",
-        end: info.event.end?.toISOString() || "",
-        type: info.event.extendedProps?.type || "event",
-        status: info.event.extendedProps?.status || "scheduled",
-        priority: info.event.extendedProps?.priority || "medium",
-        color: info.event.backgroundColor || "#3b82f6",
+        start: info.event.start?.toISOString() || raw?.start || "",
+        end: info.event.end?.toISOString() || raw?.end || "",
+        type: raw?.type || (info.event.extendedProps?.type as any) || "event",
+        status: raw?.status || info.event.extendedProps?.status || "scheduled",
+        priority: raw?.priority || info.event.extendedProps?.priority || "medium",
+        color: info.event.backgroundColor || raw?.color || "#3b82f6",
         draggable: info.event.startEditable ?? true,
         resizable: info.event.durationEditable ?? true,
         allDay: info.event.allDay,
-        description: info.event.extendedProps?.description,
-        resourceId: info.event.extendedProps?.resourceId,
-        resourceTitle: info.event.extendedProps?.resourceTitle,
+        description: raw?.description || info.event.extendedProps?.description,
+        resourceId: raw?.resourceId || info.event.extendedProps?.resourceId,
+        resourceTitle: raw?.resourceTitle || info.event.extendedProps?.resourceTitle,
+        isRecurring: !!(raw?.isRecurring || raw?.rrule || info.event.extendedProps?.rrule),
+        recurrenceRule: raw?.recurrenceRule || (typeof raw?.rrule === "string" ? raw.rrule : undefined),
+        rrule: raw?.rrule,
       };
 
       if (onEventClick) {

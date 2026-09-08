@@ -302,9 +302,47 @@ export const calendarRouter = router({
     .input(
       z.object({
         id: z.string(),
+        scope: z.enum(["this", "all"]).optional().default("all"),
+        occurrenceDate: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // If deleting only this occurrence of a recurring event
+      if (input.scope === "this" && input.occurrenceDate) {
+        try {
+          const ev = await ctx.prisma.calendarEvent.findUnique({
+            where: { id: input.id },
+          });
+          if (ev && ev.recurrenceRule) {
+            const occDate = new Date(input.occurrenceDate);
+            const pad = (n: number) => n.toString().padStart(2, "0");
+            const exdateStr = `${occDate.getUTCFullYear()}${pad(occDate.getUTCMonth() + 1)}${pad(occDate.getUTCDate())}T${pad(occDate.getUTCHours())}${pad(occDate.getUTCMinutes())}${pad(occDate.getUTCSeconds())}Z`;
+
+            let updatedRule = ev.recurrenceRule;
+            if (updatedRule.includes("EXDATE:")) {
+              const lines = updatedRule.split("\n");
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith("EXDATE:")) {
+                  lines[i] = `${lines[i]},${exdateStr}`;
+                  break;
+                }
+              }
+              updatedRule = lines.join("\n");
+            } else {
+              updatedRule = `${updatedRule}\nEXDATE:${exdateStr}`;
+            }
+
+            await ctx.prisma.calendarEvent.update({
+              where: { id: input.id },
+              data: { recurrenceRule: updatedRule },
+            });
+
+            return { success: true, scope: "this" };
+          }
+        } catch (e) {}
+      }
+
+      // Default: "all" — delete completely
       try {
         await ctx.prisma.calendarEvent.deleteMany({
           where: { id: input.id },
@@ -318,6 +356,6 @@ export const calendarRouter = router({
         });
       } catch (e) {}
 
-      return { success: true };
+      return { success: true, scope: "all" };
     }),
 });

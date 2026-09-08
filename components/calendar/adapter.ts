@@ -31,12 +31,23 @@ export function toFullCalendarEvent(event: CalendarEvent): EventInput {
     }
   }
 
-  let finalRrule: any = event.rrule;
-  if (typeof finalRrule === "string" && finalRrule && !finalRrule.includes("DTSTART") && event.start) {
-    const d = new Date(event.start);
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const dtstart = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
-    finalRrule = `DTSTART:${dtstart}\nRRULE:${finalRrule}`;
+  let finalRrule: any = event.rrule || (event.isRecurring ? event.recurrenceRule : undefined);
+  if (typeof finalRrule === "string" && finalRrule) {
+    const lines = finalRrule.split("\n").map((l: string) => l.trim()).filter(Boolean);
+    const rruleLine = lines.find((l: string) => l.startsWith("RRULE:") || (!l.startsWith("DTSTART:") && !l.startsWith("EXDATE:")));
+    const exdateLines = lines.filter((l: string) => l.startsWith("EXDATE:"));
+    const rawRule = rruleLine ? (rruleLine.startsWith("RRULE:") ? rruleLine.substring(6) : rruleLine) : "";
+
+    if (!finalRrule.includes("DTSTART") && event.start) {
+      const d = new Date(event.start);
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const dtstart = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      let rruleStr = `DTSTART:${dtstart}\nRRULE:${rawRule}`;
+      if (exdateLines.length > 0) {
+        rruleStr += `\n${exdateLines.join("\n")}`;
+      }
+      finalRrule = rruleStr;
+    }
   }
 
   return {

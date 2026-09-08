@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"anchor-backend/internal/auth"
@@ -336,6 +337,9 @@ func UpdateCalendarEvent(ctx context.Context, pool *pgxpool.Pool, userID string,
 
 /**
  * DeleteCalendarEvent removes the event from CalendarEvent or marks deleted in tasks.
+ * Supports recurring event deletion:
+ * - scope="this": appends EXDATE to the recurrenceRule to omit only the clicked occurrence date.
+ * - scope="all": deletes the entire master recurring event record.
  */
 func DeleteCalendarEvent(ctx context.Context, pool *pgxpool.Pool, userID string, input map[string]interface{}) (interface{}, error) {
 	if pool == nil {
@@ -347,11 +351,66 @@ func DeleteCalendarEvent(ctx context.Context, pool *pgxpool.Pool, userID string,
 		return nil, fmt.Errorf("id is required")
 	}
 
-	// Delete from "CalendarEvent"
-	_, _ = pool.Exec(ctx, `DELETE FROM "CalendarEvent" WHERE id = $1`, id)
+	scope, _ := input["scope"].(string)
+	if scope == "" {
+		scope = "all"
+	}
 
-	// Mark deleted in "tasks"
+	occurrenceDateStr, _ := input["occurrenceDate"].(string)
+
+	// If deleting only this occurrence of a recurring event
+	if scope == "this" && occurrenceDateStr != "" {
+		var occDate time.Time
+		if t, err := time.Parse(time.RFC3339, occurrenceDateStr); err == nil {
+			occDate = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05Z07:00", occurrenceDateStr); err == nil {
+			occDate = t
+		} else if t, err := time.Parse("2006-01-02", occurrenceDateStr); err == nil {
+			occDate = t
+		}
+
+		if !occDate.IsZero() {
+			var recRule string
+			err := pool.QueryRow(ctx, `SELECT COALESCE("recurrenceRule", '') FROM "CalendarEvent" WHERE id = $1`, id).Scan(&recRule)
+			if err == nil && recRule != "" {
+				utcDate := occDate.UTC()
+				exdateStr := fmt.Sprintf("%04d%02d%02dT%02d%02d%02dZ",
+					utcDate.Year(), utcDate.Month(), utcDate.Day(),
+					utcDate.Hour(), utcDate.Minute(), utcDate.Second())
+
+				var updatedRule string
+				if strings.Contains(recRule, "EXDATE:") {
+					// Append to existing EXDATE line
+					lines := strings.Split(recRule, "\n")
+					found := false
+					for i, l := range lines {
+						if strings.HasPrefix(strings.TrimSpace(l), "EXDATE:") {
+							lines[i] = strings.TrimSpace(l) + "," + exdateStr
+							found = true
+							break
+						}
+					}
+					if !found {
+						lines = append(lines, "EXDATE:"+exdateStr)
+					}
+					updatedRule = strings.Join(lines, "\n")
+				} else {
+					updatedRule = recRule + "\nEXDATE:" + exdateStr
+				}
+
+				_, _ = pool.Exec(ctx, `
+					UPDATE "CalendarEvent" 
+					SET "recurrenceRule" = $2, "updatedAt" = NOW() 
+					WHERE id = $1`, id, updatedRule)
+
+				return map[string]interface{}{"success": true, "scope": "this"}, nil
+			}
+		}
+	}
+
+	// Default: "all" — Delete completely from "CalendarEvent" and "tasks"
+	_, _ = pool.Exec(ctx, `DELETE FROM "CalendarEvent" WHERE id = $1`, id)
 	_, _ = pool.Exec(ctx, `UPDATE tasks SET deleted_at = NOW() WHERE id = $1`, id)
 
-	return map[string]interface{}{"success": true}, nil
+	return map[string]interface{}{"success": true, "scope": "all"}, nil
 }

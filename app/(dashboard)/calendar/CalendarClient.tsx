@@ -13,6 +13,7 @@ import {
 } from "@/components/calendar/GoogleCalendarSidebar";
 import { EventDetailPopover } from "@/components/calendar/EventDetailPopover";
 import { GoogleCreateEventDialog } from "@/components/calendar/GoogleCreateEventDialog";
+import { DeleteRecurringDialog } from "@/components/calendar/DeleteRecurringDialog";
 import { CalendarEvent } from "@/types/calendar";
 
 export function CalendarClient() {
@@ -28,6 +29,7 @@ export function CalendarClient() {
   // Popover State (Google-style positioned popup)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedAnchorRect, setSelectedAnchorRect] = useState<DOMRect | null>(null);
+  const [recurringEventToDelete, setRecurringEventToDelete] = useState<CalendarEvent | null>(null);
 
   // Create / Edit Dialog State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -297,6 +299,41 @@ export function CalendarClient() {
     );
   }, []);
 
+  // Delete Request Handler (checks for recurring events)
+  const handleDeleteRequest = useCallback(
+    (id: string, event?: CalendarEvent) => {
+      const target = event || visibleEvents.find((e) => e.id === id);
+      if (target && (target.isRecurring || target.rrule)) {
+        setRecurringEventToDelete(target);
+        setSelectedEvent(null);
+        setSelectedAnchorRect(null);
+      } else {
+        if (target?.type === "task") {
+          deleteTaskMutation.mutate({ id });
+        } else {
+          deleteCalendarEventMutation.mutate({ id, scope: "all" });
+        }
+        setSelectedEvent(null);
+        setSelectedAnchorRect(null);
+      }
+    },
+    [visibleEvents, deleteTaskMutation, deleteCalendarEventMutation],
+  );
+
+  // Confirm Deletion of Recurring Event (this vs all)
+  const handleConfirmDeleteRecurring = useCallback(
+    (scope: "this" | "all") => {
+      if (!recurringEventToDelete) return;
+      deleteCalendarEventMutation.mutate({
+        id: recurringEventToDelete.id,
+        scope,
+        occurrenceDate: recurringEventToDelete.start,
+      });
+      setRecurringEventToDelete(null);
+    },
+    [recurringEventToDelete, deleteCalendarEventMutation],
+  );
+
   return (
     <div className="h-full w-full flex flex-col bg-[#0a0c10] overflow-hidden select-none">
       {/* 1. Google-Style Top Navigation Header */}
@@ -362,13 +399,7 @@ export function CalendarClient() {
               setSelectedEvent(null);
               setSelectedAnchorRect(null);
             }}
-            onDelete={(id) => {
-              if (selectedEvent?.type === "task") {
-                deleteTaskMutation.mutate({ id });
-              } else {
-                deleteCalendarEventMutation.mutate({ id });
-              }
-            }}
+            onDelete={handleDeleteRequest}
             onComplete={(id) => completeTaskMutation.mutate({ id })}
             onStartTimer={(id) => startTimerMutation.mutate({ id })}
             onEdit={(ev) => {
@@ -398,6 +429,17 @@ export function CalendarClient() {
             createCalendarEventMutation.isPending ||
             updateEvent.isPending
           }
+        />
+
+        {/* 5. Google Calendar Recurring Event Delete Dialog */}
+        <DeleteRecurringDialog
+          open={!!recurringEventToDelete}
+          onOpenChange={(open) => {
+            if (!open) setRecurringEventToDelete(null);
+          }}
+          event={recurringEventToDelete}
+          onConfirm={handleConfirmDeleteRecurring}
+          isDeleting={deleteCalendarEventMutation.isPending}
         />
       </div>
     </div>
