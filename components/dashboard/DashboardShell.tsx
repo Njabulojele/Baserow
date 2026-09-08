@@ -7,7 +7,9 @@ import { usePathname } from "next/navigation";
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isFullBleed =
-    pathname?.startsWith("/calendar") || pathname?.startsWith("/canvas");
+    pathname?.startsWith("/calendar") ||
+    pathname?.startsWith("/canvas") ||
+    pathname?.startsWith("/timer");
 
   if (isFullBleed) {
     return (

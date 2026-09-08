@@ -41,7 +41,7 @@ const sidebarRoutes = [
   { label: "Goals", icon: Target, href: "/goals" },
   { label: "Calendar", icon: Calendar, href: "/calendar" },
   { label: "Canvas", icon: PenTool, href: "/canvas" },
-  { label: "Timer / Focus Mode", icon: Timer, href: "/timer" },
+  { label: "Focus Mode", icon: Timer, href: "/timer" },
   // { label: "Tracklog", icon: Activity, href: "/tracklog" },
   { label: "Reports & Analytics", icon: LineChart, href: "/analytics" },
   { label: "Settings", icon: Settings, href: "/settings" },

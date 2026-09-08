@@ -230,36 +230,47 @@ export const useTimerStore = create<TimerStoreState>()(
         set({
           activeTimer: { ...activeTimer, isRunning: true },
           isRunning: true,
-          startTime: now - activeTimer.elapsedSeconds * 1000,
+          startTime: now,
         });
         get().startHeartbeat();
       },
 
       pause: () => {
-        const { activeTimer } = get();
+        const { activeTimer, startTime, accumulatedMs } = get();
         get().stopHeartbeat();
+        const now = Date.now();
+        const addedMs = startTime ? Math.max(0, now - startTime) : 0;
+        const totalMs = accumulatedMs + addedMs;
+        const totalSec = Math.floor(totalMs / 1000);
+
         if (activeTimer) {
           set({
-            activeTimer: { ...activeTimer, isRunning: false },
+            activeTimer: { ...activeTimer, isRunning: false, elapsedSeconds: totalSec },
             isRunning: false,
             startTime: null,
-            accumulatedMs: activeTimer.elapsedSeconds * 1000,
+            accumulatedMs: totalMs,
           });
         } else {
-          set({ isRunning: false, startTime: null });
+          set({ isRunning: false, startTime: null, accumulatedMs: totalMs });
         }
       },
 
       stopAndReset: () => {
         const { activeTimer } = get();
+        const totalMs = get().getElapsedMs();
+        const totalSec = Math.floor(totalMs / 1000);
         get().stopHeartbeat();
+        const finishedTimer = activeTimer
+          ? { ...activeTimer, elapsedSeconds: totalSec, isRunning: false }
+          : null;
+
         set({
           activeTimer: null,
           isRunning: false,
           startTime: null,
           accumulatedMs: 0,
         });
-        return activeTimer;
+        return finishedTimer;
       },
 
       updateNotes: (notes: string) => {
@@ -322,18 +333,15 @@ export const useTimerStore = create<TimerStoreState>()(
       },
 
       tick: () => {
-        const { activeTimer, isRunning } = get();
-        if (activeTimer && activeTimer.isRunning) {
+        // Always derive elapsed from wall-clock delta — never accumulate +1.
+        // This ensures correctness regardless of how often the browser fires setInterval.
+        const { activeTimer, startTime, accumulatedMs } = get();
+        if (activeTimer && activeTimer.isRunning && startTime !== null) {
+          const totalMs = accumulatedMs + Math.max(0, Date.now() - startTime);
+          const totalSec = Math.floor(totalMs / 1000);
           set({
-            activeTimer: {
-              ...activeTimer,
-              elapsedSeconds: activeTimer.elapsedSeconds + 1,
-            },
-            accumulatedMs: (activeTimer.elapsedSeconds + 1) * 1000,
+            activeTimer: { ...activeTimer, elapsedSeconds: totalSec },
           });
-        } else if (isRunning && get().startTime) {
-          const elapsed = Date.now() - (get().startTime || Date.now());
-          set({ accumulatedMs: elapsed });
         }
       },
 
@@ -341,26 +349,39 @@ export const useTimerStore = create<TimerStoreState>()(
         const state = get();
         if (state.heartbeatIntervalId) return;
 
+        let tickCount = 0;
         const interval = setInterval(async () => {
-          const current = get().activeTimer;
-          if (!current || !current.isRunning) {
+          const { activeTimer, startTime, accumulatedMs } = get();
+          if (!activeTimer || !activeTimer.isRunning) {
             get().stopHeartbeat();
             return;
           }
-          try {
-            await fetch("/api/trpc/task.heartbeatTimer?batch=1", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                "0": {
-                  json: { sessionId: current.sessionId, id: current.sessionId },
-                },
-              }),
-            });
-          } catch {
-            // silent fail
+
+          // Always compute from wall clock — immune to tab throttling
+          if (startTime !== null) {
+            const totalMs = accumulatedMs + Math.max(0, Date.now() - startTime);
+            const totalSec = Math.floor(totalMs / 1000);
+            set({ activeTimer: { ...activeTimer, elapsedSeconds: totalSec } });
           }
-        }, 30000);
+
+          // Backend heartbeat ping — only every 30 ticks (~30 seconds)
+          tickCount++;
+          if (tickCount % 30 === 0) {
+            try {
+              await fetch("/api/trpc/task.heartbeatTimer?batch=1", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  "0": {
+                    json: { sessionId: activeTimer.sessionId, id: activeTimer.sessionId },
+                  },
+                }),
+              });
+            } catch {
+              // silent fail
+            }
+          }
+        }, 1000); // 1-second tick; backend ping throttled to every 30s via counter
 
         set({ heartbeatIntervalId: interval });
       },
@@ -389,12 +410,8 @@ export const useTimerStore = create<TimerStoreState>()(
 
       getElapsedMs: () => {
         const state = get();
-        if (state.activeTimer && state.activeTimer.isRunning) {
-          const started = new Date(state.activeTimer.startedAt).getTime();
-          return Math.max(0, Date.now() - started);
-        }
         if (state.isRunning && state.startTime !== null) {
-          return state.accumulatedMs + (Date.now() - state.startTime);
+          return state.accumulatedMs + Math.max(0, Date.now() - state.startTime);
         }
         return state.accumulatedMs;
       },
@@ -405,6 +422,8 @@ export const useTimerStore = create<TimerStoreState>()(
       partialize: (state) => ({
         activeTimer: state.activeTimer,
         accumulatedMs: state.accumulatedMs,
+        isRunning: state.isRunning,
+        startTime: state.startTime,
       }),
     }
   )
