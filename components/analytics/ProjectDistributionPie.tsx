@@ -144,7 +144,7 @@ export function ProjectDistributionPie() {
                         </span>
                       </div>
                       <span className="text-[10px] font-mono font-semibold text-muted-foreground shrink-0">
-                        {project.count || 0} tasks
+                        {(project as any).count || 0} tasks
                       </span>
                     </div>
 

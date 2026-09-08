@@ -117,6 +117,7 @@ export const chatRouter = router({
             title: input.payload.title || "Untitled Task",
             priority: input.payload.priority || "medium",
             status: "not_started",
+            type: input.payload.type || "shallow_work",
             scheduledDate: new Date(), // Schedule for today
           },
         });

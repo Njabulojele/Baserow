@@ -85,7 +85,7 @@ export default function SSOSettingsPage() {
                   card: "w-full shadow-none bg-transparent border-none rounded-none m-0 p-0",
                   scrollBox: "rounded-none",
                 },
-              }}
+              } as any}
               routing="hash"
             />
           </div>

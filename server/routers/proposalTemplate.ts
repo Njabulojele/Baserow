@@ -63,7 +63,7 @@ export const proposalTemplateRouter = router({
     .input(
       z.object({
         templateId: z.string(),
-        variables: z.record(z.string()), // e.g. { clientName: "Acme Corp", projectScope: "..." }
+        variables: z.record(z.string(), z.string()), // e.g. { clientName: "Acme Corp", projectScope: "..." }
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -81,7 +81,7 @@ export const proposalTemplateRouter = router({
       for (const [key, value] of Object.entries(input.variables)) {
         rendered = rendered.replace(
           new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-          value,
+          String(value),
         );
       }
 

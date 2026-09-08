@@ -17,7 +17,7 @@ export default function UserProfilePage() {
             navbar: "hidden md:flex",
             pageScrollBox: "p-4 sm:p-8",
           },
-        }}
+        } as any}
       />
     </div>
   );

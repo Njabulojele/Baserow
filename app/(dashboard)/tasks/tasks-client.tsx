@@ -127,7 +127,7 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
 
     createTask.mutate({
       title: newTaskTitle.trim(),
-      status: targetStatus,
+      status: targetStatus as any,
       priority: "medium",
       type: "shallow_work",
     });
@@ -457,7 +457,7 @@ export function TasksClient({ initialTasks }: TasksClientProps) {
                                   key={s.key}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateTask.mutate({ id: task.id, status: s.rawStatus });
+                                    updateTask.mutate({ id: task.id, status: s.rawStatus as any });
                                   }}
                                   className={cn(
                                     "text-[10px] font-extrabold px-2 py-0.5 rounded-full transition-all hover:scale-105",

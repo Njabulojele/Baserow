@@ -135,7 +135,7 @@ export function AIMiniChat() {
                         updated[lastIdx] = {
                           ...updated[lastIdx],
                           text: fullText
-                            .replace(/ACTION:\s*\{.*?\}/s, "")
+                            .replace(/ACTION:\s*\{[\s\S]*?\}/, "")
                             .trim(),
                         };
                       }
@@ -153,7 +153,7 @@ export function AIMiniChat() {
       }
 
       // Check for action in the final text
-      const actionMatch = fullText.match(/ACTION:\s*(\{.*?\})/s);
+      const actionMatch = fullText.match(/ACTION:\s*(\{[\s\S]*?\})/);
       if (actionMatch) {
         try {
           const action = JSON.parse(actionMatch[1]);
@@ -163,7 +163,7 @@ export function AIMiniChat() {
             if (updated[lastIdx]?.role === "assistant") {
               updated[lastIdx] = {
                 ...updated[lastIdx],
-                text: fullText.replace(/ACTION:\s*\{.*?\}/s, "").trim(),
+                text: fullText.replace(/ACTION:\s*\{[\s\S]*?\}/, "").trim(),
                 action,
               };
             }

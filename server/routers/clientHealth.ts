@@ -111,6 +111,7 @@ export const clientHealthRouter = router({
       atRiskCount,
       healthyCount,
       needsAttentionCount: needsAttention,
+      warningCount: needsAttention,
     };
   }),
 

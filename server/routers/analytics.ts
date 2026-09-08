@@ -269,7 +269,7 @@ export const analyticsRouter = router({
 
     const projectHours: Record<
       string,
-      { name: string; color: string; hours: number }
+      { name: string; color: string; hours: number; count: number }
     > = {};
     const noProjectKey = "No Project";
 
@@ -280,9 +280,11 @@ export const analyticsRouter = router({
           name: entry.project?.name || "No Project",
           color: entry.project?.color || "#94a3b8", // slate-400
           hours: 0,
+          count: 0,
         };
       }
       projectHours[key].hours += entry.duration / 60;
+      projectHours[key].count += 1;
     });
 
     return Object.values(projectHours)
@@ -674,7 +676,7 @@ export const analyticsRouter = router({
         id: true,
         name: true,
         companyName: true,
-        lifetimeValueZar: true,
+        lifetimeValue: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -683,7 +685,7 @@ export const analyticsRouter = router({
       id: c.id,
       name: c.name,
       company: c.companyName || c.name,
-      amount: c.lifetimeValueZar || 0,
+      amount: c.lifetimeValue || 0,
       closedAt: c.createdAt.toISOString().split("T")[0],
     }));
   }),

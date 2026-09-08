@@ -469,7 +469,8 @@ export const crmLeadRouter = router({
 
   // Get lead statistics
   getStats: protectedProcedure.query(async ({ ctx }) => {
-    const [total, byStatus, bySource, avgScore] = await Promise.all([
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [total, byStatus, bySource, avgScore, newThisWeek, converted] = await Promise.all([
       ctx.prisma.crmLead.count({ where: { userId: ctx.userId } }),
       ctx.prisma.crmLead.groupBy({
         by: ["status"],
@@ -485,13 +486,33 @@ export const crmLeadRouter = router({
         where: { userId: ctx.userId },
         _avg: { score: true },
       }),
+      ctx.prisma.crmLead.count({
+        where: {
+          userId: ctx.userId,
+          createdAt: { gte: oneWeekAgo },
+        },
+      }),
+      ctx.prisma.crmLead.count({
+        where: {
+          userId: ctx.userId,
+          OR: [
+            { convertedToClientId: { not: null } },
+            { status: "WON" },
+          ],
+        },
+      }),
     ]);
+
+    const conversionRate = total > 0 ? (converted / total) * 100 : 0;
 
     return {
       total,
       byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
       bySource: Object.fromEntries(bySource.map((s) => [s.source, s._count])),
       averageScore: avgScore._avg.score ?? 0,
+      newThisWeek,
+      converted,
+      conversionRate,
     };
   }),
 });

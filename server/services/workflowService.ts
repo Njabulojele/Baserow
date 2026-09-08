@@ -1,5 +1,4 @@
 import {
-  PrismaClient,
   WorkflowActionType,
   WorkflowTriggerType,
 } from "@prisma/client";

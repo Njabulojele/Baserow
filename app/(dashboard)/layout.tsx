@@ -17,6 +17,8 @@ import { AIMiniChat } from "@/components/ai/AIMiniChat";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FloatingGoalTimer } from "@/components/goals/FloatingGoalTimer";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -36,7 +38,7 @@ export default async function DashboardLayout({
 
   // Sync user to database
   try {
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = user?.emailAddresses?.[0]?.emailAddress;
     if (email) {
       const displayName =
         `${user.firstName || ""} ${user.lastName || ""}`.trim() ||

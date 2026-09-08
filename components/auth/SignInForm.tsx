@@ -12,7 +12,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { verifyAuthAction } from "@/lib/actions/auth";
 
 export function SignInForm() {
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded, signIn, setActive } = useSignIn() as any;
   const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,10 +56,10 @@ export function SignInForm() {
         return;
       }
 
-      const result = await signIn.create({
+      const result = (await signIn.create({
         identifier: email,
         password,
-      });
+      })) as any;
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });

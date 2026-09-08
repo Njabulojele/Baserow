@@ -128,7 +128,7 @@ export function DailyScheduleTimeline({ date }: DailyScheduleTimelineProps) {
                 hasCalEvent && !isCurrent && "opacity-50",
               )}
               style={{
-                ringColor: isCurrent ? `${block.color}60` : undefined,
+                boxShadow: isCurrent ? `0 0 0 1px ${block.color}60` : undefined,
               }}
             >
               {/* Time */}

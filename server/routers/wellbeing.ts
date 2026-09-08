@@ -229,4 +229,73 @@ export const wellbeingRouter = router({
         entries,
       };
     }),
+
+  // Alias: getDailyLog — returns today's entry with simplified shape
+  getDailyLog: protectedProcedure
+    .input(z.object({}).optional())
+    .query(async ({ ctx }) => {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const entry = await ctx.prisma.wellBeingEntry.findFirst({
+        where: { userId: ctx.userId!, date: today },
+      });
+      return entry
+        ? {
+            energy: entry.morningEnergy ?? entry.averageEnergy ?? 8,
+            mood: entry.mood ?? 8,
+            stress: entry.stressLevel ?? 3,
+          }
+        : null;
+    }),
+
+  // Alias: getStats — returns streak / average scores
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    since.setUTCHours(0, 0, 0, 0);
+    const entries = await ctx.prisma.wellBeingEntry.findMany({
+      where: { userId: ctx.userId!, date: { gte: since } },
+      orderBy: { date: "asc" },
+    });
+    const avgEnergy =
+      entries.length > 0
+        ? entries.reduce((s, e) => s + (e.morningEnergy ?? e.averageEnergy ?? 0), 0) / entries.length
+        : 0;
+    return {
+      totalEntries: entries.length,
+      avgEnergy: Math.round(avgEnergy * 10) / 10,
+    };
+  }),
+
+  // Alias: saveLog — simple energy/mood/stress save
+  saveLog: protectedProcedure
+    .input(
+      z.object({
+        energy: z.number().min(1).max(10),
+        mood: z.number().min(1).max(10),
+        stress: z.number().min(1).max(10),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const existing = await ctx.prisma.wellBeingEntry.findFirst({
+        where: { userId: ctx.userId!, date: today },
+      });
+      if (existing) {
+        return ctx.prisma.wellBeingEntry.update({
+          where: { id: existing.id },
+          data: { morningEnergy: input.energy, mood: input.mood, stressLevel: input.stress },
+        });
+      }
+      return ctx.prisma.wellBeingEntry.create({
+        data: {
+          userId: ctx.userId!,
+          date: today,
+          morningEnergy: input.energy,
+          mood: input.mood,
+          stressLevel: input.stress,
+        },
+      });
+    }),
 });

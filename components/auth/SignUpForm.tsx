@@ -16,7 +16,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { verifyAuthAction } from "@/lib/actions/auth";
 
 export function SignUpForm() {
-  const { isLoaded, signUp, setActive } = useSignUp();
+  const { isLoaded, signUp, setActive } = useSignUp() as any;
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -70,9 +70,9 @@ export function SignUpForm() {
     setIsLoading(true);
 
     try {
-      const completeSignUp = await signUp.attemptEmailAddressVerification({
+      const completeSignUp = (await signUp.attemptEmailAddressVerification({
         code,
-      });
+      })) as any;
 
       if (completeSignUp.status === "complete") {
         await setActive({ session: completeSignUp.createdSessionId });

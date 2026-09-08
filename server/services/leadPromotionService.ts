@@ -1,7 +1,6 @@
-import { PrismaClient, CrmLeadSource, CrmLeadStatus } from "@prisma/client";
+import { CrmLeadSource, CrmLeadStatus, WorkflowTriggerType } from "@prisma/client";
 import { ExtendedPrismaClient } from "../../lib/prisma";
 import { WorkflowService } from "./workflowService";
-import { WorkflowTriggerType } from "@prisma/client";
 
 /**
  * Automatically promotes scored Leads into the CRM pipeline based on tier.
